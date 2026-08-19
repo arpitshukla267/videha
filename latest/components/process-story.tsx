@@ -7,7 +7,7 @@ import { gsap } from "gsap"
 import { ScrollTrigger } from "gsap/ScrollTrigger"
 import { SectionLabel } from "@/components/section-label"
 import { Reveal } from "@/components/reveal"
-
+import { FeatureFilmstrip } from "@/components/ui/feature-filmstrip"
 import { PROCESS_STEPS as STEPS } from "@/lib/content"
 
 export function ProcessStory() {
@@ -82,7 +82,7 @@ export function ProcessStory() {
             {/* Left — text */}
             <div className="col-span-5 flex flex-col justify-around pt-28 pb-20 pr-10 h-full">
               <h2 className="flex flex-col text-4xl font-semibold leading-[1.05] tracking-[-0.02em] text-foreground md:text-5xl">
-              <SectionLabel className="mb-4">Our Process</SectionLabel>
+                <SectionLabel className="mb-4">Our Process</SectionLabel>
                 <span className="text-foreground">From Source to Global Markets</span>
               </h2>
 
@@ -96,7 +96,7 @@ export function ProcessStory() {
                     transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
                   >
                     <div className="flex items-baseline gap-4">
-                      <span className="text-5xl font-semibold tracking-tight text-primary/25">
+                      <span className="text-5xl font-semibold tracking-tight text-primary/50">
                         {STEPS[active].num}
                       </span>
                       <span className="text-md font-medium uppercase tracking-[0.28em] text-accent">
@@ -112,7 +112,6 @@ export function ProcessStory() {
                   </motion.div>
                 </AnimatePresence>
               </div>
-
             </div>
 
             {/* Right — stacked frames */}
@@ -135,9 +134,6 @@ export function ProcessStory() {
                       className="object-cover"
                     />
                     <div className="absolute bottom-0 left-0 right-0 h-1/3 bg-gradient-to-t from-foreground/40 to-transparent" />
-                    {/* <span className="absolute bottom-6 left-6 text-[11px] font-medium uppercase tracking-[0.28em] text-background">
-                      {s.num} / {String(STEPS.length).padStart(2, "0")}
-                    </span> */}
                   </div>
                 ))}
               </div>
@@ -146,45 +142,24 @@ export function ProcessStory() {
         </div>
       </div>
 
-      {/* ===== Mobile: vertical sequence ===== */}
-      <div className="mx-auto max-w-xl px-5 py-24 md:hidden">
-        <SectionLabel>Our Process</SectionLabel>
-        <h2 className="mt-6 text-4xl font-semibold leading-[1.05] tracking-[-0.02em] text-foreground text-balance">
-          From Source to Global Markets
-        </h2>
-
-        <div className="mt-14 flex flex-col gap-16">
-          {STEPS.map((s) => (
-            <div key={s.num}>
-              <div className="flex items-baseline gap-4">
-                <span className="text-4xl font-semibold tracking-tight text-primary/25">
-                  {s.num}
-                </span>
-                <span className="text-[12px] font-medium uppercase tracking-[0.28em] text-accent">
-                  {s.label}
-                </span>
-              </div>
-              <h3 className="mt-4 text-2xl font-semibold tracking-tight text-foreground">
-                {s.heading}
-              </h3>
-              <p className="mt-3 text-[15px] leading-relaxed text-muted-foreground">
-                {s.copy}
-              </p>
-              <Reveal as="figure" className="mt-7">
-                <div className="relative aspect-[4/5] w-full overflow-hidden">
-                  <Image
-                    src={s.image || "/placeholder.svg"}
-                    alt={`${s.label} — ${s.heading}`}
-                    fill
-                    sizes="100vw"
-                    className="object-cover"
-                  />
-                </div>
-              </Reveal>
-            </div>
-          ))}
-        </div>
-      </div>
+      {/* ===== Mobile: pinned horizontal filmstrip with unified heading & dots ===== */}
+      <FeatureFilmstrip
+        title={
+          <div>
+            <SectionLabel className="mb-2">Our Process</SectionLabel>
+            <h2 className="text-2xl font-semibold leading-tight tracking-tight text-foreground">
+              From Source to Global Markets
+            </h2>
+          </div>
+        }
+        items={STEPS.map((s) => ({
+          num: s.num,
+          title: s.heading,
+          tagline: s.label,
+          description: s.copy,
+          image: s.image || "/placeholder.svg",
+        }))}
+      />
     </section>
   )
 }

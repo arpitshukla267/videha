@@ -66,7 +66,7 @@ export default function GlobalReachPage() {
   return (
     <main className="overflow-hidden bg-background">
       {/* Hero Header */}
-      <header className="border-b border-border bg-[#f8f6f0] pt-36 md:pt-48 pb-16">
+      <header className="border-b border-border bg-secondary/30 pt-36 md:pt-48 pb-16">
         <div className="mx-auto max-w-[1400px] px-5 md:px-10">
           <div className="max-w-4xl">
             <Reveal>
@@ -193,7 +193,7 @@ export default function GlobalReachPage() {
       </section>
 
       {/* Sourcing & Shipping reliability guarantees */}
-      <section className="py-24 md:py-32 bg-[#f8f6f0] border-b border-border">
+      <section className="py-24 md:py-32 bg-secondary/30 border-b border-border">
         <div className="mx-auto max-w-[1400px] px-5 md:px-10">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="p-8 border border-border bg-background">
@@ -241,7 +241,7 @@ export default function GlobalReachPage() {
               </div>
 
               <Link
-                href="/contact"
+                href="/contact?subject=Transit+Lanes+%26+Container+Sourcing"
                 className="group inline-flex items-center gap-3 border border-background/40 px-8 py-4 text-[12px] font-medium uppercase tracking-[0.18em] text-background hover:bg-background hover:text-foreground transition-colors whitespace-nowrap"
               >
                 Inquire About Transit Lanes

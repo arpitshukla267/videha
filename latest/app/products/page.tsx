@@ -32,7 +32,6 @@ export default function ProductsPage() {
     <main
       className={`${poppins.variable} font-sans overflow-hidden bg-background`}
     >
-
       {/* PRODUCT CARD GRID */}
       <section className="border-t border-border bg-background">
         <div className="mx-auto max-w-[1680px] px-5 py-24 sm:px-8 md:px-10 lg:py-32 xl:px-12">
@@ -44,7 +43,7 @@ export default function ProductsPage() {
             </Reveal>
           </div>
 
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-2 gap-x-2 gap-y-4 md:gap-6 sm:grid-cols-3 lg:grid-cols-4">
             {PRODUCTS.map((product, index) => (
               <Reveal
                 key={product.name}
@@ -53,7 +52,7 @@ export default function ProductsPage() {
               >
                 <article className="group flex h-full flex-col overflow-hidden border border-border bg-background transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_18px_45px_rgba(0,0,0,0.08)]">
                   {/* Image */}
-                  <div className="relative aspect-[16/11] w-full overflow-hidden bg-secondary">
+                  <div className="relative aspect-[5/5] md:aspect-[16/11] w-full overflow-hidden bg-secondary">
                     <Image
                       src={product.image}
                       alt={product.name}
@@ -61,51 +60,32 @@ export default function ProductsPage() {
                       sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                       className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.045]"
                     />
-                    <div className="absolute top-4 left-4 bg-background/90 px-3 py-1.5 border border-border text-[10px] font-mono uppercase text-foreground">
-                      {product.format}
-                    </div>
                   </div>
 
                   {/* Content */}
-                  <div className="flex flex-1 flex-col p-6">
-                    <span className="font-mono text-[10px] font-bold text-accent">
-                      PRODUCT {String(index + 1).padStart(2, "0")}
-                    </span>
-                    <h3 className="mt-2 text-xl font-semibold leading-[1.2] tracking-[-0.02em] text-foreground">
+                  <div className="flex flex-1 flex-col p-3 py-5 md:p-6">
+                    <h3 className="md:mt-2 text-lg md:text-xl font-medium md:font-semibold leading-[1.2] tracking-[-0.02em] text-foreground">
                       {product.name}
                     </h3>
                     <p className="mt-2.5 line-clamp-3 text-sm leading-[1.55] text-muted-foreground">
                       {product.copy}
                     </p>
 
-                    {/* Specs */}
-                    <div className="mt-5 pt-5 border-t border-border/60 grid grid-cols-2 gap-3 text-[11px] font-mono">
-                      <div>
-                        <span className="text-muted-foreground uppercase text-[9px] tracking-wider block">
-                          Grade
-                        </span>
-                        <span className="font-semibold text-foreground mt-0.5 block">
-                          {product.grade}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground uppercase text-[9px] tracking-wider block">
-                          Packaging
-                        </span>
-                        <span className="font-semibold text-foreground mt-0.5 block">
-                          {product.packaging}
-                        </span>
-                      </div>
-                    </div>
 
-                    {/* Button */}
-                    <div className="mt-auto pt-6">
+                    {/* Buttons */}
+                    <div className="mt-auto pt-6 grid grid-cols-2 gap-2">
                       <Link
                         href={`/products/${getSlug(product.name)}`}
-                        className="group/btn flex h-11 w-full items-center justify-center gap-2 border border-foreground/80 text-[13px] font-medium uppercase tracking-wide text-foreground transition-all duration-300 hover:bg-foreground hover:text-background"
+                        className="group/btn flex h-10 w-full items-center justify-center border border-foreground/60 text-[11px] font-medium uppercase tracking-wide text-foreground transition-all duration-300 hover:bg-foreground hover:text-background"
                       >
-                        View Specifications
-                        <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover/btn:translate-x-1" />
+                        Details
+                      </Link>
+                      <Link
+                        href={`/contact?product=${encodeURIComponent(product.name)}`}
+                        className="group/btn flex h-10 w-full items-center justify-center gap-1 bg-foreground text-[11px] font-medium uppercase tracking-wide text-background transition-all duration-300 hover:bg-primary"
+                      >
+                        Enquire
+                        <ArrowRight className="w-3 h-3 transition-transform group-hover/btn:translate-x-0.5" />
                       </Link>
                     </div>
                   </div>
@@ -117,7 +97,7 @@ export default function ProductsPage() {
       </section>
 
       {/* TAILORED SPECIFICATION CTA */}
-      <section className="py-24 md:py-32 bg-[#f8f6f0]">
+      <section className="py-24 md:py-32 bg-secondary/30">
         <div className="mx-auto max-w-[1400px] px-5 md:px-10 text-center max-w-3xl">
           <Reveal>
             <span className="text-[10px] font-mono uppercase tracking-[0.24em] text-accent">
@@ -132,7 +112,7 @@ export default function ProductsPage() {
               retail packaging requirements.
             </p>
             <Link
-              href="/contact"
+              href="/contact?subject=Custom+Market+Specifications"
               className="mt-8 inline-flex items-center gap-3 bg-foreground px-8 py-4 text-[12px] font-medium uppercase tracking-[0.18em] text-background transition-colors hover:bg-primary"
             >
               Enquire Now

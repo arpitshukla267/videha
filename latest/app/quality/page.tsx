@@ -48,7 +48,7 @@ export default function QualityPage() {
   return (
     <main className="overflow-hidden bg-background">
       {/* Hero Header */}
-      <header className="border-b border-border bg-[#f8f6f0] pt-36 md:pt-48 pb-16">
+      <header className="border-b border-border bg-secondary/30 pt-36 md:pt-48 pb-16">
         <div className="mx-auto max-w-[1400px] px-5 md:px-10">
           <div className="max-w-4xl">
             <Reveal>
@@ -67,7 +67,7 @@ export default function QualityPage() {
       </header>
 
       {/* Macro Image Section */}
-      <section className="border-b border-border bg-[#f8f6f0] pb-20 md:pb-28">
+      <section className="border-b border-border bg-secondary/30 pb-20 md:pb-28">
         <div className="mx-auto max-w-[1400px] px-5 md:px-10">
           <Reveal>
             <div className="relative aspect-[21/9] w-full overflow-hidden border border-border bg-secondary">
@@ -120,7 +120,7 @@ export default function QualityPage() {
       </section>
 
       {/* Journey Map Section */}
-      <section className="py-24 md:py-32 bg-[#f8f6f0] border-b border-border">
+      <section className="py-24 md:py-32 bg-secondary/30 border-b border-border">
         <div className="mx-auto max-w-[1400px] px-5 md:px-10">
           <div className="max-w-2xl mb-16">
             <span className="text-[10px] font-mono uppercase tracking-[0.24em] text-accent">
@@ -142,7 +142,7 @@ export default function QualityPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-6 relative z-10">
                 {JOURNEY_STEPS.map((step, idx) => (
-                  <div key={step.name} className="flex flex-col bg-[#f8f6f0]/50 border border-border p-5 h-full group hover:border-primary transition-all duration-300">
+                  <div key={step.name} className="flex flex-col bg-background/80 border border-border p-5 h-full group hover:border-primary transition-all duration-300">
                     <div className="w-8 h-8 rounded-full bg-background border border-border flex items-center justify-center font-mono text-[10px] font-bold text-accent mb-4 group-hover:bg-primary group-hover:text-background transition-colors">
                       0{idx + 1}
                     </div>
@@ -176,7 +176,7 @@ export default function QualityPage() {
       </section>
 
       {/* Global Compliance & Accreditations */}
-      <section className="py-20 md:py-28 border-b border-border bg-[#f8f6f0]">
+      <section className="py-20 md:py-28 border-b border-border bg-secondary/30">
         <div className="mx-auto max-w-[1400px] px-5 md:px-10">
           <div className="text-center max-w-2xl mx-auto mb-12">
             <Reveal>
@@ -208,7 +208,7 @@ export default function QualityPage() {
               </div>
 
               <Link
-                href="/contact"
+                href="/contact?subject=Laboratory+Certifications+%26+Lab+Sheets"
                 className="group inline-flex items-center gap-3 border border-background/40 px-8 py-4 text-[12px] font-medium uppercase tracking-[0.18em] text-background hover:bg-background hover:text-foreground transition-colors whitespace-nowrap"
               >
                 Request Lab Sheet

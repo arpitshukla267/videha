@@ -38,9 +38,18 @@ type WorldMapProps = {
   interactive?: boolean;
 };
 
-// Simple dart/plane silhouette pointing EAST (0deg) by default,
-// so animateMotion's rotate="auto" aligns it correctly along any path direction.
-function PlaneMarker({ pathD, delay }: { pathD: string; delay: number }) {
+// Simple dart/plane silhouette. begin is "indefinite" here — it will
+// NOT auto-play on mount. We trigger it manually via ref.beginElement()
+// once the map is actually in the viewport (see WorldMap's useEffect below).
+function PlaneMarker({
+  pathD,
+  onMotionRef,
+  onFadeRef,
+}: {
+  pathD: string;
+  onMotionRef: (el: SVGAnimateMotionElement | null) => void;
+  onFadeRef: (el: SVGAnimateElement | null) => void;
+}) {
   return (
     <g opacity={0}>
       <g>
@@ -67,8 +76,9 @@ function PlaneMarker({ pathD, delay }: { pathD: string; delay: number }) {
         />
 
         <animateMotion
+          ref={onMotionRef}
           dur="3.5s"
-          begin={`${delay}s`}
+          begin="indefinite"
           fill="freeze"
           rotate="auto"
           path={pathD}
@@ -77,11 +87,12 @@ function PlaneMarker({ pathD, delay }: { pathD: string; delay: number }) {
 
       {/* Fade */}
       <animate
+        ref={onFadeRef}
         attributeName="opacity"
         values="0;1;1;0"
         keyTimes="0;0.08;0.85;1"
         dur="3.5s"
-        begin={`${delay}s`}
+        begin="indefinite"
         fill="freeze"
       />
     </g>
@@ -99,6 +110,12 @@ export function WorldMap({
 
   const containerRef = useRef<HTMLDivElement>(null);
   const isInView = useInView(containerRef, { once: true, amount: 0.3 });
+
+  // Refs to each plane's SMIL animation elements, so we can start them
+  // manually with JS-controlled timing instead of relying on `begin="Xs"`
+  // offsets (which fire immediately when the element mounts late).
+  const motionRefs = useRef<(SVGAnimateMotionElement | null)[]>([]);
+  const fadeRefs = useRef<(SVGAnimateElement | null)[]>([]);
 
   useEffect(() => {
     const mql = window.matchMedia("(min-width: 1024px)");
@@ -155,6 +172,29 @@ export function WorldMap({
       };
     });
   }, [projection, originXY]);
+
+  // Trigger the plane flights only once the section is in view,
+  // with a 1s pause first, then a stagger between each plane.
+  useEffect(() => {
+    if (!isInView) return;
+
+    const timers: ReturnType<typeof setTimeout>[] = [];
+
+    const startDelay = setTimeout(() => {
+      routes.forEach((_, idx) => {
+        const stagger = idx * 350; // ms between each plane departing
+        const t = setTimeout(() => {
+          motionRefs.current[idx]?.beginElement();
+          fadeRefs.current[idx]?.beginElement();
+        }, stagger);
+        timers.push(t);
+      });
+    }, 500); // <-- 1 second delay after the map enters the viewport
+
+    timers.push(startDelay);
+
+    return () => timers.forEach(clearTimeout);
+  }, [isInView, routes]);
 
   return (
     <div ref={containerRef} className="h-full w-full min-h-[360px]">
@@ -220,7 +260,12 @@ export function WorldMap({
               <PlaneMarker
                 key={`plane-${route.name}`}
                 pathD={route.d}
-                delay={idx * 0.35}
+                onMotionRef={(el) => {
+                  motionRefs.current[idx] = el;
+                }}
+                onFadeRef={(el) => {
+                  fadeRefs.current[idx] = el;
+                }}
               />
             ))}
           </g>

@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { SectionLabel } from "@/components/section-label";
 import { Reveal } from "@/components/reveal";
+import { FeatureFilmstrip } from "@/components/ui/feature-filmstrip";
 
 const SERVICES_DATA = [
   {
@@ -133,9 +134,9 @@ export default function ServicesPage() {
   };
 
   return (
-    <main className="bg-background">
+    <main className="overflow-x-clip bg-background">
       {/* HERO SECTION */}
-      <header className="relative border-b border-border pt-36 md:pt-48 pb-20 md:pb-28 overflow-hidden min-h-[100vh] flex items-center justify-center">
+      <header className="relative pt-36 md:pt-48 pb-20 md:pb-28 overflow-hidden min-h-[100vh] flex items-center justify-center">
         <Image
           src="/services.jpg"
           alt="Makhana processing facility"
@@ -147,7 +148,7 @@ export default function ServicesPage() {
         {/* Overlay — full-bleed, solid tint, no blur on the image itself */}
         <div className="absolute inset-0 bg-[#000000]/50" />
 
-        <div className="relative z-10 px-5 md:px-10 text-center max-w-4xl mx-auto">
+        <div className="relative z-10 px-5 md:px-10 text-center max-w-[90vw] md:max-w-4xl mx-auto">
           <Reveal>
             <div className="flex justify-center">
               <span className="text-md font-mono uppercase tracking-[0.24em] text-white font-semibold">
@@ -155,11 +156,11 @@ export default function ServicesPage() {
               </span>
             </div>
           </Reveal>
-          <h1 className="mt-6 text-[clamp(2.5rem,6.5vw,5rem)] font-medium leading-[0.95] tracking-[-0.0em] text-white text-balance">
+          <h1 className="mt-6 text-3xl lg:text-[clamp(2.0rem,6.5vw,5rem)] font-medium lg:leading-[0.95] lg:tracking-[-0.0em] text-white lg:text-balance">
             Built for Buyers Who Think Beyond the Shipment.
           </h1>
           <Reveal delay={0.1}>
-            <p className="mt-6 max-w-2xl mx-auto text-lg leading-relaxed text-white">
+            <p className="mt-6 max-w-sm md:max-w-2xl mx-auto text-md lg:text-lg leading-relaxed text-white">
               Videha Overseas is a dedicated supply chain partner. We coordinate
               procurement, processing, grading, packaging, and logistics to make
               importing premium Indian makhana reliable and risk-free.
@@ -168,17 +169,41 @@ export default function ServicesPage() {
         </div>
       </header>
 
-      {/* INTERACTIVE SERVICE INDEX */}
+      {/* MOBILE INTERACTIVE SERVICE INDEX (FILMSTRIP) */}
+      <div className="lg:hidden border-b border-border">
+        <FeatureFilmstrip
+          className="block"
+          title={
+            <div>
+              <span className="text-[10px] font-mono uppercase tracking-[0.24em] text-accent block mb-1">
+                CORE SUPPLY CAPABILITIES
+              </span>
+              <h2 className="text-2xl font-semibold tracking-tight text-foreground">
+                Interactive Service Index
+              </h2>
+            </div>
+          }
+          items={SERVICES_DATA.map((s) => ({
+            num: s.num,
+            title: s.title,
+            tagline: s.tagline,
+            description: s.copy,
+            image: s.image,
+          }))}
+        />
+      </div>
+
+      {/* DESKTOP INTERACTIVE SERVICE INDEX */}
       <section
         ref={stickyContainerRef}
-        className="relative border-b border-border bg-background"
+        className="hidden lg:block relative border-b border-border bg-background"
         style={{ height: `${SERVICES_DATA.length * 80}vh` }}
       >
-        <div className="sticky top-0 lg:top-10 h-screen flex items-center">
-          <div className="mx-auto max-w-[1400px] px-5 md:px-10 w-full">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-stretch max-h-[90vh]">
+        <div className="sticky top-10 h-screen flex items-center">
+          <div className="mx-auto max-w-[1400px] px-10 w-full">
+            <div className="grid grid-cols-12 gap-16 items-stretch max-h-[90vh]">
               {/* Left: Vertical Index List — desktop/laptop only */}
-              <div className="hidden lg:flex lg:col-span-6 h-full flex-col gap-1 overflow-y-auto pr-2">
+              <div className="col-span-6 h-full flex flex-col gap-1 overflow-y-auto pr-2">
                 <span className="text-[10px] font-mono uppercase tracking-[0.24em] text-accent block mb-4">
                   CORE SUPPLY CAPABILITIES
                 </span>
@@ -220,8 +245,8 @@ export default function ServicesPage() {
                 ))}
               </div>
 
-              {/* Right: Preview Pane — full width on mobile/tablet */}
-              <div className="col-span-1 lg:col-span-6 h-full overflow-y-auto border-0 lg:border lg:border-border bg-background p-2 lg:p-7 shadow-xs lg:shadow-xs">
+              {/* Right: Preview Pane */}
+              <div className="col-span-6 h-full overflow-y-auto border border-border bg-background p-7 shadow-xs">
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={activeIndex}
@@ -231,8 +256,7 @@ export default function ServicesPage() {
                     transition={{ duration: 0.35, ease: "easeInOut" }}
                     className="flex flex-col gap-4"
                   >
-                    {/* Service name — above the image, bigger on mobile */}
-                    <h3 className="text-2xl md:text-xl font-semibold tracking-tight text-primary">
+                    <h3 className="text-xl font-semibold tracking-tight text-primary">
                       {SERVICES_DATA[activeIndex].title}
                     </h3>
 
@@ -242,7 +266,7 @@ export default function ServicesPage() {
                         alt={SERVICES_DATA[activeIndex].title}
                         fill
                         className="object-cover"
-                        sizes="(max-width: 1024px) 100vw, 40vw"
+                        sizes="40vw"
                       />
                     </div>
 
@@ -273,7 +297,7 @@ export default function ServicesPage() {
                     </div>
 
                     <Link
-                      href="/contact"
+                      href={`/contact?service=${encodeURIComponent(SERVICES_DATA[activeIndex].title)}`}
                       className="group inline-flex items-center gap-2 text-[12px] font-medium uppercase tracking-[0.18em] text-primary hover:gap-3 transition-all w-fit border-2 border-foreground/25 px-5 py-2.5"
                     >
                       Request Quotation
@@ -398,7 +422,7 @@ export default function ServicesPage() {
               </div>
 
               <Link
-                href="/contact"
+                href="/contact?subject=Service+Quotation+Request"
                 className="group inline-flex items-center gap-3 border border-background/40 px-8 py-4 text-[12px] font-medium uppercase tracking-[0.18em] text-background hover:bg-background hover:text-foreground transition-colors whitespace-nowrap"
               >
                 Request Quotation

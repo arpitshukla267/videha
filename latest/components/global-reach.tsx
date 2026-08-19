@@ -10,7 +10,7 @@ type GlobalReachProps = {
 
 export function GlobalReach({ preview = false }: GlobalReachProps) {
   return (
-    <section className="overflow-hidden bg-videha-mist">
+    <section className="overflow-hidden bg-secondary/30">
       <div className="mx-auto max-w-[95vw] px-5 py-24 md:px-10 md:py-32">
         <div className="grid grid-cols-1 gap-12 lg:grid-cols-12 lg:items-stretch lg:gap-14">
           {/* Content */}

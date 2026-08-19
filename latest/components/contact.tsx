@@ -35,14 +35,14 @@ const FIELDS = [
     name: "company",
     label: "Company",
     type: "text",
-    placeholder: "Company name",
+    placeholder: "Your Company name",
     required: false,
   },
   {
     name: "email",
     label: "Email",
     type: "email",
-    placeholder: "you@company.com",
+    placeholder: "Your Email",
     required: true,
   },
   {
@@ -56,21 +56,21 @@ const FIELDS = [
     name: "phone",
     label: "Phone",
     type: "tel",
-    placeholder: "+1 · +44 · +971",
+    placeholder: "Your Mobile No.",
     required: false,
   },
   {
     name: "volume",
     label: "Expected Monthly Volume",
     type: "text",
-    placeholder: "e.g. 2–5 MT / month",
+    placeholder: "",
     required: false,
   },
   {
     name: "port",
     label: "Destination Port / Market",
     type: "text",
-    placeholder: "e.g. Dubai / Jebel Ali",
+    placeholder: "",
     required: false,
   },
 ] as const;
@@ -130,7 +130,7 @@ function MultiSelect({
 
   return (
     <div ref={ref} className="relative flex flex-col">
-      <label className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+      <label className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
         {label}
         {required && <span className="ml-1 text-videha-green">*</span>}
       </label>
@@ -174,7 +174,7 @@ function MultiSelect({
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.9 }}
-                className="inline-flex items-center gap-1 rounded-full bg-videha-mist px-2.5 py-1 text-[10px] font-medium text-videha-navy"
+                className="inline-flex items-center gap-1 rounded-full bg-videha-mist px-2.5 py-1 text-xs font-medium text-videha-navy"
               >
                 {item}
 
@@ -257,14 +257,14 @@ function MultiSelect({
 
             {/* Footer */}
             <div className="flex items-center justify-between border-t border-border px-3 py-2.5">
-              <span className="text-[10px] text-muted-foreground">
+              <span className="text-xs text-muted-foreground">
                 {selected.length} selected
               </span>
 
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="text-[10px] font-semibold uppercase tracking-[0.12em] text-videha-green"
+                className="text-xs font-semibold uppercase tracking-[0.12em] text-videha-green"
               >
                 Done
               </button>
@@ -285,6 +285,72 @@ export function Contact({
 
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const params = new URLSearchParams(window.location.search);
+    const paramProduct = params.get("product") || params.get("p");
+    const paramService = params.get("service") || params.get("s");
+    const paramSubject =
+      params.get("subject") || params.get("interest") || params.get("enquiry");
+    const paramMessage = params.get("message");
+
+    if (paramProduct) {
+      const cleanParam = decodeURIComponent(paramProduct).trim();
+      const normalized = cleanParam.toLowerCase().replace(/[-_]/g, " ");
+
+      // Match against PRODUCTS
+      const matched = PRODUCTS.find(
+        (p) =>
+          p.toLowerCase() === normalized ||
+          p.toLowerCase().includes(normalized) ||
+          normalized.includes(
+            p.toLowerCase().replace(/[^a-z0-9]/g, " ").trim().split(" ")[0]
+          )
+      );
+
+      const targetProduct = matched || cleanParam;
+      setSelectedProducts((prev) =>
+        prev.includes(targetProduct) ? prev : [...prev, targetProduct]
+      );
+    }
+
+    if (paramService) {
+      const cleanParam = decodeURIComponent(paramService).trim();
+      const normalized = cleanParam.toLowerCase().replace(/[-_]/g, " ");
+
+      // Match against SERVICES
+      const matched = SERVICES.find(
+        (s) =>
+          s.toLowerCase() === normalized ||
+          s.toLowerCase().includes(normalized) ||
+          normalized.includes(
+            s.toLowerCase().replace(/[^a-z0-9]/g, " ").trim().split(" ")[0]
+          )
+      );
+
+      const targetService = matched || cleanParam;
+      setSelectedServices((prev) =>
+        prev.includes(targetService) ? prev : [...prev, targetService]
+      );
+    }
+
+    if (paramSubject || paramMessage) {
+      const textToFill =
+        paramMessage ||
+        (paramSubject ? `Enquiry regarding: ${paramSubject}` : "");
+      if (textToFill) {
+        setTimeout(() => {
+          const msgInput = (document.getElementById("message") ||
+            document.getElementById("preview-message")) as HTMLTextAreaElement | null;
+          if (msgInput && !msgInput.value) {
+            msgInput.value = textToFill;
+          }
+        }, 100);
+      }
+    }
+  }, []);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -310,8 +376,8 @@ export function Contact({
   }
 
   return (
-    <section className="border-t border-border bg-background">
-      <div className="mx-auto max-w-[1400px] px-5 py-20 md:px-10 md:py-28">
+    <section className="bg-background">
+      <div className="mx-auto max-w-[1400px] px-5 py-20 md:px-10 md:py-20">
         <div className="grid grid-cols-1 gap-12 lg:grid-cols-12 lg:gap-16">
           {/* LEFT */}
           <div className="flex flex-col justify-between lg:col-span-5">
@@ -335,7 +401,7 @@ export function Contact({
 
             <div className="mt-10 flex flex-col gap-5 border-t border-border pt-7 text-xs">
               <div>
-                <span className="text-[9px] font-medium uppercase tracking-[0.15em] text-muted-foreground">
+                <span className="text-xs font-medium uppercase tracking-[0.15em] text-muted-foreground">
                   Export Division Email
                 </span>
 
@@ -348,7 +414,7 @@ export function Contact({
               </div>
 
               <div>
-                <span className="text-[9px] font-medium uppercase tracking-[0.15em] text-muted-foreground">
+                <span className="text-xs font-medium uppercase tracking-[0.15em] text-muted-foreground">
                   Telephone Inquiries
                 </span>
 
@@ -359,7 +425,7 @@ export function Contact({
 
               <div className="grid grid-cols-2 gap-5">
                 <div>
-                  <span className="text-[9px] font-medium uppercase tracking-[0.15em] text-muted-foreground">
+                  <span className="text-xs font-medium uppercase tracking-[0.15em] text-muted-foreground">
                     Operating Hours
                   </span>
 
@@ -373,7 +439,7 @@ export function Contact({
                 </div>
 
                 <div>
-                  <span className="text-[9px] font-medium uppercase tracking-[0.15em] text-muted-foreground">
+                  <span className="text-xs font-medium uppercase tracking-[0.15em] text-muted-foreground">
                     Procurement Hub
                   </span>
 
@@ -429,7 +495,7 @@ export function Contact({
                           htmlFor={
                             preview ? `preview-${field.name}` : field.name
                           }
-                          className="text-[10px] font-medium uppercase tracking-[0.15em] text-muted-foreground transition-colors group-focus-within:text-videha-green"
+                          className="text-xs font-medium uppercase tracking-[0.15em] text-muted-foreground transition-colors group-focus-within:text-videha-green"
                         >
                           {field.label}
 
@@ -473,7 +539,7 @@ export function Contact({
                   <div className="mt-8 flex flex-col group">
                     <label
                       htmlFor={preview ? "preview-message" : "message"}
-                      className="text-[10px] font-medium uppercase tracking-[0.15em] text-muted-foreground transition-colors group-focus-within:text-videha-green"
+                      className="text-xs font-medium uppercase tracking-[0.15em] text-muted-foreground transition-colors group-focus-within:text-videha-green"
                     >
                       Requirement / Message
                       <span className="ml-1 text-videha-green">*</span>
@@ -493,7 +559,7 @@ export function Contact({
                   <div className="mt-9 flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
                     <button
                       type="submit"
-                      className="group inline-flex w-fit cursor-pointer items-center gap-3 bg-videha-navy px-7 py-3.5 text-[11px] font-medium uppercase tracking-[0.18em] text-white transition-colors hover:bg-videha-green"
+                      className="group inline-flex w-fit bg-black cursor-pointer items-center gap-3 bg-videha-navy px-7 py-3.5 text-[11px] font-medium uppercase tracking-[0.18em] text-white transition-colors hover:bg-videha-green"
                     >
                       Send Enquiry
                       <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />

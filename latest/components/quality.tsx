@@ -44,7 +44,7 @@ export function Quality({ preview = false }: QualityProps) {
                   <h3 className="mt-2 text-base font-medium text-background">
                     {p.title}
                   </h3>
-                  <p className="mt-1.5 text-[13px] leading-relaxed text-background/60">
+                  <p className="mt-1.5 text-sm leading-relaxed text-background/60">
                     {p.copy}
                   </p>
                 </div>
@@ -52,7 +52,7 @@ export function Quality({ preview = false }: QualityProps) {
             ))}
           </div>
 
-          {preview && (
+          {/* {preview && (
             <Reveal delay={0.2}>
               <Link
                 href="/quality"
@@ -61,7 +61,7 @@ export function Quality({ preview = false }: QualityProps) {
                 Our quality philosophy →
               </Link>
             </Reveal>
-          )}
+          )} */}
         </div>
       </div>
     </section>

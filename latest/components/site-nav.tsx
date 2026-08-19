@@ -1,52 +1,67 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { cn } from "@/lib/utils"
-import { Menu, X } from "lucide-react"
-import { motion, AnimatePresence } from "framer-motion"
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { cn } from "@/lib/utils";
+import { Menu, X, Download } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 const LINKS = [
-  { label: "Home", href: "/"},
+  { label: "Home", href: "/" },
   { label: "About", href: "/about" },
   { label: "Products", href: "/products" },
   { label: "Services", href: "/services" },
   { label: "Why Videha", href: "/why-videha" },
   { label: "Contact", href: "/contact" },
-]
+];
 
 export function SiteNav() {
-  const [scrolled, setScrolled] = useState(false)
-  const [open, setOpen] = useState(false)
-  const pathname = usePathname()
+  const [scrolled, setScrolled] = useState(false);
+  const [open, setOpen] = useState(false);
+  const pathname = usePathname();
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 24)
-    onScroll()
-    window.addEventListener("scroll", onScroll, { passive: true })
-    return () => window.removeEventListener("scroll", onScroll)
-  }, [])
+    const onScroll = () => setScrolled(window.scrollY > 24);
 
-  // Close the mobile menu whenever the route changes and restore scroll
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  // Close menu when route changes
   useEffect(() => {
-    setOpen(false)
-    document.body.style.overflow = "unset"
-  }, [pathname])
+    setOpen(false);
+    document.body.style.overflow = "unset";
+  }, [pathname]);
+
+  // Lock body scroll while menu is open
+  useEffect(() => {
+    if (open) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
+    }
+
+    return () => {
+      document.body.style.overflow = "unset";
+    };
+  }, [open]);
 
   const toggleMenu = () => {
-    setOpen((prev) => {
-      const next = !prev
-      if (next) {
-        document.body.style.overflow = "hidden"
-      } else {
-        document.body.style.overflow = "unset"
-      }
-      return next
-    })
-  }
+    setOpen((prev) => !prev);
+  };
 
-  const isActive = (href: string) => pathname === href
+  const closeMenu = () => {
+    setOpen(false);
+  };
+
+  const isActive = (href: string) => pathname === href;
+
+  /* Transparent dark mode for Home page (/) and Services page (/services) when at top */
+  const isTransparentRoute = pathname === "/" || pathname === "/services" || pathname?.startsWith("/services/");
+  const isTopTransparent = isTransparentRoute && !scrolled && !open;
 
   return (
     <>
@@ -54,7 +69,7 @@ export function SiteNav() {
         className={cn(
           "fixed inset-x-0 top-0 z-50 transition-all duration-500",
           scrolled || open
-            ? "border-b border-border/70 bg-background/85 backdrop-blur-md"
+            ? "border-b border-border/70 bg-background/95 backdrop-blur-md shadow-xs"
             : "border-b border-transparent bg-transparent",
         )}
       >
@@ -64,23 +79,48 @@ export function SiteNav() {
             scrolled ? "h-16" : "h-24",
           )}
         >
-          <Link href="/" className="flex flex-col leading-none z-50">
-            <span className="text-lg font-semibold tracking-tight text-foreground">Videha</span>
-            <span className="text-[10px] font-medium uppercase tracking-[0.34em] text-muted-foreground">
+          {/* Logo */}
+          <Link
+            href="/"
+            onClick={closeMenu}
+            className="relative z-50 flex flex-col leading-none"
+          >
+            <span
+              className={cn(
+                "text-lg font-semibold tracking-tight transition-colors duration-300",
+                isTopTransparent ? "text-white" : "text-foreground",
+              )}
+            >
+              Videha
+            </span>
+
+            <span
+              className={cn(
+                "text-[10px] font-medium uppercase tracking-[0.34em] transition-colors duration-300",
+                isTopTransparent ? "text-white/70" : "text-muted-foreground",
+              )}
+            >
               Overseas
             </span>
           </Link>
 
+          {/* Desktop Navigation */}
           <ul className="hidden items-center gap-8 lg:flex">
             {LINKS.map((l) => (
               <li key={l.href}>
                 <Link
                   href={l.href}
                   className={cn(
-                    "relative text-[13px] font-medium transition-colors after:absolute after:-bottom-1.5 after:left-0 after:h-px after:bg-foreground after:transition-all after:duration-300",
-                    isActive(l.href)
-                      ? "text-foreground after:w-full"
-                      : "text-foreground/60 after:w-0 hover:text-foreground hover:after:w-full",
+                    "relative text-[13px] font-medium transition-colors duration-300",
+                    "after:absolute after:-bottom-1.5 after:left-0 after:h-px",
+                    "after:transition-all after:duration-300",
+                    isTopTransparent
+                      ? isActive(l.href)
+                        ? "text-white after:w-full after:bg-white"
+                        : "text-white/80 after:w-0 after:bg-white hover:text-white hover:after:w-full"
+                      : isActive(l.href)
+                        ? "text-foreground after:w-full after:bg-foreground"
+                        : "text-foreground/70 after:w-0 after:bg-foreground hover:text-foreground hover:after:w-full",
                   )}
                 >
                   {l.label}
@@ -89,89 +129,161 @@ export function SiteNav() {
             ))}
           </ul>
 
-          <div className="flex items-center gap-3 z-50">
+          {/* Desktop CTA + Mobile Menu Button */}
+          <div className="relative z-50 flex items-center gap-3">
             <Link
               href="/contact"
-              className="hidden items-center border border-foreground/25 px-5 py-2.5 text-[12px] font-medium uppercase tracking-[0.18em] text-foreground transition-colors hover:bg-foreground hover:text-background lg:inline-flex"
+              className={cn(
+                "hidden items-center px-5 py-2.5 text-[12px] font-medium uppercase tracking-[0.18em] transition-all duration-300 lg:inline-flex",
+                isTopTransparent
+                  ? "border border-white/40 text-white hover:bg-white hover:text-black"
+                  : "border border-foreground/25 text-foreground hover:bg-foreground hover:text-background",
+              )}
             >
               Enquire
             </Link>
+
             <button
               type="button"
               aria-label={open ? "Close menu" : "Open menu"}
+              aria-expanded={open}
               onClick={toggleMenu}
-              className="lg:hidden inline-flex h-10 w-10 items-center justify-center text-foreground hover:opacity-80 transition-opacity"
+              className={cn(
+                "inline-flex h-10 w-10 items-center justify-center transition-colors lg:hidden",
+                isTopTransparent ? "text-white" : "text-foreground",
+              )}
             >
-              {open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+              <AnimatePresence mode="wait" initial={false}>
+                {open ? (
+                  <motion.span
+                    key="close"
+                    initial={{ rotate: -90, opacity: 0 }}
+                    animate={{ rotate: 0, opacity: 1 }}
+                    exit={{ rotate: 90, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <X className="h-6 w-6" />
+                  </motion.span>
+                ) : (
+                  <motion.span
+                    key="menu"
+                    initial={{ rotate: 90, opacity: 0 }}
+                    animate={{ rotate: 0, opacity: 1 }}
+                    exit={{ rotate: -90, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <Menu className="h-6 w-6" />
+                  </motion.span>
+                )}
+              </AnimatePresence>
             </button>
           </div>
         </nav>
-      </header>
 
-      {/* Premium Fullscreen Mobile Menu Overlay */}
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-            className="fixed inset-0 z-40 flex flex-col justify-between bg-background px-6 pt-32 pb-12 lg:hidden"
-          >
-            <div className="flex flex-col justify-center flex-1">
-              <span className="text-[10px] font-mono uppercase tracking-[0.3em] text-accent mb-6">
-                Navigation
-              </span>
-              <ul className="flex flex-col gap-6">
-                {LINKS.map((l, i) => (
-                  <motion.li
-                    key={l.href}
-                    initial={{ opacity: 0, x: -30 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.1 + i * 0.05, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-                  >
-                    <Link
-                      href={l.href}
-                      className="group flex items-baseline gap-4 py-1.5"
-                    >
-                      <span className="font-mono text-xs text-accent/50 group-hover:text-accent transition-colors">
-                        0{i + 1}
-                      </span>
-                      <span className={cn(
-                        "text-3xl font-semibold tracking-tight transition-colors",
-                        isActive(l.href) ? "text-primary" : "text-foreground hover:text-primary"
-                      )}>
-                        {l.label}
-                      </span>
-                    </Link>
-                  </motion.li>
-                ))}
-              </ul>
-            </div>
-
+        {/* ================= MOBILE MENU ================= */}
+        <AnimatePresence>
+          {open && (
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.35 }}
-              className="border-t border-border/60 pt-6 flex flex-col gap-4"
+              initial={{
+                opacity: 0,
+                scaleY: 0,
+              }}
+              animate={{
+                opacity: 1,
+                scaleY: 1,
+              }}
+              exit={{
+                opacity: 0,
+                scaleY: 0,
+              }}
+              transition={{
+                duration: 0.28,
+                ease: [0.22, 1, 0.36, 1],
+              }}
+              style={{
+                transformOrigin: "top",
+              }}
+              className="
+                absolute left-0 right-0 top-full
+                overflow-hidden
+                border-t border-border/60
+                bg-background
+                lg:hidden
+                shadow-[0_14px_24px_rgba(0,0,0,0.10)]
+              "
             >
-              <div className="flex flex-col text-xs text-muted-foreground font-mono">
-                <span>EXPORT ENQUIRY DESK</span>
-                <a href="mailto:export@videhaoverseas.com" className="text-foreground font-medium mt-1 hover:underline">
-                  export@videhaoverseas.com
-                </a>
-              </div>
-              <Link
-                href="/contact"
-                className="inline-flex w-full items-center justify-center bg-foreground px-5 py-4 text-[12px] font-medium uppercase tracking-[0.18em] text-background transition-colors hover:bg-primary"
-              >
-                Send Enquiry
-              </Link>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </>
-  )
-}
+              <div className="max-h-[calc(100dvh-4rem)] overflow-y-auto">
+                <ul>
+                  {LINKS.map((link) => (
+                    <li key={link.href}>
+                      <Link
+                        href={link.href}
+                        onClick={closeMenu}
+                        className={cn(
+                          "group flex items-center px-7 py-5",
+                          "border-b border-border/70",
+                          "transition-colors duration-200",
+                          "hover:bg-muted/40",
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            "text-[17px] font-medium tracking-tight",
+                            "transition-transform duration-200",
+                            isActive(link.href)
+                              ? "translate-x-1 text-foreground font-semibold"
+                              : "text-muted-foreground group-hover:translate-x-1 group-hover:text-foreground",
+                          )}
+                        >
+                          {link.label}
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
 
+                  {/* Download Brochure */}
+                  <li>
+                    <a
+                      href="/brochure.pdf"
+                      download
+                      onClick={closeMenu}
+                      className="
+                        group flex items-center justify-between
+                        border-b border-border/70
+                        px-7 py-5
+                        transition-colors duration-200
+                        hover:bg-muted/40
+                      "
+                    >
+                      <span
+                        className="
+                          text-[17px] font-medium tracking-tight
+                          text-muted-foreground
+                          transition-transform duration-200
+                          group-hover:translate-x-1
+                          group-hover:text-foreground
+                        "
+                      >
+                        Download Brochure
+                      </span>
+
+                      <Download
+                        className="
+                          h-5 w-5
+                          text-muted-foreground
+                          transition-all duration-200
+                          group-hover:translate-y-0.5
+                          group-hover:text-foreground
+                        "
+                      />
+                    </a>
+                  </li>
+                </ul>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </header>
+    </>
+  );
+}

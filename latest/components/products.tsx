@@ -42,7 +42,7 @@ const getSlug = (name: string) => {
 export function Products() {
   return (
     <section id="products" className="border-t border-border bg-background">
-      <div className="mx-auto max-w-[1680px] px-5 py-24 sm:px-8 md:px-10 lg:py-32 xl:px-12">
+      <div className="mx-auto max-w-[1680px] px-3 py-12 md:py-24 sm:px-8 md:px-10 lg:py-32 xl:px-12">
         {/* Header */}
         <div className="mb-14 md:mb-16">
           <Reveal>
@@ -57,12 +57,12 @@ export function Products() {
         </div>
 
         {/* Product Grid */}
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-x-2 gap-y-4 md:gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {PRODUCTS.map((product, index) => (
             <Reveal key={product.name} delay={index * 0.06} className="h-full">
               <article className="group flex h-full flex-col overflow-hidden rounded-[5px] border border-border bg-background transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_18px_45px_rgba(0,0,0,0.08)]">
                 {/* Image */}
-                <div className="relative aspect-[1.18/1] w-full overflow-hidden bg-secondary">
+                <div className="relative aspect-[5/5] md:aspect-[1.18/1] w-full overflow-hidden bg-secondary">
                   <Image
                     src={product.image || "/placeholder.svg"}
                     alt={product.name}
@@ -77,8 +77,8 @@ export function Products() {
                 </div>
 
                 {/* Content */}
-                <div className="flex flex-1 flex-col p-5">
-                  <h3 className="text-[19px] font-medium leading-[1.25] tracking-[-0.02em] text-foreground">
+                <div className="flex flex-1 flex-col p-3 md:p-5">
+                  <h3 className="text-lg md:text-xl font-medium leading-[1.15] tracking-[-0.03em] text-foreground">
                     {product.name}
                   </h3>
 
@@ -86,14 +86,20 @@ export function Products() {
                     {product.copy}
                   </p>
 
-                  {/* Button */}
-                  <div className="mt-auto pt-5">
+                  {/* Buttons */}
+                  <div className="mt-auto pt-5 grid grid-cols-2 gap-2">
                     <Link
                       href={`/products/${getSlug(product.name)}`}
-                      className="group/btn flex h-11 w-full items-center justify-center gap-2 border border-foreground/80 text-[13px] font-medium uppercase tracking-wide text-foreground transition-all duration-300 hover:bg-foreground hover:text-background"
+                      className="group/btn flex h-10 w-full items-center justify-center border border-foreground/60 text-[11px] font-medium uppercase tracking-wide text-foreground transition-all duration-300 hover:bg-foreground hover:text-background"
                     >
-                      View Details
-                      <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover/btn:translate-x-1" />
+                      Details
+                    </Link>
+                    <Link
+                      href={`/contact?product=${encodeURIComponent(product.name)}`}
+                      className="group/btn flex h-10 w-full items-center justify-center gap-1 bg-foreground text-[11px] font-medium uppercase tracking-wide text-background transition-all duration-300 hover:bg-primary"
+                    >
+                      Enquire
+                      <ArrowRight className="w-3 h-3 transition-transform group-hover/btn:translate-x-0.5" />
                     </Link>
                   </div>
                 </div>

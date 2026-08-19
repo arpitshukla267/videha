@@ -5,7 +5,6 @@ import { notFound } from "next/navigation"
 import { Poppins } from "next/font/google"
 import {
   ArrowRight,
-  CheckCircle2,
   ShieldCheck,
   Search,
   MessageCircle,
@@ -13,9 +12,8 @@ import {
   Recycle,
   MapPin,
 } from "lucide-react"
-import { SectionLabel } from "@/components/section-label"
-import { Reveal } from "@/components/reveal"
-import { OriginSealGraphic, ComplianceBadgesGraphic } from "@/components/graphics"
+import { Lens } from "@/components/ui/lens";
+import { ComplianceBadgesGraphic } from "@/components/graphics"
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -187,13 +185,15 @@ export default async function ProductDetailPage({ params }: PageProps) {
   ]
 
   return (
-    <main className={`${poppins.variable} font-sans overflow-hidden bg-background`}>
+    <main
+      className={`${poppins.variable} font-sans overflow-hidden bg-background`}
+    >
       {/* Breadcrumb strip */}
-      <div className="border-b border-border pt-28 md:pt-30 pb-6 bg-background">
-        <div className="mx-auto max-w-[1400px] px-5 md:px-10">
+      <div className=" pt-28 md:pt-30 pb-6 bg-background">
+        <div className="mx-auto max-w-[1400px] px-5 md:px-8">
           <Link
             href="/products"
-            className="inline-flex items-center gap-2 text-xs font-mono text-muted-foreground hover:text-foreground transition-colors"
+            className="inline-flex items-center gap-2 text-md font-mono text-muted-foreground hover:text-foreground transition-colors"
           >
             ← Back to Product Range
           </Link>
@@ -205,30 +205,19 @@ export default async function ProductDetailPage({ params }: PageProps) {
         <div className="mx-auto max-w-[1400px] px-5 md:px-10">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-start">
 
-            {/* Left: Image with zoom icon */}
+            {/* Left: Product Image with Cursor Zoom */}
             <div className="relative aspect-square w-full overflow-hidden border border-border bg-secondary">
-              <Image
+              <Lens
                 src={product.image}
                 alt={product.name}
-                fill
-                className="object-cover"
-                sizes="(max-width: 1024px) 100vw, 50vw"
-                priority
+                zoomFactor={2.2}
+                lensSize={180}
+                className="h-full w-full"
               />
-              <button
-                type="button"
-                aria-label="Zoom image"
-                className="absolute top-4 right-4 w-11 h-11 rounded-full bg-background/95 border border-border flex items-center justify-center hover:bg-background transition-colors"
-              >
-                <Search className="w-4 h-4 text-foreground" />
-              </button>
             </div>
 
             {/* Right: Title, description, categories, actions */}
             <div className="flex flex-col">
-              <span className="font-mono text-xs font-bold text-accent block mb-3">
-                PRODUCT {product.index}
-              </span>
               <h1 className="text-[clamp(2rem,4vw,3rem)] font-semibold leading-[1.05] tracking-[-0.02em] text-foreground">
                 {product.name}
               </h1>
@@ -259,7 +248,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
               {/* CTA buttons */}
               <div className="mt-8 flex flex-col sm:flex-row gap-4">
                 <Link
-                  href={`/contact?product=${slug}`}
+                  href={`/contact?product=${encodeURIComponent(product.name)}`}
                   className="group inline-flex items-center justify-center gap-2 bg-foreground text-background px-8 py-4 text-sm font-medium hover:bg-primary transition-colors"
                 >
                   <ArrowRight className="w-4 h-4" />
@@ -284,12 +273,13 @@ export default async function ProductDetailPage({ params }: PageProps) {
                     className="flex flex-col items-center text-center gap-2 border border-border p-4"
                   >
                     <Icon className="w-6 h-6 text-primary" />
-                    <span className="text-xs text-muted-foreground">{label}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {label}
+                    </span>
                   </div>
                 ))}
               </div>
             </div>
-
           </div>
         </div>
       </section>
@@ -304,12 +294,16 @@ export default async function ProductDetailPage({ params }: PageProps) {
             {product.specs.map((spec, i) => (
               <div
                 key={spec.label}
-                className={`grid grid-cols-1 sm:grid-cols-3 gap-2 px-6 py-4 text-xs ${
+                className={`grid grid-cols-1 sm:grid-cols-3 gap-2 px-6 py-4 ${
                   i !== product.specs.length - 1 ? "border-b border-border" : ""
                 }`}
               >
-                <span className="font-mono text-muted-foreground uppercase">{spec.label}</span>
-                <span className="sm:col-span-2 font-medium text-foreground">{spec.value}</span>
+                <span className="font-medium text-sm uppercase">
+                  {spec.label}
+                </span>
+                <span className="sm:col-span-2 text-sm">
+                  {spec.value}
+                </span>
               </div>
             ))}
           </div>
@@ -324,18 +318,21 @@ export default async function ProductDetailPage({ params }: PageProps) {
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {product.processingSteps.map((step, idx) => (
-              <div key={idx} className="flex items-start gap-4 border border-border p-5 bg-[#f8f6f0]">
+              <div
+                key={idx}
+                className="flex items-start gap-4 border border-border p-5 bg-[#f8f6f0]"
+              >
                 <span className="font-mono text-xs font-bold text-accent bg-secondary px-2.5 py-1">
                   0{idx + 1}
                 </span>
-                <p className="text-xs md:text-sm text-foreground font-medium mt-1">{step}</p>
+                <p className="text-xs md:text-sm text-foreground font-medium mt-1">
+                  {step}
+                </p>
               </div>
             ))}
           </div>
         </div>
       </section>
-
-
 
       {/* Compliance & Standards */}
       <section className="border-t border-border py-16 bg-background">
@@ -349,5 +346,5 @@ export default async function ProductDetailPage({ params }: PageProps) {
         </div>
       </section>
     </main>
-  )
+  );
 }

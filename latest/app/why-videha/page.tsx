@@ -158,7 +158,7 @@ export default function WhyVidehaPage() {
       </section>
 
       {/* WHAT BUYERS CAN EXPECT */}
-      <section className="py-24 md:py-32 bg-[#f8f6f0] border-b border-border">
+      <section className="py-24 md:py-32 bg-secondary/30 border-b border-border">
         <div className="mx-auto max-w-[1400px] px-5 md:px-10">
           <div className="max-w-2xl mb-16">
             <span className="text-[10px] font-mono uppercase tracking-[0.24em] text-accent">
@@ -214,7 +214,7 @@ export default function WhyVidehaPage() {
               </div>
 
               <Link
-                href="/contact"
+                href="/contact?subject=EXIM+Sourcing+Contract"
                 className="group inline-flex items-center gap-3 border border-background/40 px-8 py-4 text-[12px] font-medium uppercase tracking-[0.18em] text-background hover:bg-background hover:text-foreground transition-colors whitespace-nowrap"
               >
                 Start EXIM Enquiry

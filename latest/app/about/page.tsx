@@ -3,20 +3,12 @@ import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowRight,
-  CheckCircle2,
-  ShieldCheck,
-  Sprout,
-  Award,
-  MapPin,
 } from "lucide-react";
 import { SectionLabel } from "@/components/section-label";
 import { Reveal } from "@/components/reveal";
-import {
-  OriginSealGraphic,
-  TraceabilityFlowGraphic,
-  ComplianceBadgesGraphic,
-} from "@/components/graphics";
 import { SourceToPartnershipSection } from "@/components/source-to-partnership";
+import { FeatureFilmstrip } from "@/components/ui/feature-filmstrip";
+import { FeatureRevealRow } from "@/components/ui/feature-reveal-row";
 
 export const metadata: Metadata = {
   title: "About — Videha Overseas",
@@ -100,11 +92,11 @@ const TIMELINE_FLOW = [
 
 export default function AboutPage() {
   return (
-    <main className="overflow-hidden bg-background">
+    <main className="overflow-x-clip bg-background">
       {/* HERO SECTION */}
-      <header className="relative min-h-[100svh] w-full overflow-hidden border-b border-border">
+      <header className="relative min-h-[100svh] w-full overflow-hidden">
         <Image
-          src="/about-3.png"
+          src="/about.png"
           alt="Bihar wetlands background"
           fill
           priority
@@ -119,7 +111,7 @@ export default function AboutPage() {
                 <SectionLabel>ABOUT VIDEHA</SectionLabel>
               </Reveal>
 
-              <h1 className="mt-6 max-w-[600px] text-[clamp(3.2rem,6.2vw,6rem)] font-normal leading-[0.91] tracking-[-0.055em] text-white md:text-[#24231F]">
+              <h1 className="mt-6 max-w-[600px] text-[clamp(3.2rem,6.2vw,5rem)] font-normal leading-[0.99] tracking-[-0.005em] text-white md:text-[#24231F]">
                 Built in India.
                 <br />
                 Ready for the
@@ -141,7 +133,7 @@ export default function AboutPage() {
       </header>
 
       {/* SECTION 02: THE ORIGIN OF MAKHANA (Bihar Cultivation) */}
-      <section className="border-b border-border bg-[#f8f6f0] py-24 md:py-32">
+      <section className="border-b border-border bg-secondary/30 py-24 md:py-32">
         <div className="mx-auto max-w-[1400px] px-5 md:px-10">
           <div className="mb-12">
             {/* <span className="text-[10px] font-mono uppercase tracking-[0.24em] text-accent">
@@ -212,15 +204,18 @@ export default function AboutPage() {
       </section>
 
       {/* SECTION 03: HOW WE THINK (Principles vertical list) */}
-      <section className="border-b border-border py-24 md:py-32">
+      <section className="border-b border-border md:py-24 md:py-32">
+        {/* Desktop content — inside max-width wrapper */}
         <div className="mx-auto max-w-[1400px] px-5 md:px-10">
-          <div className="mb-16">
+          {/* Desktop heading — normal, non-sticky */}
+          <div className="hidden md:block mb-16">
             <h2 className="mt-2 text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
               How We Think — Core Operating Principles
             </h2>
           </div>
 
-          <div className="flex flex-col gap-12">
+          {/* Desktop: existing row layout */}
+          <div className="hidden md:flex flex-col gap-12">
             {PRINCIPLES.map((p, idx) => (
               <Reveal key={p.num} delay={idx * 0.05}>
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 border-t border-border pt-12 items-start group">
@@ -260,6 +255,24 @@ export default function AboutPage() {
             ))}
           </div>
         </div>
+
+        {/* Mobile: sticky filmstrip — sits OUTSIDE the max-w/px wrapper
+            so its tall scroll-height container is a direct child of the
+            section, avoiding any intermediate overflow/padding clipping. */}
+        <FeatureFilmstrip
+          title={
+            <h2 className="text-2xl font-semibold tracking-tight text-foreground">
+              How We Think — Core Operating Principles
+            </h2>
+          }
+          items={PRINCIPLES.map((p) => ({
+            num: p.num,
+            title: p.title,
+            tagline: p.tagline,
+            description: p.description,
+            image: p.image,
+          }))}
+        />
       </section>
 
       {/* SECTION 04: FROM SOURCE TO PARTNERSHIP */}
@@ -296,7 +309,7 @@ export default function AboutPage() {
       </section>
 
       {/* CTA SECTION */}
-      <section className="py-20 md:py-28 bg-[#f8f6f0]">
+      <section className="py-20 md:py-28 bg-secondary/30">
         <div className="mx-auto max-w-[1400px] px-5 md:px-10">
           <Reveal>
             <div className="p-8 md:p-16 border border-border bg-background flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
@@ -321,7 +334,7 @@ export default function AboutPage() {
                   View Products
                 </Link>
                 <Link
-                  href="/contact"
+                  href="/contact?subject=Sample+Request"
                   className="group inline-flex items-center gap-3 bg-foreground px-8 py-4 text-[12px] font-medium uppercase tracking-[0.18em] text-background transition-colors hover:bg-primary whitespace-nowrap"
                 >
                   Request Samples

@@ -58,9 +58,9 @@ const DETAILED_PROCESS_DATA = [
 
 export default function OurProcessPage() {
   return (
-    <main className="overflow-hidden bg-background">
+    <main className="overflow-x-clip bg-background">
       {/* Hero Header */}
-      <header className="border-b border-border bg-[#f8f6f0] pt-36 md:pt-48 pb-16">
+      <header className="border-b border-border bg-secondary/30 pt-36 md:pt-48 pb-16">
         <div className="mx-auto max-w-[1400px] px-5 md:px-10">
           <div className="max-w-4xl">
             <Reveal>
@@ -99,7 +99,7 @@ export default function OurProcessPage() {
 
           <div className="flex flex-col border border-border">
             {/* Table Header */}
-            <div className="hidden lg:grid grid-cols-12 bg-[#f8f6f0] border-b border-border text-[11px] font-mono uppercase text-muted-foreground px-6 py-4">
+            <div className="hidden lg:grid grid-cols-12 bg-secondary/30 border-b border-border text-[11px] font-mono uppercase text-muted-foreground px-6 py-4">
               <div className="col-span-1">STEP</div>
               <div className="col-span-2">PHASE</div>
               <div className="col-span-3">WHAT HAPPENS</div>
@@ -143,7 +143,7 @@ export default function OurProcessPage() {
       </section>
 
       {/* EXPORT JOURNEY GRAPHIC */}
-      <section className="py-24 md:py-32 bg-[#f8f6f0] border-b border-border">
+      <section className="py-24 md:py-32 bg-secondary/30 border-b border-border">
         <div className="mx-auto max-w-[1400px] px-5 md:px-10">
           <div className="text-center max-w-2xl mx-auto mb-16">
             <span className="text-[10px] font-mono uppercase tracking-[0.24em] text-accent">
@@ -230,7 +230,7 @@ export default function OurProcessPage() {
               </div>
 
               <Link
-                href="/contact"
+                href="/contact?subject=Sample+Kits+%26+Specifications"
                 className="group inline-flex items-center gap-3 border border-background/40 px-8 py-4 text-[12px] font-medium uppercase tracking-[0.18em] text-background hover:bg-background hover:text-foreground transition-colors whitespace-nowrap"
               >
                 Connect With Us

@@ -28,7 +28,7 @@ const ICONS: Record<string, LucideIcon> = {
 };
 
 // How far down the viewport the "activation line" sits (0 = top, 1 = bottom)
-const LINE_POSITION = 0.42;
+const LINE_POSITION = 0.75;
 
 function useScrollRail(count: number) {
   const railRef = useRef<HTMLDivElement>(null);
@@ -105,9 +105,6 @@ export function SourceToPartnershipSection({
     <section className="border-b border-border bg-[#f8f6f0] py-24 md:py-32">
       <div className="mx-auto max-w-[1400px] px-5 md:px-10">
         <div className="mb-20 max-w-2xl mx-auto text-center">
-          <span className="font-mono text-[10px] uppercase tracking-[0.24em] text-accent">
-            Manifest 01–{steps.length.toString().padStart(2, "0")}
-          </span>
           <h2 className="mt-2 text-3xl font-semibold text-foreground md:text-4xl">
             From Source to Partnership
           </h2>
@@ -118,10 +115,10 @@ export function SourceToPartnershipSection({
         </div>
 
         <div className="relative max-w-3xl mx-auto">
-          {/* Rail track — centered on desktop, left-aligned on mobile */}
+          {/* Rail track — only the reached (accent) portion is rendered, nothing beyond it */}
           <div
             ref={railRef}
-            className="absolute left-[21px] md:left-1/2 top-2 bottom-2 w-px -translate-x-0 md:-translate-x-1/2 bg-border"
+            className="absolute left-[21px] md:left-1/2 top-2 bottom-2 w-px -translate-x-0 md:-translate-x-1/2"
           >
             <div
               className="w-px bg-accent transition-[height] duration-150 ease-out"
@@ -129,7 +126,7 @@ export function SourceToPartnershipSection({
             />
           </div>
 
-          <div className="flex flex-col gap-16 md:gap-24">
+          <div className="flex flex-col gap-28 md:gap-36 py-16">
             {steps.map((t, idx) => {
               const Icon = ICONS[t.label] ?? Sprout;
               const isPassed = passed[idx];
@@ -150,15 +147,15 @@ export function SourceToPartnershipSection({
                     )}
                   </div>
 
-                  {/* Icon node, centered on the rail */}
+                  {/* Icon node, centered on the rail — hidden until reached */}
                   <div
                     ref={(el) => {
                       iconRefs.current[idx] = el;
                     }}
                     className={`relative z-10 flex h-11 w-11 md:h-14 md:w-14 shrink-0 items-center justify-center justify-self-start md:justify-self-center rounded-full border bg-background transition-all duration-500 ${
                       isPassed
-                        ? "border-accent text-accent"
-                        : "border-border text-muted-foreground"
+                        ? "opacity-100 scale-100 border-accent text-accent"
+                        : "opacity-0 scale-75 border-border text-muted-foreground"
                     } ${isActive ? "ring-4 ring-accent/15" : ""}`}
                   >
                     <Icon
@@ -198,34 +195,19 @@ function StepContent({
   const isRight = align === "right";
 
   return (
-    <div className={`relative ${isRight ? "flex flex-col items-end" : ""}`}>
+    <div
+      className={`relative transition-all duration-500 ease-out ${
+        isRight ? "flex flex-col items-end" : ""
+      } ${isPassed ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}
+    >
       <span
         aria-hidden
-        className={`pointer-events-none absolute -top-8 select-none font-mono text-[56px] font-bold leading-none text-foreground/[0.06] md:text-[72px] ${
-          isRight ? "right-0" : "left-0"
+        className={`pointer-events-none absolute select-none font-mono text-[56px] font-bold leading-none text-foreground/[0.06] md:text-[72px] ${
+          isRight ? "right-0 -top-10" : "left-0  -top-14"
         }`}
       >
         {t.step}
       </span>
-
-      <div
-        className={`opacity-0 relative inline-flex items-center gap-1.5 border px-2 py-1 transition-colors duration-500 ${
-          isPassed ? "border-accent" : "border-border"
-        }`}
-      >
-        <span
-          className={`h-1.5 w-1.5 rounded-full transition-colors duration-500 ${
-            isPassed ? "bg-accent" : "bg-border"
-          }`}
-        />
-        <span
-          className={`font-mono text-[9px] uppercase tracking-wider transition-colors duration-500 ${
-            isPassed ? "text-accent" : "text-muted-foreground"
-          }`}
-        >
-          {t.label}
-        </span>
-      </div>
 
       <h3 className="relative mt-4 text-base font-bold text-foreground leading-tight md:text-lg">
         {t.title}

@@ -23,7 +23,7 @@ const FACTS = [
 
 export function Intro() {
   return (
-    <section id="about" className="border-y border-border bg-[#F7F5EF]">
+    <section id="about" className="border-y border-border bg-secondary/30">
       <div className="mx-auto max-w-[1600px] px-5 py-20 sm:px-8 md:px-10 md:py-28 lg:px-12 xl:px-16">
         <div className="grid grid-cols-1 items-stretch gap-12 lg:grid-cols-12 lg:gap-16 xl:gap-20">
           {/* LEFT — CONTENT */}
@@ -85,11 +85,11 @@ export function Intro() {
           <Reveal as="figure" delay={0.12} className="lg:col-span-6">
             <div className="relative h-full min-h-[420px] w-full overflow-hidden rounded-[4px] md:min-h-[520px] lg:min-h-[580px]">
               <Image
-                src="/hero.png"
+                src="/about-2.png"
                 alt="Lotus wetlands in India at golden hour where makhana is sourced"
                 fill
                 sizes="(max-width: 1024px) 100vw, 50vw"
-                className="object-cover object-center transition-transform duration-[1.2s] ease-out hover:scale-[1.025]"
+                className="object-cover object-right transition-transform duration-[1.2s] ease-out hover:scale-[1.025]"
               />
             </div>
           </Reveal>
