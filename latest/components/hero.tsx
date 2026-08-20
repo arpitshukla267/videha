@@ -150,7 +150,7 @@ function DesktopHero() {
   // `t` value as the growing image, so it fades in exactly as fast as the
   // image expands (see `contentOpacity` below and the growLeft/growTop/
   // growWidth/growHeight-driven wrapper in the JSX).
-  const contentOpacity = useTransform(t, [0, 1], [0, 1]);
+  const contentOpacity = useTransform(t, [0.5, 1], [0, 0.9]);
 
   useMotionValueEvent(t, "change", (v) => {
     const target =
