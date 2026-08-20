@@ -41,7 +41,7 @@ const getSlug = (name: string) => {
 
 export function Products() {
   return (
-    <section id="products" className="border-t border-border bg-background">
+    <section id="products" className="border-t border-border bg-secondary/30">
       <div className="mx-auto max-w-[1680px] px-3 py-12 md:py-24 sm:px-8 md:px-10 lg:py-32 xl:px-12">
         {/* Header */}
         <div className="mb-14 md:mb-16">
@@ -87,20 +87,20 @@ export function Products() {
                   </p>
 
                   {/* Buttons */}
-                  <div className="mt-auto pt-5 grid grid-cols-2 gap-2">
+                  <div className="mt-auto pt-5 grid grid-cols-1 gap-2">
                     <Link
                       href={`/products/${getSlug(product.name)}`}
                       className="group/btn flex h-10 w-full items-center justify-center border border-foreground/60 text-[11px] font-medium uppercase tracking-wide text-foreground transition-all duration-300 hover:bg-foreground hover:text-background"
                     >
                       Details
                     </Link>
-                    <Link
+                    {/* <Link
                       href={`/contact?product=${encodeURIComponent(product.name)}`}
                       className="group/btn flex h-10 w-full items-center justify-center gap-1 bg-foreground text-[11px] font-medium uppercase tracking-wide text-background transition-all duration-300 hover:bg-primary"
                     >
                       Enquire
                       <ArrowRight className="w-3 h-3 transition-transform group-hover/btn:translate-x-0.5" />
-                    </Link>
+                    </Link> */}
                   </div>
                 </div>
               </article>

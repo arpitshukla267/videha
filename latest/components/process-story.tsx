@@ -74,7 +74,9 @@ export function ProcessStory() {
   }, [])
 
   return (
-    <section id="process" className="relative border-t border-border bg-background">
+    <section
+      id="process"
+      className="relative border-t border-border bg-secondary/30">
       {/* ===== Desktop: pinned cinematic story ===== */}
       <div ref={sectionRef} className="hidden md:block py-6">
         <div ref={pinRef} className="relative h-screen w-full overflow-hidden">
@@ -83,7 +85,9 @@ export function ProcessStory() {
             <div className="col-span-5 flex flex-col justify-around pt-28 pb-20 pr-10 h-full">
               <h2 className="flex flex-col text-4xl font-semibold leading-[1.05] tracking-[-0.02em] text-foreground md:text-5xl">
                 <SectionLabel className="mb-4">Our Process</SectionLabel>
-                <span className="text-foreground">From Source to Global Markets</span>
+                <span className="text-foreground">
+                  From Source to Global Markets
+                </span>
               </h2>
 
               <div className="relative mt-22 h-[220px] my-auto">
@@ -121,7 +125,7 @@ export function ProcessStory() {
                   <div
                     key={s.num}
                     ref={(el) => {
-                      imageRefs.current[i] = el
+                      imageRefs.current[i] = el;
                     }}
                     className="absolute inset-0 will-change-[clip-path,transform]"
                     style={{ zIndex: i + 1 }}
@@ -161,5 +165,5 @@ export function ProcessStory() {
         }))}
       />
     </section>
-  )
+  );
 }

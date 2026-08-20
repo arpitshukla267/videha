@@ -73,20 +73,20 @@ export default function ProductsPage() {
 
 
                     {/* Buttons */}
-                    <div className="mt-auto pt-6 grid grid-cols-2 gap-2">
+                    <div className="mt-auto pt-6 grid grid-cols-1 gap-2">
                       <Link
                         href={`/products/${getSlug(product.name)}`}
                         className="group/btn flex h-10 w-full items-center justify-center border border-foreground/60 text-[11px] font-medium uppercase tracking-wide text-foreground transition-all duration-300 hover:bg-foreground hover:text-background"
                       >
                         Details
                       </Link>
-                      <Link
+                      {/* <Link
                         href={`/contact?product=${encodeURIComponent(product.name)}`}
                         className="group/btn flex h-10 w-full items-center justify-center gap-1 bg-foreground text-[11px] font-medium uppercase tracking-wide text-background transition-all duration-300 hover:bg-primary"
                       >
                         Enquire
                         <ArrowRight className="w-3 h-3 transition-transform group-hover/btn:translate-x-0.5" />
-                      </Link>
+                      </Link> */}
                     </div>
                   </div>
                 </article>
