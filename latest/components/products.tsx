@@ -8,25 +8,25 @@ const PRODUCTS = [
   {
     index: "01",
     name: "Classic Roasted Makhana",
-    image: "/images/product-classic.png",
+    image: "/images/product-classic.webp",
     copy: "Pure, plain-roasted fox nuts with a delicate crunch and clean flavour — the versatile foundation of the range, ideal for retail and private label.",
   },
   {
     index: "02",
     name: "Flavoured Makhana",
-    image: "/images/product-flavoured.png",
+    image: "/images/product-flavoured.webp",
     copy: "Lightly seasoned varieties developed for modern snacking — measured spice, natural ingredients and a finish tuned to international palates.",
   },
   {
     index: "03",
     name: "Bulk & Raw Export",
-    image: "/images/product-bulk.png",
+    image: "/images/product-bulk.webp",
     copy: "Graded raw and semi-processed fox nuts supplied in export volumes, sorted by size and packed to preserve integrity across long-haul shipping.",
   },
   {
     index: "04",
     name: "Makhana Powder",
-    image: "/images/product-powder.png",
+    image: "/images/product-powder.webp",
     copy: "Premium makhana powder processed for food manufacturers, wellness brands and private-label applications with consistent quality.",
   },
 ];
@@ -42,7 +42,7 @@ const getSlug = (name: string) => {
 export function Products() {
   return (
     <section id="products" className="border-t border-border bg-secondary/30">
-      <div className="mx-auto max-w-[1680px] px-3 py-12 md:py-24 sm:px-8 md:px-10 lg:py-32 xl:px-12">
+      <div className="mx-auto max-w-[1680px] px-3 py-12 md:py-8 sm:px-8 md:px-10 lg:py-12 xl:px-12">
         {/* Header */}
         <div className="mb-14 md:mb-16">
           <Reveal>

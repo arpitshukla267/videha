@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useLayoutEffect, useRef, useState } from "react";
 import Image from "next/image"
 import { AnimatePresence, motion } from "framer-motion"
 import { gsap } from "gsap"
@@ -12,74 +12,119 @@ import { PROCESS_STEPS as STEPS } from "@/lib/content"
 
 export function ProcessStory() {
   const sectionRef = useRef<HTMLDivElement>(null)
-  const pinRef = useRef<HTMLDivElement>(null)
   const imageRefs = useRef<Array<HTMLDivElement | null>>([])
   const [active, setActive] = useState(0)
 
-  useEffect(() => {
-    if (typeof window === "undefined") return
-    if (window.matchMedia("(max-width: 767px)").matches) return
+useLayoutEffect(() => {
+  if (window.matchMedia("(max-width: 767px)").matches) return;
 
-    gsap.registerPlugin(ScrollTrigger)
+  gsap.registerPlugin(ScrollTrigger);
 
-    const ctx = gsap.context(() => {
-      const imgs = imageRefs.current.filter(Boolean) as HTMLDivElement[]
+  const ctx = gsap.context(() => {
+    const section = sectionRef.current;
 
-      // Initial frame states: first visible, rest revealed from top with a slight scale-up
-      gsap.set(imgs[0], { clipPath: "inset(0% 0% 0% 0%)", scale: 1, opacity: 1 })
-      imgs.slice(1).forEach((el) => {
-        gsap.set(el, { clipPath: "inset(100% 0% 0% 0%)", scale: 1.18, opacity: 1 })
-      })
+    if (!section) return;
 
-      const tl = gsap.timeline({
-        scrollTrigger: {
-          trigger: sectionRef.current,
-          start: "top top",
-          end: () => "+=" + window.innerHeight * STEPS.length,
-          scrub: 1,
-          pin: pinRef.current,
-          anticipatePin: 1,
-          onUpdate: (self) => {
-            const idx = Math.min(
-              STEPS.length - 1,
-              Math.floor(self.progress * STEPS.length),
-            )
-            setActive(idx)
-          },
+    const imgs = imageRefs.current.filter(Boolean) as HTMLDivElement[];
+
+    if (!imgs.length) return;
+
+    // First frame
+    gsap.set(imgs[0], {
+      clipPath: "inset(0% 0% 0% 0%)",
+      scale: 1,
+      opacity: 1,
+    });
+
+    // Remaining frames
+    imgs.slice(1).forEach((el) => {
+      gsap.set(el, {
+        clipPath: "inset(100% 0% 0% 0%)",
+        scale: 1.18,
+        opacity: 1,
+      });
+    });
+
+    const tl = gsap.timeline({
+      scrollTrigger: {
+        trigger: section,
+
+        // Section ke top par pahunchte hi timeline start
+        start: "top top",
+
+        // Section ke bottom tak timeline chalegi
+        end: "bottom bottom",
+
+        // IMPORTANT:
+        // No GSAP pin here.
+        // CSS sticky handles the pinning.
+
+        scrub: 1,
+
+        invalidateOnRefresh: true,
+
+        onUpdate: (self) => {
+          const idx = Math.min(
+            STEPS.length - 1,
+            Math.floor(self.progress * STEPS.length),
+          );
+
+          setActive(idx);
         },
-      })
+      },
+    });
 
-      for (let i = 1; i < imgs.length; i++) {
-        tl.to(
-          imgs[i - 1],
-          { scale: 1.08, duration: 1, ease: "none" },
-          i - 1 + 0.4,
-        )
-        tl.to(
-          imgs[i],
-          {
-            clipPath: "inset(0% 0% 0% 0%)",
-            scale: 1,
-            duration: 1,
-            ease: "power2.inOut",
-          },
-          i - 1 + 0.4,
-        )
-        // hold
-        tl.to({}, { duration: 0.6 })
-      }
-    }, sectionRef)
+    for (let i = 1; i < imgs.length; i++) {
+      tl.to(
+        imgs[i - 1],
+        {
+          scale: 1.08,
+          duration: 1,
+          ease: "none",
+        },
+        i - 1 + 0.4,
+      );
 
-    return () => ctx.revert()
-  }, [])
+      tl.to(
+        imgs[i],
+        {
+          clipPath: "inset(0% 0% 0% 0%)",
+          scale: 1,
+          duration: 1,
+          ease: "power2.inOut",
+        },
+        i - 1 + 0.4,
+      );
+
+      // Hold
+      tl.to(
+        {},
+        {
+          duration: 0.6,
+        },
+      );
+    }
+
+    requestAnimationFrame(() => {
+      ScrollTrigger.refresh();
+    });
+  }, sectionRef);
+
+  return () => ctx.revert();
+}, []);
 
   return (
     <section
       id="process"
-      className="relative border-t border-border bg-secondary/30">
+      className="relative border-t border-border bg-secondary/30"
+    >
       {/* ===== Desktop: pinned cinematic story ===== */}
-      <div ref={sectionRef} className="hidden md:block py-6">
-        <div ref={pinRef} className="relative h-screen w-full overflow-hidden">
+      <div
+        ref={sectionRef}
+        className="hidden md:block relative"
+        style={{ height: `${STEPS.length * 100}vh` }}
+      >
+        <div className="sticky top-8 h-screen w-full overflow-hidden">
           <div className="mx-auto grid h-full max-w-[1400px] grid-cols-12 items-stretch gap-0 px-10">
             {/* Left — text */}
             <div className="col-span-5 flex flex-col justify-around pt-28 pb-20 pr-10 h-full">
@@ -136,6 +181,7 @@ export function ProcessStory() {
                       fill
                       sizes="58vw"
                       className="object-cover"
+                      priority={i === 0}
                     />
                     <div className="absolute bottom-0 left-0 right-0 h-1/3 bg-gradient-to-t from-foreground/40 to-transparent" />
                   </div>

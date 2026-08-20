@@ -72,7 +72,7 @@ export default function QualityPage() {
           <Reveal>
             <div className="relative aspect-[21/9] w-full overflow-hidden border border-border bg-secondary">
               <Image
-                src="/images/quality-macro.png"
+                src="/images/quality-macro.webp"
                 alt="Macro detail of premium popped makhana"
                 fill
                 className="object-cover"

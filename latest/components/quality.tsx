@@ -15,7 +15,7 @@ export function Quality({ preview = false }: QualityProps) {
         <Reveal as="figure" className="md:col-span-5">
           <div className="relative aspect-[4/5] w-full overflow-hidden md:aspect-[3/4] md:max-h-[480px]">
             <Image
-              src="/images/quality-macro.png"
+              src="/images/quality-macro.webp"
               alt="Macro detail of a single premium makhana puff"
               fill
               sizes="(max-width: 768px) 100vw, 42vw"

@@ -239,6 +239,7 @@ export function WorldMap({
               strokeDasharray="4 3"
               strokeLinecap="round"
               opacity={0.8}
+              suppressHydrationWarning
             >
               {isInView && (
                 <animate

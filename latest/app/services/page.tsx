@@ -28,7 +28,7 @@ const SERVICES_DATA = [
     title: "BULK EXPORT SUPPLY",
     tagline: "Large-Scale Roasting & Processing Supply",
     copy: "We supply graded raw and unflavoured plain-roasted makhana in high volumes to international distributors, snack brands, and wholesaling clients. Our facilities are designed to maintain supply lines year-round, protecting our buyers from seasonal scarcity.",
-    image: "/images/process-process.png",
+    image: "/images/process-process.webp",
     specs: [
       "24 Metric Tons monthly processing capacity",
       "Standard FCL container loading optimization",
@@ -40,7 +40,7 @@ const SERVICES_DATA = [
     title: "PRIVATE LABEL / CUSTOM PACKAGING",
     tagline: "Bespoke Flavoring & Retail Ready Formats",
     copy: "For snack brands building their own makhana ranges, we offer complete private-label OEM manufacturing. From custom seasoning formulation (Himalayan Salt, Peri Peri, Truffle) to retail bag artwork printing, barcode placement, and shelf-display packaging.",
-    image: "/images/product-flavoured.png",
+    image: "/images/product-flavoured.webp",
     specs: [
       "Bespoke flavor matching and R&D formulation",
       "Nitrogen-flushed matte laminate retail pouches",
@@ -52,7 +52,7 @@ const SERVICES_DATA = [
     title: "PRODUCT SOURCING",
     tagline: "Direct Sourcing from Mithila Wetland Clusters",
     copy: "We procure crop lots directly from farming cooperatives in Bihar's wetland belt. By bypassing secondary traders, we guarantee 100% single-origin lot integrity and direct trace documentation back to the harvest ponds.",
-    image: "/images/process-source.png",
+    image: "/images/process-source.webp",
     specs: [
       "Direct pond-to-pallet origin registration",
       "Audited local cooperative sourcing loops",
@@ -64,7 +64,7 @@ const SERVICES_DATA = [
     title: "QUALITY & GRADING",
     tagline: "Multi-Tier Sorter Checks & Lab Analyses",
     copy: "Every container lot is subjected to mechanical and optical sorting to assure Grade AAA size consistency. Independent laboratory test parameters confirm moisture control (<4.5%) and food-safety hygiene standards prior to container stuffing.",
-    image: "/images/quality-macro.png",
+    image: "/images/quality-macro.webp",
     specs: [
       "6mm+ Super Jumbo size grading guarantees",
       "Kiln-drying moisture limit of 4.5% locked in",
@@ -76,7 +76,7 @@ const SERVICES_DATA = [
     title: "EXPORT DOCUMENTATION",
     tagline: "Customs Clearances & Food Safety Permits",
     copy: "Our in-house export desk prepares all documentation specifically for your country's customs regulations. We handle phytosanitary certificates, FSSAI export licensing, certificates of origin, and custom shipping bills.",
-    image: "/images/process-export.png",
+    image: "/images/process-export.webp",
     specs: [
       "Phytosanitary clearances from Ministry of Agriculture",
       "FSSAI export authorization paperwork",
@@ -88,7 +88,7 @@ const SERVICES_DATA = [
     title: "LOGISTICS COORDINATION",
     tagline: "End-to-End Sea Freight Dispatch",
     copy: "We organize shipping schedules, coordinate land haulage, perform secure pallet stuffing, and handle port transfers to guarantee on-time shipping dispatches to ports across Europe, North America, the Middle East, and Oceania.",
-    image: "/images/process-pack.png",
+    image: "/images/process-pack.webp",
     specs: [
       "FOB, CFR, and CIF shipping term flexibility",
       "Corrugated pallet stuffing & vacuum packaging protection",

@@ -46,7 +46,7 @@ const DETAIL_MAP: Record<string, ProductDetail> = {
   "classic-roasted-makhana": {
     index: "01",
     name: "Classic Roasted Makhana",
-    image: "/images/product-classic.png",
+    image: "/images/product-classic.webp",
     tagline: "Pure, Double-Roasted Crisp Puffs",
     story:
       "Our classic roasted makhana is the golden standard of popping. Sourced directly from local farmer cooperatives in Mithila, Bihar, the raw seeds undergo careful sun-drying before entering controlled-temperature flame roasting. Pop by pop, the seeds expand into light, uniform ivory-white puffs. Free from added oils, chemical bleaches, or artificial seasoning, this product serves as a clean, highly nutritious base perfect for snack packaging or custom flavoring.",
@@ -83,7 +83,7 @@ const DETAIL_MAP: Record<string, ProductDetail> = {
   "flavoured-makhana": {
     index: "02",
     name: "Flavoured Makhana",
-    image: "/images/product-flavoured.png",
+    image: "/images/product-flavoured.webp",
     tagline: "Gourmet Seasoned Puffs for Global Brands",
     story:
       "Designed for premium snack brands, our seasoned makhana range elevates the traditional puff with clean, natural seasoning formulations. We work with expert food technologists to formulate profiles tailored for international palates. The puffs are flame roasted, lightly coated with food-grade binder, and gently tumbled with finely-milled spices. The outcome is a dry, non-greasy snack with rich flavor and zero greasy residues.",
@@ -120,7 +120,7 @@ const DETAIL_MAP: Record<string, ProductDetail> = {
   "bulk-raw-export": {
     index: "03",
     name: "Bulk & Raw Export",
-    image: "/images/product-bulk.png",
+    image: "/images/product-bulk.webp",
     tagline: "Sieved Raw Seeds & Bulk Unroasted Puffs",
     story:
       "For food manufacturers, milling houses, and regional wholesale packaging units, we supply size-graded raw makhana seeds and unflavoured raw popped lots. Our raw seeds are sorted immediately post-harvest to verify seed coat thickness and kernel weight. Puffed bulk lots are packed under vacuum to protect structural integrity during long-haul transit, ensuring they arrive at your facility ready for processing, flavoring, or packaging.",

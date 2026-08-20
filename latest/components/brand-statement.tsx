@@ -7,7 +7,7 @@ export function BrandStatement() {
   return (
     <section className="relative flex min-h-[60vh] mt-12 items-center justify-center overflow-hidden">
       <Image
-        src="/brand-statement.png"
+        src="/brand-statement.webp"
         alt="Indian lotus wetlands at dawn"
         fill
         sizes="100vw"

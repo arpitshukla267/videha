@@ -23,7 +23,7 @@ const PRINCIPLES = [
     tagline: "Wetland Roots in Bihar's Mithila Region",
     description:
       "Every shipment is traceable back to specific harvesting clusters in the wetlands of Mithila, Bihar. By bypassing raw material traders and working directly with local farming cooperatives at origin, we secure first-grade seed lots and guarantee batch purity.",
-    image: "/images/process-source.png",
+    image: "/images/process-source.webp",
   },
   {
     num: "02",
@@ -31,7 +31,7 @@ const PRINCIPLES = [
     tagline: "Uncompromising Size & Crunch",
     description:
       "Export makhana demands absolute physical consistency. We sort all popped lots mechanically and optically to ensure only 6mm+ Super Jumbo puffs make it into our packing lines. Unpopped kernels, shell fragments, and off-color puffs are strictly weeded out.",
-    image: "/images/process-select.png",
+    image: "/images/process-select.webp",
   },
   {
     num: "03",
@@ -39,7 +39,7 @@ const PRINCIPLES = [
     tagline: "Moisture Protection Under 4.5%",
     description:
       "Popped makhana is highly hygroscopic, easily absorbing moisture and turning soft. To lock in the delicate crunch across 20+ days of ocean transit, we kiln-dry our makhana to under 4.5% moisture and seal it immediately in heavy-gauge double-barrier packaging.",
-    image: "/images/process-pack.png",
+    image: "/images/process-pack.webp",
   },
   {
     num: "04",
@@ -47,7 +47,7 @@ const PRINCIPLES = [
     tagline: "Transparent EXIM Operations",
     description:
       "We prepare all phytosanitary certifications, commercial invoices, and origin certificates with meticulous care. Every container comes with an independent lab Certificate of Analysis (COA) matching destination market regulations.",
-    image: "/images/process-export.png",
+    image: "/images/process-export.webp",
   },
 ];
 
@@ -96,7 +96,7 @@ export default function AboutPage() {
       {/* HERO SECTION */}
       <header className="relative min-h-[100svh] w-full overflow-hidden">
         <Image
-          src="/about.png"
+          src="/about.webp"
           alt="Bihar wetlands background"
           fill
           priority
@@ -133,7 +133,7 @@ export default function AboutPage() {
       </header>
 
       {/* SECTION 02: THE ORIGIN OF MAKHANA (Bihar Cultivation) */}
-      <section className="border-b border-border bg-secondary/30 py-24 md:py-32">
+      <section className="border-b border-border bg-secondary/30 py-12 md:py-12 lg:py-18">
         <div className="mx-auto max-w-[1400px] px-5 md:px-10">
           <div className="mb-12">
             {/* <span className="text-[10px] font-mono uppercase tracking-[0.24em] text-accent">
@@ -149,7 +149,7 @@ export default function AboutPage() {
               <Reveal>
                 <div className="relative aspect-[4/3] w-full overflow-hidden border border-border bg-secondary">
                   <Image
-                    src="/images/process-source.png"
+                    src="/images/process-source.webp"
                     alt="Lotus ponds in Bihar makhana harvesting"
                     fill
                     className="object-cover"
@@ -181,7 +181,7 @@ export default function AboutPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 items-center">
                 <div className="relative aspect-[3/2] w-full overflow-hidden border border-border bg-secondary">
                   <Image
-                    src="/images/process-select.png"
+                    src="/images/process-select.webp"
                     alt="Sorting harvested seeds"
                     fill
                     className="object-cover"
@@ -204,7 +204,7 @@ export default function AboutPage() {
       </section>
 
       {/* SECTION 03: HOW WE THINK (Principles vertical list) */}
-      <section className="border-b border-border md:py-24 md:py-32">
+      <section className="border-b border-border py-12 md:py-12 lg:py-18">
         {/* Desktop content — inside max-width wrapper */}
         <div className="mx-auto max-w-[1400px] px-5 md:px-10">
           {/* Desktop heading — normal, non-sticky */}
@@ -282,7 +282,7 @@ export default function AboutPage() {
       <section className="relative border-b border-border bg-foreground text-background py-24 md:py-32">
         <div className="absolute inset-0 z-0 opacity-15">
           <Image
-            src="/images/brand-statement.png"
+            src="/images/brand-statement.webp"
             alt="Videha export loading dock makhana bags background"
             fill
             className="object-cover object-center"

@@ -1,7 +1,8 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { motion } from "motion/react";
+import Image from "next/image";
 
 interface LensProps {
   src: string;
@@ -26,6 +27,14 @@ export function Lens({
     y: 0,
   });
 
+  // Preload zoom image
+  useEffect(() => {
+    if (typeof window !== "undefined" && src) {
+      const img = new window.Image();
+      img.src = src;
+    }
+  }, [src]);
+
   const handleMouseMove = (event: React.MouseEvent<HTMLDivElement>) => {
     if (!containerRef.current) return;
 
@@ -46,11 +55,14 @@ export function Lens({
       onMouseMove={handleMouseMove}
     >
       {/* Main Image */}
-      <img
+      <Image
         src={src}
         alt={alt}
         draggable={false}
-        className="block h-full w-full object-cover"
+        fill
+        priority
+        sizes="(max-width: 1024px) 100vw, 50vw"
+        className="block object-cover"
       />
 
       {/* Zoom Lens */}
@@ -68,16 +80,16 @@ export function Lens({
             duration: 0.15,
             ease: "easeOut",
           }}
-          className="pointer-events-none absolute z-20 overflow-hidden rounded-full border border-white/50 shadow-[0_8px_30px_rgba(0,0,0,0.18)]"
+          className="pointer-events-none absolute left-0 top-0 z-20 overflow-hidden rounded-full border border-white/50 shadow-[0_8px_30px_rgba(0,0,0,0.18)] [transform-style:preserve-3d] will-change-transform"
           style={{
             width: lensSize,
             height: lensSize,
-            left: position.x - lensSize / 2,
-            top: position.y - lensSize / 2,
+            x: position.x - lensSize / 2,
+            y: position.y - lensSize / 2,
           }}
         >
           <div
-            className="absolute inset-0"
+            className="absolute inset-0 [transform-style:preserve-3d] will-change-transform"
             style={{
               backgroundImage: `url("${src}")`,
               backgroundRepeat: "no-repeat",
