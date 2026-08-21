@@ -15,19 +15,6 @@ import { RevealText } from "@/components/reveal";
 /* ------------------------------------------------------------------ */
 /*  Storyline data                                                     */
 /* ------------------------------------------------------------------ */
-/*
-  NOTE ON ASSETS
-  ----------------------------------------------------------------------
-  The original Hero only shipped three images (hero.webp, process-export.png,
-  brand-statement.png). The four-part storyline needs a dedicated
-  Shipment / Global Logistics visual that doesn't exist yet in the repo.
-  I've reused the two images that map cleanly (source + destination/brand)
-  and pointed "shipment" at a new path — /images/global-shipment.png —
-  which needs to be added to /public/images. Everything else (copy,
-  layout, motion) is fully wired and will work the moment that file exists;
-  until then Next/Image will just 404 on that one story.
-  ----------------------------------------------------------------------
-*/
 type Story = {
   id: string;
   number: string;
@@ -88,16 +75,6 @@ const SEGMENTS = STORIES.length - 1; // 3 transitions across 4 stories
 /* ------------------------------------------------------------------ */
 /*  Thumbnail slot geometry (in % of the hero frame)                   */
 /* ------------------------------------------------------------------ */
-/*
-  Three horizontal positions, evenly spaced by (THUMB_W + GAP), anchored
-  to the bottom-right of the frame — exactly as before:
-
-    NEAR_LEFT  -> the rail slot closest to the main frame (slot 1)
-    FAR_LEFT   -> the rail slot furthest out (slot 2)
-    ENTER_LEFT -> fully off-screen, one more step to the right of FAR_LEFT.
-                  This is only ever used as a starting position for the
-                  entering thumbnail — it's never a resting slot.
-*/
 const PAD_RIGHT = 0;
 const PAD_BOTTOM = 7;
 const THUMB_W = 19;
@@ -123,10 +100,6 @@ function DesktopHero() {
     offset: ["start start", "end end"],
   });
 
-  useMotionValueEvent(scrollYProgress, "change", (v) => {
-    console.log("scrollYProgress:", v.toFixed(3));
-  });
-
   // 0 -> SEGMENTS across the whole pin range
   const rawProgress = useTransform(scrollYProgress, (v) => v * SEGMENTS);
 
@@ -146,10 +119,6 @@ function DesktopHero() {
   // content crossfade — synced directly to scroll, no timers
   const outOpacity = useTransform(t, [0, 0.4], [1, 0]);
   const outY = useTransform(t, [0, 0.4], [0, -14]);
-  // Incoming content is no longer an independent fade — it rides the same
-  // `t` value as the growing image, so it fades in exactly as fast as the
-  // image expands (see `contentOpacity` below and the growLeft/growTop/
-  // growWidth/growHeight-driven wrapper in the JSX).
   const contentOpacity = useTransform(t, [0.5, 1], [0, 0.9]);
 
   useMotionValueEvent(t, "change", (v) => {
@@ -163,14 +132,29 @@ function DesktopHero() {
   const px = (from: number, to: number) =>
     useTransform(t, (v) => `${from + (to - from) * v}px`);
 
-  // the story currently filling the whole frame
-  const mainStory = STORIES[segment % STORIES.length];
-  // the "next" thumbnail — grows out of the NEAR slot into the full frame
-  const growingStory = STORIES[(segment + 1) % STORIES.length];
-  // sits in the FAR slot, slides FAR -> NEAR as growingStory leaves NEAR
-  const movingStory = STORIES[(segment + 2) % STORIES.length];
-  // travels in from fully off-screen (ENTER) into the vacated FAR slot
-  const enteringStory = STORIES[(segment + 3) % STORIES.length];
+  /*
+    IMPORTANT: indices below are NOT wrapped with `% STORIES.length` anymore.
+    A story that has already played as the `mainStory` at an earlier segment
+    must never come back into the rail (entering/moving slots). Since
+    `segment` only ever increases (0..SEGMENTS-1) and each story is "used up"
+    the moment it becomes `mainStory`, plain (unwrapped) indices guarantee
+    every story appears exactly once — either as the current main frame or
+    waiting in the rail — and never twice. Once an index runs past the end
+    of STORIES, that rail slot is simply hidden instead of looping back to a
+    story that's already been shown.
+  */
+  const mainIndex = segment;
+  const growingIndex = segment + 1;
+  const movingIndex = segment + 2;
+  const enteringIndex = segment + 3;
+
+  const showMoving = movingIndex < STORIES.length;
+  const showEntering = enteringIndex < STORIES.length;
+
+  const mainStory = STORIES[mainIndex];
+  const growingStory = STORIES[growingIndex];
+  const movingStory = showMoving ? STORIES[movingIndex] : undefined;
+  const enteringStory = showEntering ? STORIES[enteringIndex] : undefined;
 
   const outgoingStory = mainStory;
   const incomingStory = growingStory;
@@ -187,8 +171,6 @@ function DesktopHero() {
 
   // entering thumbnail: fully off-screen -> FAR slot (conveyor refill)
   const enterLeft = pct(ENTER_LEFT, FAR_LEFT);
-
-  const story = STORIES[activeIndex];
 
   return (
     <div
@@ -209,47 +191,52 @@ function DesktopHero() {
           />
         </div>
 
-        {/* Entering thumbnail — travels from completely off-screen (right)
-            into the FAR slot, physically, tied to scroll progress */}
-        <motion.div
-          className="absolute z-[100] overflow-hidden rounded-2xl border border-white/25 shadow-2xl"
-          style={{
-            left: enterLeft,
-            top: `${SLOT_TOP}%`,
-            width: `${THUMB_W}%`,
-            height: `${THUMB_H}%`,
-          }}
-        >
-          <Image
-            src={enteringStory.image}
-            alt={enteringStory.alt}
-            fill
-            sizes="20vw"
-            className="object-cover object-center"
-          />
-          <ThumbLabel story={enteringStory} />
-        </motion.div>
+        {/* Entering thumbnail — only rendered while there's still an unseen
+            story left to bring in from off-screen. Once every story has
+            been used, this slot disappears instead of recycling one. */}
+        {showEntering && enteringStory && (
+          <motion.div
+            className="absolute z-[100] overflow-hidden rounded-2xl border border-white/25 shadow-2xl"
+            style={{
+              left: enterLeft,
+              top: `${SLOT_TOP}%`,
+              width: `${THUMB_W}%`,
+              height: `${THUMB_H}%`,
+            }}
+          >
+            <Image
+              src={enteringStory.image}
+              alt={enteringStory.alt}
+              fill
+              sizes="20vw"
+              className="object-cover object-center"
+            />
+            <ThumbLabel story={enteringStory} />
+          </motion.div>
+        )}
 
-        {/* Moving thumbnail — slides from the FAR slot into the NEAR slot,
-            in lockstep with the growing thumbnail vacating NEAR */}
-        <motion.div
-          className="absolute z-[100] overflow-hidden rounded-2xl border border-white/25 shadow-2xl"
-          style={{
-            left: moveLeft,
-            top: `${SLOT_TOP}%`,
-            width: `${THUMB_W}%`,
-            height: `${THUMB_H}%`,
-          }}
-        >
-          <Image
-            src={movingStory.image}
-            alt={movingStory.alt}
-            fill
-            sizes="20vw"
-            className="object-cover object-center"
-          />
-          <ThumbLabel story={movingStory} />
-        </motion.div>
+        {/* Moving thumbnail — only rendered while there's still an unseen
+            story queued behind the growing one. */}
+        {showMoving && movingStory && (
+          <motion.div
+            className="absolute z-[100] overflow-hidden rounded-2xl border border-white/25 shadow-2xl"
+            style={{
+              left: moveLeft,
+              top: `${SLOT_TOP}%`,
+              width: `${THUMB_W}%`,
+              height: `${THUMB_H}%`,
+            }}
+          >
+            <Image
+              src={movingStory.image}
+              alt={movingStory.alt}
+              fill
+              sizes="20vw"
+              className="object-cover object-center"
+            />
+            <ThumbLabel story={movingStory} />
+          </motion.div>
+        )}
 
         {/* Growing thumbnail — expands from the NEAR slot into the full frame */}
         <motion.div
@@ -274,14 +261,11 @@ function DesktopHero() {
         {/* Legibility overlay */}
         <div className="pointer-events-none absolute inset-0 z-40 bg-black/35 bg-gradient-to-r from-black/45 via-black/25 to-black/5" />
 
-        {/* Incoming content — anchored to the growing image's TOP-LEFT corner.
-            It reuses the exact same left/top/width/height transforms as the
-            growing thumbnail above, so the text and the image read as one
-            composition expanding together: small + faint at the thumbnail,
-            settling into the normal content position as the image fills the
-            frame. This is intentionally a sibling of the growing image (not
-            nested inside it) so its z-index can sit above the legibility
-            overlay while still tracking the image's geometry 1:1. */}
+        {/* Incoming content — anchored to the growing image's TOP-LEFT corner,
+            reusing the exact same left/top/width/height transforms as the
+            growing thumbnail. The button lives inside ContentBlock now, so
+            it grows/moves in lockstep with the image and fades in with the
+            rest of the incoming text. */}
         <motion.div
           className="absolute z-50 flex items-center overflow-visible pt-24 pb-16"
           style={{
@@ -302,25 +286,6 @@ function DesktopHero() {
           <div className="mx-auto w-full max-w-[1400px] px-5 md:px-10">
             <motion.div style={{ opacity: outOpacity, y: outY }}>
               <ContentBlock story={outgoingStory} />
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 14 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{
-                duration: 0.8,
-                delay: 0.5,
-                ease: [0.22, 1, 0.36, 1],
-              }}
-              className="mt-9"
-            >
-              <a
-                href="#products"
-                className="group inline-flex items-center gap-3 border border-white/40 px-7 py-4 text-[12px] font-medium uppercase tracking-[0.18em] text-white transition-colors hover:border-white hover:bg-white hover:text-[#0A0E0A]"
-              >
-                Explore Products
-                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-              </a>
             </motion.div>
           </div>
         </div>
@@ -351,6 +316,16 @@ function ThumbLabel({ story }: { story: Story }) {
   );
 }
 
+/*
+  ContentBlock now owns the "Explore Products" button too. Both the
+  outgoing and incoming content wrappers in DesktopHero already animate
+  opacity/position for whatever they contain (outOpacity/outY for the
+  outgoing block, contentOpacity + growLeft/growTop/growWidth/growHeight
+  for the incoming block) — so by rendering the button *inside* this
+  component, it automatically inherits the same fade-out-with-outgoing /
+  grow-and-fade-in-with-incoming behaviour as the heading and description,
+  instead of sitting static and disconnected from the transition.
+*/
 function ContentBlock({ story }: { story: Story }) {
   return (
     <>
@@ -364,28 +339,39 @@ function ContentBlock({ story }: { story: Story }) {
       <p className="mt-6 max-w-md text-[15px] leading-relaxed text-white/85">
         {story.description}
       </p>
+      <div className="mt-9">
+        <a
+          href="#products"
+          className="group inline-flex items-center gap-3 border border-white/40 px-7 py-4 text-[12px] font-medium uppercase tracking-[0.18em] text-white transition-colors hover:border-white hover:bg-white hover:text-[#0A0E0A]"
+        >
+          Explore Products
+          <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+        </a>
+      </div>
     </>
   );
 }
 
 /* ------------------------------------------------------------------ */
-/*  Mobile: original Hero, unchanged behaviour                         */
+/*  Mobile: same STORIES content as desktop, just no scroll-driven      */
+/*  cinematic transitions — a plain autoplaying image + text slide.     */
+/*  Each banner pulls its image/heading/description straight from       */
+/*  STORIES (by index) so mobile always shows the same story content    */
+/*  as desktop; only the background image crossfades (kept from the     */
+/*  original), the text itself just swaps instantly with no added       */
+/*  animation.                                                           */
 /* ------------------------------------------------------------------ */
-const MOBILE_BANNERS = [
-  { image: "/hero-mobile.webp", alt: "Lotus wetlands at dawn in Bihar, India" },
-  {
-    image: "/images/process-export.png",
-    alt: "Makhana export shipment ready for global markets",
-  },
-  { image: "/brand-statement.png", alt: "Indian lotus wetlands at dawn" },
-];
+const MOBILE_BANNERS = STORIES.map((story) => ({
+  image: story.mobileImage ?? story.image,
+  alt: story.alt,
+  story,
+}));
 
 const SLIDE_DURATION = 5000;
 
 function MobileHero() {
   const [active, setActive] = useState(0);
 
-  // identical autoplay timing/behaviour to the original Hero implementation
   useEffect(() => {
     const timer = setTimeout(() => {
       setActive((i) => (i + 1) % MOBILE_BANNERS.length);
@@ -394,6 +380,7 @@ function MobileHero() {
   }, [active]);
 
   const banner = MOBILE_BANNERS[active];
+  const story = banner.story;
 
   return (
     <section className="relative block w-full overflow-hidden bg-background md:hidden">
@@ -421,41 +408,21 @@ function MobileHero() {
           <div className="absolute inset-0 bg-black/35 bg-gradient-to-r from-black/45 via-black/25 to-black/5" />
         </div>
 
+        {/* Text content — sourced straight from the active story, no
+            entrance/crossfade animation tied to `active`: it just swaps
+            the moment the banner changes. */}
         <div className="relative z-10 flex w-full items-center pt-24 pb-16">
           <div className="mx-auto w-full max-w-[1400px] px-5 md:px-10">
             <h1 className="max-w-2xl text-[2.6rem] font-semibold leading-[1.04] tracking-[-0.02em] text-white text-balance sm:text-6xl md:text-[4rem]">
-              <RevealText text="Premium Makhana," delay={0.15} immediate />
-              <RevealText
-                text="from India to the world."
-                delay={0.3}
-                immediate
-              />
+              <RevealText text={story.heading[0]} delay={0.15} immediate />
+              <RevealText text={story.heading[1]} delay={0.3} immediate />
             </h1>
 
-            <motion.p
-              initial={{ opacity: 0, y: 14 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{
-                duration: 0.8,
-                delay: 0.55,
-                ease: [0.22, 1, 0.36, 1],
-              }}
-              className="mt-6 max-w-md text-[15px] leading-relaxed text-white/85"
-            >
-              Sourced from the wetlands of Bihar, exported to discerning markets
-              across the globe.
-            </motion.p>
+            <p className="mt-6 max-w-md text-[15px] leading-relaxed text-white/85">
+              {story.description}
+            </p>
 
-            <motion.div
-              initial={{ opacity: 0, y: 14 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{
-                duration: 0.8,
-                delay: 0.7,
-                ease: [0.22, 1, 0.36, 1],
-              }}
-              className="mt-9"
-            >
+            <div className="mt-9">
               <a
                 href="#products"
                 className="group inline-flex items-center gap-3 border border-white/40 px-7 py-4 text-[12px] font-medium uppercase tracking-[0.18em] text-white transition-colors hover:border-white hover:bg-white hover:text-[#0A0E0A]"
@@ -463,7 +430,7 @@ function MobileHero() {
                 Explore Products
                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </a>
-            </motion.div>
+            </div>
           </div>
         </div>
 
