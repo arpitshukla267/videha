@@ -482,7 +482,7 @@ function MobileHero() {
                             ? "service=Private%20Label"
                             : "service=Export%20%26%20Logistics"
                   }`}
-                  className="group inline-flex items-center gap-3 border border-white/40 px-7 py-4 text-[12px] font-medium uppercase tracking-[0.18em] text-white transition-colors hover:border-white hover:bg-white hover:text-[#0A0E0A]"
+                  className="group inline-flex items-center gap-3 border border-white/40 px-5 py-3 text-[12px] font-medium uppercase tracking-[0.12em] text-white transition-colors hover:border-white hover:bg-white hover:text-[#0A0E0A]"
                 >
                   Request Quotation
                   <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
@@ -491,7 +491,7 @@ function MobileHero() {
                 {(story.id === "makhana" || story.id === "guar-gum") && (
                   <Link
                     href={story.id === "makhana" ? "/products" : "/guar-gum"}
-                    className="group inline-flex items-center gap-3 border border-white/30 px-7 py-4 text-[12px] font-medium uppercase tracking-[0.18em] text-white/80 transition-colors hover:border-white hover:bg-white/10 hover:text-white"
+                    className="group inline-flex items-center gap-3 border border-white/30 px-5 py-3 text-[12px] font-medium uppercase tracking-[0.12em] text-white/80 transition-colors hover:border-white hover:bg-white/10 hover:text-white"
                   >
                     Explore Products
                     <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />

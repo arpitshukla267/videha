@@ -168,7 +168,7 @@ export function SiteNav() {
               width={120}
               height={120}
               priority
-              className="h-auto w-28 sm:w-36"
+              className="h-auto w-28 sm:w-36 focus:outline-none"
             />
             {/* <span
               className={cn(

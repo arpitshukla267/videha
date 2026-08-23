@@ -31,7 +31,7 @@ type FeatureFilmstripProps = {
 export function FeatureFilmstrip({
   items,
   title,
-  vhPerCard = 75,
+  vhPerCard = 45,
   className = "md:hidden",
 }: FeatureFilmstripProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -41,16 +41,10 @@ export function FeatureFilmstrip({
     offset: ["start start", "end end"],
   });
 
-  /*
-    Mobile pe stiffness thoda kam + damping thoda zyada kar diya —
-    isse spring har frame pe utna hard "chase" nahi karta, jo
-    low-end phones pe jaake smoother feel deta hai.
-    mass bhi thoda kam kiya taaki response lag na lage.
-  */
   const smoothProgress = useSpring(scrollYProgress, {
-    stiffness: 180,
-    damping: 32,
-    mass: 0.4,
+    stiffness: 420,
+    damping: 40,
+    mass: 0.25,
     restDelta: 0.001,
   });
 
@@ -69,19 +63,24 @@ export function FeatureFilmstrip({
       className={cn("relative", className)}
       style={{ height: `${items.length * vhPerCard}vh` }}
     >
-      {/*
-        FIX: dvh -> svh
-        dvh mobile browser ke address bar show/hide hone par recalc hota
-        hai scroll ke dauraan hi, jo layout thrashing/jank create karta
-        hai. svh stable rehta hai (chhota, fixed viewport), isse scroll
-        ke time koi reflow trigger nahi hota — yahi sabse bada fix hai.
-      */}
-      <div
-        className="sticky top-0 h-[100svh] flex flex-col justify-between px-5 pt-20 pb-6 bg-background"
-        style={{ contain: "layout paint" }}
-      >
+      <div className="sticky top-0 h-[100svh] flex flex-col px-5 pt-20 pb-6 bg-background">
+        {/* Pinned Title */}
         {title && <div className="shrink-0 mb-1">{title}</div>}
 
+        {/*
+          FIX — root cause of both the visual cut-off card AND the
+          dots/tracking mismatch: the track (motion.div) is intentionally
+          much wider than this container (items.length * 100vw). Adding
+          `justify-center` here made the flex container try to center
+          that oversized child BEFORE our scroll-driven `x` transform
+          even applies — shifting the whole coordinate system out from
+          under our translateX math, which assumes the track starts
+          perfectly flush-left at x=0%.
+          `items-center` alone (vertical/cross-axis only) is enough —
+          it doesn't touch the horizontal axis, so translateX(0%) shows
+          card 1 flush, translateX(-maxShift%) shows the last card flush,
+          exactly matching the 0→1 scroll progress the dots also use.
+        */}
         <div className="flex-1 min-h-0 flex items-center overflow-hidden -mx-5">
           <motion.div
             style={{
@@ -97,6 +96,7 @@ export function FeatureFilmstrip({
                 className="w-screen shrink-0 px-5 flex items-center justify-center"
               >
                 <div className="w-full max-w-sm h-[470px] sm:h-[480px] flex flex-col rounded-2xl border border-border/80 bg-card overflow-hidden shadow-[0_14px_36px_-6px_rgba(0,0,0,0.08)]">
+                  {/* Card Image */}
                   <div className="relative h-[220px] sm:h-[200px] w-full shrink-0 overflow-hidden bg-secondary">
                     <Image
                       src={item.image}
@@ -104,13 +104,12 @@ export function FeatureFilmstrip({
                       fill
                       className="object-cover"
                       sizes="(max-width: 640px) 90vw, 400px"
-                      // FIX: pehle 1-2 image eager/priority, baaki lazy —
-                      // isse initial scroll ke time network/decode load kam hota hai
                       loading={i < 2 ? "eager" : "lazy"}
                       priority={i === 0}
                     />
                   </div>
 
+                  {/* Card Content */}
                   <div className="flex-1 flex flex-col p-5 sm:p-6 min-h-0 overflow-hidden justify-between bg-card">
                     <div>
                       <div className="flex items-center gap-2">
@@ -148,7 +147,8 @@ export function FeatureFilmstrip({
           </motion.div>
         </div>
 
-        <div className="flex justify-center items-center gap-2 shrink-0 mt-2">
+        {/* Progress Dots — pinned to the very bottom */}
+        <div className="mt-auto flex justify-center items-center gap-2 shrink-0 pt-2">
           {items.map((item, i) => (
             <Dot
               key={item.num}
