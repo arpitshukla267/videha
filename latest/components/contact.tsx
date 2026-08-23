@@ -670,20 +670,54 @@ export function Contact({
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -12 }}
-                  className="flex min-h-[500px] flex-col justify-center border border-border bg-videha-mist p-8 md:p-10"
+                  className="flex md:min-h-[500px] flex-col justify-center border border-border bg-videha-mist p-6 md:p-10"
                 >
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-videha-green/10">
-                    <Check className="h-5 w-5 text-videha-green" />
+                  <div className="flex items-center gap-4">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center text-green-600">
+                      <svg
+                        viewBox="0 0 52 52"
+                        className="h-11 w-11"
+                        fill="none"
+                      >
+                        <circle
+                          cx="26"
+                          cy="26"
+                          r="23"
+                          className="check-circle"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                        />
+
+                        <path
+                          d="M15 27L22 34L38 18"
+                          className="check-mark"
+                          stroke="currentColor"
+                          strokeWidth="3"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </div>
+
+                    <div>
+                      <h3 className="text-xl font-medium tracking-tight text-videha-navy md:text-2xl">
+                        Thank you for your enquiry.
+                      </h3>
+
+                      <p className="mt-1 text-[10px] font-mono uppercase tracking-[0.2em] text-green-600">
+                        Enquiry received
+                      </p>
+                    </div>
                   </div>
 
-                  <h3 className="mt-6 text-2xl font-medium text-videha-navy">
-                    Thank you — enquiry received.
-                  </h3>
-
-                  <p className="mt-3 max-w-md text-sm leading-relaxed text-muted-foreground">
-                    Our export desk has registered your requirements. An EXIM
-                    coordinator will contact you shortly with the next steps.
-                  </p>
+                  <div className="mt-7 max-w-lg border-t border-border pt-5">
+                    <p className="text-sm leading-7 text-muted-foreground">
+                      Your enquiry has been successfully submitted to the Videha
+                      Overseas export desk. Our team will review your
+                      requirements and an EXIM coordinator will contact you
+                      shortly to discuss the next steps.
+                    </p>
+                  </div>
                 </motion.div>
               ) : (
                 <motion.form
