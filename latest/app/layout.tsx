@@ -5,6 +5,8 @@ import { GoogleAnalytics } from "@next/third-parties/google";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import "./globals.css";
+import { WhatsAppButton } from "@/components/ui/whatsapp-button";
+import { EnquiryButton } from "@/components/ui/enquiry-button";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -14,26 +16,12 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "Videha Overseas — Premium Makhana, From India to the World",
+  title: "Videha Overseas Private Limited",
   description:
-    "Videha Overseas is an Indian makhana (fox nut) exporter delivering premium, export-ready quality to global markets. From source to shelf, built around quality and trust.",
-  generator: "v0.app",
+    "Videha Overseas is an India-based export company delivering premium, export-ready products to global markets. From sourcing to shipment, we focus on quality, reliability, and long-term international partnerships.",
   icons: {
-    icon: [
-      {
-        url: "/icon-light-32x32.png",
-        media: "(prefers-color-scheme: light)",
-      },
-      {
-        url: "/icon-dark-32x32.png",
-        media: "(prefers-color-scheme: dark)",
-      },
-      {
-        url: "/icon.svg",
-        type: "image/svg+xml",
-      },
-    ],
-    apple: "/apple-icon.png",
+    icon: "/logo.png",
+    apple: "/logo.png",
   },
 };
 
@@ -55,6 +43,8 @@ export default function RootLayout({
         {children}
 
         <SiteFooter />
+        <EnquiryButton/>
+        <WhatsAppButton floating />
 
         {process.env.NODE_ENV === "production" && <Analytics />}
 

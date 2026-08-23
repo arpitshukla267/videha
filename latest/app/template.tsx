@@ -2,6 +2,7 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
+import Image from "next/image";
 
 export default function Template({ children }: { children: React.ReactNode }) {
   const [showLoader, setShowLoader] = useState(true);
@@ -66,13 +67,21 @@ export default function Template({ children }: { children: React.ReactNode }) {
               }}
               className="flex flex-col items-center select-none"
             >
-              <span className="text-3xl font-semibold tracking-tight text-[#1F2421]">
+              <Image
+                src="/logo.png"
+                alt="Videha Overseas"
+                width={120}
+                height={120}
+                priority
+                className="h-auto w-44 sm:w-72"
+              />
+              {/* <span className="text-3xl font-semibold tracking-tight text-[#1F2421]">
                 Videha
               </span>
 
               <span className="mt-1 text-xs font-medium uppercase tracking-[0.34em] text-[#665E52]">
                 Overseas
-              </span>
+              </span> */}
             </motion.div>
           </motion.div>
         )}

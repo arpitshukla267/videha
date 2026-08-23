@@ -93,7 +93,7 @@ export default function QualityCompliancePage() {
     >
       {/* 1. HERO */}
       <section className="border-b border-border bg-background py-16 md:py-24">
-        <div className="mx-auto max-w-[90vw] px-5 md:px-10">
+        <div className="mx-auto max-w-[95vw] md:max-w-[90vw] px-5 md:px-10">
           <Reveal>
             <span className="text-[10px] uppercase tracking-[0.24em] text-accent">
               QUALITY & COMPLIANCE
@@ -119,7 +119,7 @@ export default function QualityCompliancePage() {
 
       {/* 2. FOUR PILLARS */}
       <section className="py-16 md:py-24 border-b border-border bg-[#f8f6f0]">
-        <div className="mx-auto max-w-[90vw] px-5 md:px-10">
+        <div className="mx-auto max-w-[95vw] md:max-w-[90vw] px-5 md:px-10">
           <div className="mb-12 max-w-3xl">
             <span className="text-[10px] uppercase tracking-[0.24em] text-primary">
               OUR APPROACH
@@ -153,7 +153,7 @@ export default function QualityCompliancePage() {
 
       {/* 3. BUSINESS REGISTRATIONS & EXPORT CREDENTIALS */}
       <section className="py-16 md:py-24 border-b border-border bg-background">
-        <div className="mx-auto max-w-[90vw] px-5 md:px-10">
+        <div className="mx-auto max-w-[95vw] md:max-w-[90vw] px-5 md:px-10">
           <div className="mb-10 max-w-3xl">
             <span className="text-[10px] uppercase tracking-[0.24em] text-accent">
               BUSINESS REGISTRATIONS
@@ -202,7 +202,7 @@ export default function QualityCompliancePage() {
 
       {/* 4. DOCUMENTATION ON REQUEST */}
       <section className="py-16 md:py-24 bg-[#f8f6f0] border-b border-border">
-        <div className="mx-auto max-w-[90vw] px-5 md:px-10">
+        <div className="mx-auto max-w-[95vw] md:max-w-[90vw] px-5 md:px-10">
           <div className="mb-10 max-w-3xl">
             <span className="text-[10px] uppercase tracking-[0.24em] text-primary">
               PER-SHIPMENT DOCUMENTATION
@@ -238,7 +238,7 @@ export default function QualityCompliancePage() {
 
       {/* 5. CTA */}
       <section className="py-16 bg-background">
-        <div className="mx-auto max-w-[90vw] px-5 md:px-10">
+        <div className="mx-auto max-w-[95vw] md:max-w-[90vw] px-5 md:px-10">
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-8 border border-border bg-[#514536] text-white p-8 md:p-12 rounded-[5px]">
             <div>
               <span className="text-[10px] uppercase tracking-[0.24em] text-white/60">

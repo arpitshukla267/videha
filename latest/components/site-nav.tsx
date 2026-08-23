@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Menu, X, Download, ChevronDown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import Image from "next/image";
 
 const LINKS = [
   { label: "Home", href: "/" },
@@ -161,7 +162,15 @@ export function SiteNav() {
             onClick={closeMenu}
             className="relative z-50 flex flex-col leading-none"
           >
-            <span
+            <Image
+              src="/logo.png"
+              alt="Videha Overseas"
+              width={120}
+              height={120}
+              priority
+              className="h-auto w-28 sm:w-36"
+            />
+            {/* <span
               className={cn(
                 "text-lg font-semibold tracking-tight transition-colors duration-300",
                 useLightNav ? "text-white" : "text-foreground",
@@ -177,7 +186,7 @@ export function SiteNav() {
               )}
             >
               Overseas
-            </span>
+            </span> */}
           </Link>
 
           {/* Desktop Navigation */}

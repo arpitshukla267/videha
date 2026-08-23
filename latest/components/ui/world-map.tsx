@@ -17,21 +17,48 @@ import type { FeatureCollection, Geometry } from "geojson";
 const GEO_URL =
   "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
 
-const HEIGHT = 450;
-
 const ORIGIN = { name: "India", coordinates: [82.5, 22.5] as [number, number] };
 
 const DESTINATIONS: {
   name: string;
+  lines: string[];
   coordinates: [number, number];
   labelOffset: [number, number];
 }[] = [
-  { name: "North America", coordinates: [-100, 40], labelOffset: [0, -12] },
-  { name: "Europe", coordinates: [12, 50], labelOffset: [0, -12] },
-  { name: "Middle East", coordinates: [50, 24], labelOffset: [0, 16] },
-  { name: "Southeast Asia", coordinates: [105, 5], labelOffset: [0, 18] },
+  {
+    name: "North America",
+    lines: ["North", "America"],
+    coordinates: [-100, 40],
+    labelOffset: [0, -16],
+  },
+  {
+    name: "Europe",
+    lines: ["Europe"],
+    coordinates: [12, 50],
+    labelOffset: [0, -12],
+  },
+  {
+    name: "Middle East",
+    // FIX: split into 2 lines, same as North America / Australia & Oceania.
+    // These labels sit close to the map edges at higher zoom, so a single
+    // long centered line was overflowing sideways.
+    lines: ["Middle", "East"],
+    coordinates: [50, 24],
+    labelOffset: [0, 18],
+  },
+  {
+    name: "Southeast Asia",
+    lines: ["Southeast", "Asia"],
+    coordinates: [105, 5],
+    labelOffset: [0, 20],
+  },
   // { name: "East Asia", coordinates: [125, 36], labelOffset: [14, -8] },
-  { name: "Australia & Oceania", coordinates: [134, -26], labelOffset: [0, 18] },
+  {
+    name: "Australia & Oceania",
+    lines: ["Australia", "& Oceania"],
+    coordinates: [134, -28],
+    labelOffset: [-4, 20],
+  },
 ];
 
 type WorldMapProps = {
@@ -44,16 +71,18 @@ type WorldMapProps = {
 // once the map is actually in the viewport (see WorldMap's useEffect below).
 function PlaneMarker({
   pathD,
+  scale,
   onMotionRef,
   onFadeRef,
 }: {
   pathD: string;
+  scale: number;
   onMotionRef: (el: SVGAnimateMotionElement | null) => void;
   onFadeRef: (el: SVGAnimateElement | null) => void;
 }) {
   return (
     <g opacity={0}>
-      <g>
+      <g transform={`scale(${scale})`}>
         {/* Airplane */}
         <path
           d="
@@ -146,8 +175,11 @@ export function WorldMap({
   }, []);
 
   const WIDTH = isDesktop ? 800 : 600;
-  const center: [number, number] = isDesktop ? [25, 25] : [15, 25];
-  const scale = compact ? 125 : 160;
+  const HEIGHT = isDesktop ? 450 : 340;
+  const center: [number, number] = isDesktop ? [25, 25] : [17, 22];
+  const scale = compact ? 125 : isDesktop ? 160 : 195;
+
+  const uiScale = isDesktop ? 1 : 1.7;
 
   const projection = useMemo(
     () =>
@@ -155,7 +187,7 @@ export function WorldMap({
         .scale(scale)
         .center(center)
         .translate([WIDTH / 2, HEIGHT / 2]),
-    [scale, center, WIDTH],
+    [scale, center, WIDTH, HEIGHT],
   );
 
   const originXY = projection(ORIGIN.coordinates)!;
@@ -197,8 +229,11 @@ export function WorldMap({
     return () => timers.forEach(clearTimeout);
   }, [isInView, routes]);
 
+  // Line height between wrapped label rows, scaled the same as font-size
+  const labelLineHeight = 10.5 * uiScale;
+
   return (
-    <div ref={containerRef} className="h-full w-full min-h-[360px]">
+    <div ref={containerRef} className="h-full w-full min-h-[300px]">
       <ComposableMap
         width={WIDTH}
         height={HEIGHT}
@@ -236,8 +271,8 @@ export function WorldMap({
               d={route.d}
               fill="none"
               stroke="#2F6B4F"
-              strokeWidth={1.1}
-              strokeDasharray="4 3"
+              strokeWidth={1.1 * uiScale}
+              strokeDasharray={`${4 * uiScale} ${3 * uiScale}`}
               strokeLinecap="round"
               opacity={0.8}
               suppressHydrationWarning
@@ -245,7 +280,7 @@ export function WorldMap({
               {isInView && (
                 <animate
                   attributeName="stroke-dashoffset"
-                  from="14"
+                  from={`${14 * uiScale}`}
                   to="0"
                   dur="1s"
                   repeatCount="indefinite"
@@ -262,6 +297,7 @@ export function WorldMap({
               <PlaneMarker
                 key={`plane-${route.name}`}
                 pathD={route.d}
+                scale={uiScale}
                 onMotionRef={(el) => {
                   motionRefs.current[idx] = el;
                 }}
@@ -275,39 +311,60 @@ export function WorldMap({
 
         {routes.map((dest) => {
           const [x, y] = projection(dest.coordinates)!;
+          const labelX = x + dest.labelOffset[0] * uiScale;
+          const labelY = y + dest.labelOffset[1] * uiScale;
+
           return (
             <g key={dest.name}>
               <Marker coordinates={dest.coordinates}>
                 <circle
-                  r={4.5}
+                  r={4.5 * uiScale}
                   fill="#C9722F"
                   stroke="#F4F1EA"
-                  strokeWidth={1.5}
+                  strokeWidth={1.5 * uiScale}
                 />
               </Marker>
+
+              {/* FIX: render each line as its own centered tspan instead
+                  of one long centered string. For a 2-line label, the
+                  first line is nudged up and the second down by half the
+                  line-height, so the pair stays visually centered around
+                  labelY rather than starting there and drifting down. */}
               <text
-                x={x + dest.labelOffset[0]}
-                y={y + dest.labelOffset[1]}
+                x={labelX}
                 textAnchor="middle"
-                fontSize={9.5}
+                fontSize={9.5 * uiScale}
                 fontWeight={600}
                 letterSpacing="0.02em"
                 fill="#3A3528"
               >
-                {dest.name}
+                {dest.lines.map((line, i) => {
+                  const n = dest.lines.length;
+                  const rowY = labelY + (i - (n - 1) / 2) * labelLineHeight;
+                  return (
+                    <tspan key={line} x={labelX} y={rowY}>
+                      {line}
+                    </tspan>
+                  );
+                })}
               </text>
             </g>
           );
         })}
 
         <Marker coordinates={ORIGIN.coordinates}>
-          <circle r={6.5} fill="#2F6B4F" stroke="#F4F1EA" strokeWidth={2} />
+          <circle
+            r={6.5 * uiScale}
+            fill="#2F6B4F"
+            stroke="#F4F1EA"
+            strokeWidth={2 * uiScale}
+          />
         </Marker>
         <text
           x={originXY[0]}
-          y={originXY[1] + 20}
+          y={originXY[1] + 20 * uiScale}
           textAnchor="middle"
-          fontSize={11}
+          fontSize={11 * uiScale}
           fontWeight={700}
           fill="#211E17"
         >

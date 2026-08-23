@@ -190,7 +190,7 @@ export default function GuarGumPage() {
 
   return (
     <main
-      className="overflow-hidden bg-background pt-24 font-poppins"
+      className="overflow-hidden bg-background pt-12 md:pt-24 font-poppins"
       style={{ fontFamily: "'Poppins', sans-serif" }}
     >
       {/* 1. HERO SECTION & TECHNICAL STATEMENT */}

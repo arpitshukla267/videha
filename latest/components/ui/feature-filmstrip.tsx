@@ -23,11 +23,8 @@ export type FeatureItem = {
 
 type FeatureFilmstripProps = {
   items: FeatureItem[];
-  /** Rendered inside the SAME sticky block, above the cards — so it stays pinned together */
   title?: ReactNode;
-  /** vh of scroll distance per card */
   vhPerCard?: number;
-  /** Custom responsive or styling classes (defaults to md:hidden) */
   className?: string;
 };
 
@@ -39,35 +36,24 @@ export function FeatureFilmstrip({
 }: FeatureFilmstripProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
-  /* Track scroll progress across the container runway.
-     "start start" = top of container aligns with top of viewport (pin starts)
-     "end end"     = bottom of container aligns with bottom of viewport (pin ends) */
   const { scrollYProgress } = useScroll({
     target: containerRef,
     offset: ["start start", "end end"],
   });
 
   /*
-    Smooth the raw scroll progress with a spring so the filmstrip glides
-    instead of snapping 1:1 to scroll events. Tuned for a fluid, slightly
-    weighted feel — high-ish stiffness keeps it responsive, damping kills
-    any bounce/overshoot.
+    Mobile pe stiffness thoda kam + damping thoda zyada kar diya —
+    isse spring har frame pe utna hard "chase" nahi karta, jo
+    low-end phones pe jaake smoother feel deta hai.
+    mass bhi thoda kam kiya taaki response lag na lage.
   */
   const smoothProgress = useSpring(scrollYProgress, {
-    stiffness: 260,
-    damping: 38,
-    mass: 0.6,
-    restDelta: 0.0005,
+    stiffness: 180,
+    damping: 32,
+    mass: 0.4,
+    restDelta: 0.001,
   });
 
-  /* 
-    CRITICAL CSS TRANSFORM MATH:
-    The motion.div track has width = items.length * 100vw (e.g. 400vw for 4 items, 600vw for 6 items).
-    In CSS translateX(percentage), 100% means the width of the motion.div itself.
-    To slide by 1 card (100vw), we need to shift by 100% / items.length.
-    To slide across all (items.length - 1) cards, the maximum shift is:
-    ((items.length - 1) / items.length) * 100%.
-  */
   const maxShiftPercent =
     items.length > 1 ? ((items.length - 1) / items.length) * 100 : 0;
 
@@ -83,31 +69,34 @@ export function FeatureFilmstrip({
       className={cn("relative", className)}
       style={{ height: `${items.length * vhPerCard}vh` }}
     >
-      {/* 
-        Single sticky block: holds title + horizontal card filmstrip + dots together.
-        Uses 100dvh so it dynamically fits mobile browsers with collapsing address bars.
+      {/*
+        FIX: dvh -> svh
+        dvh mobile browser ke address bar show/hide hone par recalc hota
+        hai scroll ke dauraan hi, jo layout thrashing/jank create karta
+        hai. svh stable rehta hai (chhota, fixed viewport), isse scroll
+        ke time koi reflow trigger nahi hota — yahi sabse bada fix hai.
       */}
-      <div className="sticky top-0 h-[100dvh] flex flex-col justify-between px-5 pt-20 pb-6 bg-background">
-        {/* Pinned Title */}
+      <div
+        className="sticky top-0 h-[100svh] flex flex-col justify-between px-5 pt-20 pb-6 bg-background"
+        style={{ contain: "layout paint" }}
+      >
         {title && <div className="shrink-0 mb-1">{title}</div>}
 
-        {/* Card Filmstrip Viewport */}
         <div className="flex-1 min-h-0 flex items-center overflow-hidden -mx-5">
           <motion.div
-            style={{ x: trackX, translateZ: 0 }}
+            style={{
+              x: trackX,
+              translateZ: 0,
+              backfaceVisibility: "hidden",
+            }}
             className="flex will-change-transform"
           >
-            {items.map((item) => (
+            {items.map((item, i) => (
               <div
                 key={item.num}
                 className="w-screen shrink-0 px-5 flex items-center justify-center"
               >
-                {/* 
-                  Uniform matching height across all cards.
-                  Full text shown without any line-clamp.
-                */}
                 <div className="w-full max-w-sm h-[470px] sm:h-[480px] flex flex-col rounded-2xl border border-border/80 bg-card overflow-hidden shadow-[0_14px_36px_-6px_rgba(0,0,0,0.08)]">
-                  {/* Card Image */}
                   <div className="relative h-[220px] sm:h-[200px] w-full shrink-0 overflow-hidden bg-secondary">
                     <Image
                       src={item.image}
@@ -115,10 +104,13 @@ export function FeatureFilmstrip({
                       fill
                       className="object-cover"
                       sizes="(max-width: 640px) 90vw, 400px"
+                      // FIX: pehle 1-2 image eager/priority, baaki lazy —
+                      // isse initial scroll ke time network/decode load kam hota hai
+                      loading={i < 2 ? "eager" : "lazy"}
+                      priority={i === 0}
                     />
                   </div>
 
-                  {/* Card Content with matched structure and NO line-clamp */}
                   <div className="flex-1 flex flex-col p-5 sm:p-6 min-h-0 overflow-hidden justify-between bg-card">
                     <div>
                       <div className="flex items-center gap-2">
@@ -156,7 +148,6 @@ export function FeatureFilmstrip({
           </motion.div>
         </div>
 
-        {/* Progress Dots / Pills */}
         <div className="flex justify-center items-center gap-2 shrink-0 mt-2">
           {items.map((item, i) => (
             <Dot

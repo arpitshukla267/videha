@@ -172,20 +172,24 @@ function MultiSelect({
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
-        className="mt-2 flex min-h-[43px] w-full items-center justify-between border-b border-border bg-transparent py-2 text-left transition-colors hover:border-videha-green/50 focus:outline-none"
+        className="mt-2 flex min-h-[46px] w-full items-center justify-between border-b border-border bg-transparent py-2 text-left transition-colors hover:border-videha-green/50 focus:outline-none"
       >
+        {/* FIX: text-sm(14px) -> 16px on mobile. Sub-16px text on a
+            focusable control triggers iOS Safari's auto-zoom, which is
+            the "bohot bada ho jata hai" issue. md+ pe chhota kar diya
+            kyunki desktop pe zoom problem nahi hoti. */}
         <span
           className={
             selected.length
-              ? "text-sm text-foreground"
-              : "text-sm text-muted-foreground/40"
+              ? "text-[16px] text-foreground md:text-sm"
+              : "text-[16px] text-muted-foreground/40 md:text-sm"
           }
         >
           {selected.length ? `${selected.length} selected` : placeholder}
         </span>
 
         <ChevronDown
-          className={`h-4 w-4 text-muted-foreground transition-transform duration-300 ${
+          className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-300 ${
             open ? "rotate-180" : ""
           }`}
         />
@@ -206,12 +210,14 @@ function MultiSelect({
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.9 }}
-                className="inline-flex items-center gap-1 rounded-full bg-videha-mist px-2.5 py-1 text-xs font-medium text-videha-navy"
+                // FIX: py-1 -> py-1.5 taaki chip ka "x" touch target thoda
+                // bada ho, chhoti screen pe misstap kam ho
+                className="inline-flex items-center gap-1 rounded-full bg-videha-mist px-2.5 py-1.5 text-xs font-medium text-videha-navy"
               >
                 {item}
 
                 <X
-                  className="h-3 w-3 cursor-pointer"
+                  className="h-3.5 w-3.5 shrink-0 cursor-pointer"
                   onClick={(event) => {
                     event.stopPropagation();
                     toggleOption(item);
@@ -237,13 +243,15 @@ function MultiSelect({
           >
             <div className="border-b border-border p-3">
               <div className="flex items-center gap-2 rounded-lg bg-videha-mist px-3">
-                <Search className="h-3.5 w-3.5 text-muted-foreground" />
+                <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
 
+                {/* FIX: same zoom issue — this is a real focusable
+                    text input, so it also needs >=16px on mobile */}
                 <input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Search..."
-                  className="h-9 w-full bg-transparent text-xs text-foreground outline-none placeholder:text-muted-foreground/50"
+                  className="h-9 w-full bg-transparent text-[16px] text-foreground outline-none placeholder:text-muted-foreground/50 md:text-xs"
                 />
               </div>
             </div>
@@ -259,10 +267,12 @@ function MultiSelect({
                       type="button"
                       layout
                       onClick={() => toggleOption(option)}
-                      className={`flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-xs transition-colors ${
+                      // FIX: py-2.5 -> py-3, so each row is a comfortable
+                      // ~44px tap target on mobile (Apple's own min guideline)
+                      className={`flex w-full items-center justify-between rounded-lg px-3 py-3 text-left text-sm transition-colors md:text-xs ${
                         active
                           ? "bg-videha-mist text-videha-navy"
-                          : "text-foreground/75 hover:bg-videha-mist/60"
+                          : "text-foreground/75 active:bg-videha-mist/60 hover:bg-videha-mist/60"
                       }`}
                     >
                       <span>{option}</span>
@@ -292,7 +302,7 @@ function MultiSelect({
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="text-xs font-semibold text-videha-green"
+                className="px-2 py-1 text-xs font-semibold text-videha-green"
               >
                 Done
               </button>
@@ -336,7 +346,9 @@ function SelectField({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           required={required}
-          className="h-[43px] w-full appearance-none border-b border-border bg-transparent pr-8 text-sm text-foreground outline-none transition-all focus:border-videha-green"
+          // FIX: native <select> bhi iOS pe usi zoom issue se affected
+          // hota hai agar font-size <16px ho
+          className="h-[46px] w-full appearance-none border-b border-border bg-transparent pr-8 text-[16px] text-foreground outline-none transition-all focus:border-videha-green md:text-sm"
         >
           <option value="">Select an option</option>
 
@@ -563,7 +575,10 @@ export function Contact({
 
   return (
     <section className="bg-background">
-      <div className="mx-auto max-w-[1400px] px-5 py-20 md:px-10 md:py-20">
+      {/* FIX: py-20 -> py-14 on mobile — was adding a lot of dead space
+          before/after the form on small screens, forcing extra scroll
+          for no reason. Restored to py-20 from md+. */}
+      <div className="mx-auto max-w-[1400px] px-5 py-14 md:px-10 md:py-20">
         <div className="grid grid-cols-1 gap-12 lg:grid-cols-12 lg:gap-16">
           {/* LEFT */}
           <div className="flex flex-col justify-between lg:col-span-5">
@@ -677,9 +692,9 @@ export function Contact({
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   onSubmit={handleSubmit}
-                  className="border border-border bg-background p-6 md:p-10"
+                  className="border border-border bg-background p-5 sm:p-6 md:p-10"
                 >
-                  <div className="grid grid-cols-1 gap-x-8 gap-y-7 sm:grid-cols-2">
+                  <div className="grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-2 sm:gap-y-7">
                     {FIELDS.map((field) => (
                       <div key={field.name} className="group flex flex-col">
                         <label
@@ -695,13 +710,16 @@ export function Contact({
                           )}
                         </label>
 
+                        {/* FIX: text-sm -> 16px on mobile. This was the
+                            main culprit — Safari zooms the whole page in
+                            on focus when a text input's font is <16px. */}
                         <input
                           id={preview ? `preview-${field.name}` : field.name}
                           name={field.name}
                           type={field.type}
                           required={field.required}
                           placeholder={field.placeholder}
-                          className="mt-2 border-b border-border bg-transparent pb-2.5 text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground/35 focus:border-videha-green focus:pl-1"
+                          className="mt-2 border-b border-border bg-transparent pb-2.5 text-[16px] text-foreground outline-none transition-all placeholder:text-muted-foreground/35 focus:border-videha-green md:text-sm"
                         />
                       </div>
                     ))}
@@ -771,6 +789,7 @@ export function Contact({
                       Additional requirement
                     </label>
 
+                    {/* FIX: same 16px fix applied to the textarea */}
                     <textarea
                       id={
                         preview
@@ -780,7 +799,7 @@ export function Contact({
                       name="additionalRequirement"
                       rows={4}
                       placeholder="Tell us about any additional requirement, certification, specification, packaging or delivery detail..."
-                      className="mt-2 resize-none border-b border-border bg-transparent pb-2.5 text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground/35 focus:border-videha-green focus:pl-1"
+                      className="mt-2 resize-none border-b border-border bg-transparent pb-2.5 text-[16px] text-foreground outline-none transition-all placeholder:text-muted-foreground/35 focus:border-videha-green md:text-sm"
                     />
                   </div>
 
@@ -795,7 +814,7 @@ export function Contact({
                     <button
                       type="submit"
                       disabled={sending}
-                      className="group inline-flex w-fit cursor-pointer items-center gap-3 bg-videha-navy px-7 py-3.5 text-[11px] font-medium uppercase tracking-[0.18em] text-black border border-gray-700 transition-colors hover:bg-black hover:text-white hover:bg-videha-green disabled:cursor-not-allowed disabled:opacity-60"
+                      className="group inline-flex w-full cursor-pointer items-center justify-center gap-3 bg-videha-navy px-7 py-3.5 text-[11px] font-medium uppercase tracking-[0.18em] text-black border border-gray-700 transition-colors hover:bg-black hover:text-white hover:bg-videha-green disabled:cursor-not-allowed disabled:opacity-60 sm:w-fit sm:justify-start"
                     >
                       {sending ? "Sending..." : "Send Business Enquiry"}
                       {!sending && (

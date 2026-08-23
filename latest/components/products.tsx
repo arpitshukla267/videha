@@ -31,7 +31,9 @@ export function Products() {
     <section id="products" className="border-t border-border bg-secondary/30">
       <div className="mx-auto max-w-[1680px] px-3 py-12 sm:px-8 md:px-10 md:py-8 lg:py-12 xl:px-12">
         {/* Header */}
-        <div className="mb-10 flex items-end justify-between gap-4 md:mb-12">
+        {/* FIX: mobile pe column stack, sm+ pe row — pehle items-end + justify-between
+            chhoti screen pe heading aur button ko squeeze/wrap kar deta tha */}
+        <div className="mb-8 flex flex-col gap-4 sm:mb-10 sm:flex-row sm:items-end sm:justify-between md:mb-12">
           <div>
             <Reveal>
               <SectionLabel>Our Products</SectionLabel>
@@ -48,7 +50,9 @@ export function Products() {
           <Reveal delay={0.1}>
             <Link
               href="/products"
-              className="group inline-flex max-w-[50vw] shrink-0 items-center justify-center gap-2 whitespace-nowrap border border-foreground/40 px-4 py-3 text-[10px] font-medium uppercase tracking-[0.12em] text-foreground transition-all duration-300 hover:bg-foreground hover:text-background sm:px-5 sm:text-[11px] sm:tracking-[0.14em]"
+              // FIX: max-w-[50vw] hataya — ab yeh apni natural width lega,
+              // self-start rakha taaki mobile pe full-width na ban jaaye
+              className="group inline-flex w-fit shrink-0 items-center justify-center gap-2 self-start whitespace-nowrap border border-foreground/40 px-4 py-3 text-[10px] font-medium uppercase tracking-[0.12em] text-foreground transition-all duration-300 hover:bg-foreground hover:text-background sm:self-auto sm:px-5 sm:text-[11px] sm:tracking-[0.14em]"
             >
               View All
               <ArrowRight className="h-3.5 w-3.5 shrink-0 transition-transform duration-300 group-hover:translate-x-1" />
@@ -58,6 +62,11 @@ export function Products() {
 
         {/* Product Rail */}
         <div className="relative">
+          {/* FIX: mobile pe left/right edge fade — visual hint ki scroll aur bhi content hai,
+              buttons hidden hone ke baad yeh replacement affordance hai */}
+          <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-6 bg-gradient-to-r from-secondary/30 to-transparent md:hidden" />
+          <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-gradient-to-l from-secondary/30 to-transparent md:hidden" />
+
           <div
             ref={scrollRef}
             className="flex gap-3 overflow-x-auto pb-4 snap-x snap-mandatory scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:gap-5"
@@ -68,14 +77,14 @@ export function Products() {
                 delay={index * 0.04}
                 className="h-full shrink-0 snap-start"
               >
-                <article className="group flex h-full w-[60vw] md:w-[78vw] md:max-w-[330px] flex-col overflow-hidden rounded-[5px] border border-border bg-background transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_18px_45px_rgba(0,0,0,0.08)] sm:w-[46vw] md:w-[310px] lg:w-[320px]">
+                <article className="group flex h-full w-[68vw] md:w-[78vw] md:max-w-[330px] flex-col overflow-hidden rounded-[5px] border border-border bg-background transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_18px_45px_rgba(0,0,0,0.08)] sm:w-[46vw] md:w-[310px] lg:w-[320px]">
                   {/* Image */}
                   <div className="relative aspect-[1.18/1] w-full overflow-hidden bg-secondary">
                     <Image
                       src={product.image || "/placeholder.svg"}
                       alt={product.name}
                       fill
-                      sizes="320px"
+                      sizes="(max-width: 768px) 68vw, 320px"
                       className="object-contain transition-transform duration-700 ease-out group-hover:scale-[1.045]"
                     />
                   </div>
@@ -113,11 +122,14 @@ export function Products() {
           </div>
 
           {/* Scroll Controls */}
+          {/* FIX: mobile pe hidden — touch users swipe se scroll karte hain,
+              arrows cards ke upar galat jagah overlap kar rahe the.
+              Sirf md+ (desktop/tablet with mouse) pe dikhenge. */}
           <button
             type="button"
             onClick={() => scrollProducts("left")}
             aria-label="Previous products"
-            className="absolute left-2 top-1/2 z-20 flex h-11 w-11 -translate-y-1/2 items-center justify-center border border-border bg-background/90 text-foreground shadow-md backdrop-blur-sm transition-all duration-300 hover:cursor-pointer hover:bg-foreground hover:text-background md:left-3"
+            className="absolute left-3 top-[38%] z-20 hidden h-11 w-11 -translate-y-1/2 items-center justify-center border border-border bg-background/90 text-foreground shadow-md backdrop-blur-sm transition-all duration-300 hover:cursor-pointer hover:bg-foreground hover:text-background md:flex"
           >
             <ArrowLeft className="h-4 w-4" />
           </button>
@@ -126,7 +138,7 @@ export function Products() {
             type="button"
             onClick={() => scrollProducts("right")}
             aria-label="Next products"
-            className="absolute right-2 top-1/2 z-20 flex h-11 w-11 -translate-y-1/2 items-center justify-center border border-border bg-background/90 text-foreground shadow-md backdrop-blur-sm transition-all duration-300 hover:cursor-pointer hover:bg-foreground hover:text-background md:right-3"
+            className="absolute right-3 top-[38%] z-20 hidden h-11 w-11 -translate-y-1/2 items-center justify-center border border-border bg-background/90 text-foreground shadow-md backdrop-blur-sm transition-all duration-300 hover:cursor-pointer hover:bg-foreground hover:text-background md:flex"
           >
             <ArrowRight className="h-4 w-4" />
           </button>
