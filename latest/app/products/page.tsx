@@ -34,7 +34,7 @@ export default function ProductsPage() {
     >
       {/* PRODUCT CARD GRID */}
       <section className="border-t border-border bg-background">
-        <div className="mx-auto max-w-[1680px] px-5 py-24 sm:px-8 md:px-10 lg:py-32 xl:px-12">
+        <div className="mx-auto max-w-full md:max-w-[1680px] px-3 py-24 sm:px-8 md:px-10 lg:py-32 xl:px-12">
           <div className="mb-14 md:mb-16">
             <Reveal delay={0.05}>
               <h2 className="mt-5 max-w-3xl text-2xl font-semibold leading-[1.05] tracking-[-0.03em] text-foreground sm:text-3xl lg:text-4xl">
@@ -58,12 +58,12 @@ export default function ProductsPage() {
                       alt={product.name}
                       fill
                       sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                      className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.045]"
+                      className="object-contain transition-transform duration-700 ease-out group-hover:scale-[1.045]"
                     />
                   </div>
 
                   {/* Content */}
-                  <div className="flex flex-1 flex-col p-3 py-5 md:p-6">
+                  <div className="flex flex-1 flex-col p-3 md:p-6">
                     <h3 className="md:mt-2 text-lg md:text-xl font-medium md:font-semibold leading-[1.2] tracking-[-0.02em] text-foreground">
                       {product.name}
                     </h3>
@@ -92,6 +92,34 @@ export default function ProductsPage() {
                 </article>
               </Reveal>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* GUAR GUM LINK BANNER */}
+      <section className="border-t border-border bg-[#f8f6f0] py-20">
+        <div className="mx-auto max-w-[1400px] px-5 md:px-10">
+          <div className="grid grid-cols-1 gap-8 md:grid-cols-12 items-center border border-border bg-background p-8 md:p-12 rounded-[5px]">
+            <div className="md:col-span-8">
+              <span className="text-[10px] font-mono uppercase tracking-[0.24em] text-accent">
+                TECHNICAL B2B HYDROCOLLOIDS
+              </span>
+              <h2 className="mt-3 text-2xl font-semibold text-foreground md:text-3xl">
+                Food Grade Guar Gum Powder (E412)
+              </h2>
+              <p className="mt-4 text-sm leading-relaxed text-muted-foreground max-w-2xl">
+                Looking for our industrial food stabilizer and thickening agent? We supply premium Indian-origin Guar Gum Powder with standardized viscosity grades (up to 5,500 cps) and fine mesh calibration, tailored for global food manufacturing.
+              </p>
+            </div>
+            <div className="md:col-span-4 flex md:justify-end">
+              <Link
+                href="/guar-gum"
+                className="group inline-flex items-center gap-3 bg-foreground px-6 py-3.5 text-xs font-semibold uppercase tracking-[0.15em] text-background transition-all hover:bg-primary"
+              >
+                View Technical Specs
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              </Link>
+            </div>
           </div>
         </div>
       </section>

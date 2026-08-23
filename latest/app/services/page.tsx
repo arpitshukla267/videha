@@ -26,84 +26,90 @@ const SERVICES_DATA = [
   {
     num: "01",
     title: "BULK EXPORT SUPPLY",
-    tagline: "Large-Scale Roasting & Processing Supply",
-    copy: "We supply graded raw and unflavoured plain-roasted makhana in high volumes to international distributors, snack brands, and wholesaling clients. Our facilities are designed to maintain supply lines year-round, protecting our buyers from seasonal scarcity.",
+    tagline: "Reliable Supply for International Buyers",
+    copy: "We support international buyers with bulk supply of premium agricultural and food products, with product specifications, quantities, packaging, and supply requirements aligned to individual buyer needs.",
     image: "/images/process-process.webp",
     specs: [
-      "24 Metric Tons monthly processing capacity",
-      "Standard FCL container loading optimization",
-      "Stabilized bulk contract pricing models",
+      "Bulk supply options",
+      "Buyer-specific product requirements",
+      "Flexible packaging solutions",
     ],
   },
   {
     num: "02",
-    title: "PRIVATE LABEL / CUSTOM PACKAGING",
-    tagline: "Bespoke Flavoring & Retail Ready Formats",
-    copy: "For snack brands building their own makhana ranges, we offer complete private-label OEM manufacturing. From custom seasoning formulation (Himalayan Salt, Peri Peri, Truffle) to retail bag artwork printing, barcode placement, and shelf-display packaging.",
+    title: "PRIVATE LABEL",
+    tagline: "Your Brand. Our Product. Export Support.",
+    copy: "We support private label requirements, especially for Makhana, with product selection, grade or flavour selection, packaging, branding, and export-ready supply based on buyer requirements.",
     image: "/images/product-flavoured.webp",
     specs: [
-      "Bespoke flavor matching and R&D formulation",
-      "Nitrogen-flushed matte laminate retail pouches",
-      "Compliant destination barcode & label layouts",
+      "Private label support",
+      "Retail and custom packaging",
+      "Product and branding requirements",
     ],
   },
   {
     num: "03",
     title: "PRODUCT SOURCING",
-    tagline: "Direct Sourcing from Mithila Wetland Clusters",
-    copy: "We procure crop lots directly from farming cooperatives in Bihar's wetland belt. By bypassing secondary traders, we guarantee 100% single-origin lot integrity and direct trace documentation back to the harvest ponds.",
+    tagline: "Quality-Focused Indian Sourcing",
+    copy: "We focus on reliable Indian sourcing and quality-focused procurement across our agricultural and food product range, with attention to product specifications and buyer requirements.",
     image: "/images/process-source.webp",
     specs: [
-      "Direct pond-to-pallet origin registration",
-      "Audited local cooperative sourcing loops",
-      "Rigorous raw seed selection and sieving",
+      "Reliable Indian sourcing",
+      "Quality-focused procurement",
+      "Buyer-specific requirements",
     ],
   },
   {
     num: "04",
-    title: "QUALITY & GRADING",
-    tagline: "Multi-Tier Sorter Checks & Lab Analyses",
-    copy: "Every container lot is subjected to mechanical and optical sorting to assure Grade AAA size consistency. Independent laboratory test parameters confirm moisture control (<4.5%) and food-safety hygiene standards prior to container stuffing.",
+    title: "QUALITY & SPECIFICATIONS",
+    tagline: "Focused on Consistent Product Requirements",
+    copy: "Product quality parameters, grades, specifications, and buyer requirements are considered throughout the sourcing and supply process. Final technical specifications are provided as applicable to each product.",
     image: "/images/quality-macro.webp",
     specs: [
-      "6mm+ Super Jumbo size grading guarantees",
-      "Kiln-drying moisture limit of 4.5% locked in",
-      "Independent batch Certificate of Analysis (COA)",
+      "Product grade and size specifications",
+      "Quality parameters",
+      "Buyer-specific requirements",
     ],
   },
   {
     num: "05",
     title: "EXPORT DOCUMENTATION",
-    tagline: "Customs Clearances & Food Safety Permits",
-    copy: "Our in-house export desk prepares all documentation specifically for your country's customs regulations. We handle phytosanitary certificates, FSSAI export licensing, certificates of origin, and custom shipping bills.",
+    tagline: "Documentation Based on Destination Requirements",
+    copy: "Documentation can be arranged as applicable to the product, destination country, and buyer requirement, supporting a smoother international trade process.",
     image: "/images/process-export.webp",
     specs: [
-      "Phytosanitary clearances from Ministry of Agriculture",
-      "FSSAI export authorization paperwork",
-      "Certificate of Origin (COO) and bills of lading",
+      "Commercial Invoice",
+      "Packing List",
+      "Certificate of Origin and COA",
     ],
   },
   {
     num: "06",
-    title: "LOGISTICS COORDINATION",
-    tagline: "End-to-End Sea Freight Dispatch",
-    copy: "We organize shipping schedules, coordinate land haulage, perform secure pallet stuffing, and handle port transfers to guarantee on-time shipping dispatches to ports across Europe, North America, the Middle East, and Oceania.",
+    title: "LOGISTICS SUPPORT",
+    tagline: "Supporting the Export Process",
+    copy: "We coordinate the export process and logistics requirements according to the product, destination, and agreed buyer requirements.",
     image: "/images/process-pack.webp",
     specs: [
-      "FOB, CFR, and CIF shipping term flexibility",
-      "Corrugated pallet stuffing & vacuum packaging protection",
-      "Real-time EXIM shipment status tracking logs",
+      "Export dispatch coordination",
+      "Destination-based requirements",
+      "Flexible Incoterm options",
     ],
   },
 ];
 
 const FLOW_STEPS = [
-  { name: "Requirement", desc: "Volume & specification request" },
-  { name: "Specification", desc: "Grade definition & pricing lock" },
-  { name: "Sourcing", desc: "Wetland harvest procurement" },
-  { name: "Quality", desc: "Grading & batch analysis" },
-  { name: "Packing", desc: "Sealing for transit durability" },
-  { name: "Shipment", desc: "Ocean freight EXIM delivery" },
+  {
+    name: "Requirement",
+    desc: "Understanding product, quantity and buyer requirements",
+  },
+  {
+    name: "Sourcing",
+    desc: "Product sourcing based on required specifications",
+  },
+  { name: "Quality", desc: "Quality parameters and buyer requirements" },
+  { name: "Packing", desc: "Bulk, retail or customized packaging" },
+  { name: "Documentation", desc: "Export documents as applicable" },
+  { name: "Dispatch", desc: "Logistics and export coordination" },
 ];
 
 export default function ServicesPage() {
@@ -297,7 +303,7 @@ export default function ServicesPage() {
                     </div>
 
                     <Link
-                      href={`/contact?service=${encodeURIComponent(SERVICES_DATA[activeIndex].title)}`}
+                      href={`/contact?service=${encodeURIComponent(SERVICES_DATA[activeIndex].title)}&additionalRequirement=${encodeURIComponent(`Enquiry for ${SERVICES_DATA[activeIndex].title} service`)}`}
                       className="group inline-flex items-center gap-2 text-[12px] font-medium uppercase tracking-[0.18em] text-primary hover:gap-3 transition-all w-fit border-2 border-foreground/25 px-5 py-2.5"
                     >
                       Request Quotation
@@ -350,9 +356,9 @@ export default function ServicesPage() {
                     </p>
                   </div>
 
-                  <div className="mt-4 pt-3 border-t border-border/40 text-[9px] font-mono text-accent uppercase tracking-widest">
+                  {/* <div className="mt-4 pt-3 border-t border-border/40 text-[9px] font-mono text-accent uppercase tracking-widest">
                     Phase 0{idx + 1}
-                  </div>
+                  </div> */}
                 </div>
               ))}
             </div>
@@ -361,7 +367,7 @@ export default function ServicesPage() {
       </section>
 
       {/* B2B SERVICE GUARANTEES */}
-      <section className="py-24 md:py-32 bg-background border-b border-border">
+      {/* <section className="py-24 md:py-32 bg-background border-b border-border">
         <div className="mx-auto max-w-[1400px] px-5 md:px-10">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="p-8 border border-border bg-background">
@@ -401,7 +407,7 @@ export default function ServicesPage() {
             </div>
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* CTA SECTION */}
       <section className="py-20 md:py-28 bg-foreground text-background">
@@ -422,7 +428,7 @@ export default function ServicesPage() {
               </div>
 
               <Link
-                href="/contact?subject=Service+Quotation+Request"
+                href={`/contact?service=${encodeURIComponent("Bulk Export Supply")}&additionalRequirement=${encodeURIComponent("Service Quotation Request for Videha Overseas Services")}`}
                 className="group inline-flex items-center gap-3 border border-background/40 px-8 py-4 text-[12px] font-medium uppercase tracking-[0.18em] text-background hover:bg-background hover:text-foreground transition-colors whitespace-nowrap"
               >
                 Request Quotation

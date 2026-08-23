@@ -31,7 +31,7 @@ const FAQ_LIST = [
 
 export default function ContactPage() {
   return (
-    <main className="overflow-hidden bg-background pt-12">
+    <main className="overflow-hidden bg-background pt-8 md:pt-12">
       {/* 1. Split-Panel Contact form */}
       <Contact
         headline="Let's Build Something That Travels."
@@ -40,7 +40,7 @@ export default function ContactPage() {
 
       {/* 2. Procurement Hub & Warehouse Coordinates */}
       <section className="bg-secondary/30 border-b border-border py-16 md:py-24">
-        <div className="mx-auto max-w-[1400px] px-5 md:px-10">
+        <div className="mx-auto max-w-[95vw] md:max-w-[1400px] px-5 md:px-10">
           <div className="max-w-2xl mb-12">
             <span className="text-[10px] font-mono uppercase tracking-[0.24em] text-accent">
               REGIONAL OPERATIONS DIRECTORY

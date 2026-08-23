@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useInView } from "framer-motion";
+// @ts-ignore
 import {
   ComposableMap,
   Geographies,
@@ -29,8 +30,8 @@ const DESTINATIONS: {
   { name: "Europe", coordinates: [12, 50], labelOffset: [0, -12] },
   { name: "Middle East", coordinates: [50, 24], labelOffset: [0, 16] },
   { name: "Southeast Asia", coordinates: [105, 5], labelOffset: [0, 18] },
-  { name: "East Asia", coordinates: [125, 36], labelOffset: [14, -8] },
-  { name: "Australia", coordinates: [134, -26], labelOffset: [0, 18] },
+  // { name: "East Asia", coordinates: [125, 36], labelOffset: [14, -8] },
+  { name: "Australia & Oceania", coordinates: [134, -26], labelOffset: [0, 18] },
 ];
 
 type WorldMapProps = {
@@ -208,8 +209,8 @@ export function WorldMap({
       >
         {geographies && (
           <Geographies geography={geographies}>
-            {({ geographies }) =>
-              geographies.map((geo) => (
+            {({ geographies }: { geographies: any[] }) =>
+              geographies.map((geo: any) => (
                 <Geography
                   key={geo.rsmKey}
                   geography={geo}

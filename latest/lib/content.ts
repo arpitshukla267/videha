@@ -1,83 +1,197 @@
 export const PRODUCTS = [
   {
     index: "01",
-    name: "Classic Roasted Makhana",
-    image: "/images/product-classic.webp",
-    copy: "Pure, plain-roasted fox nuts with a delicate crunch and clean flavour — the versatile foundation of the range, ideal for retail and private label.",
-    meta: ["Plain Roasted", "Retail & Bulk", "Grade AAA"],
-    grade: "Grade AAA",
-    format: "Plain Roasted",
-    application: "Retail, private label, ingredient use",
-    packaging: "Retail packs · bulk sacks · custom formats",
+    name: "Raw / Plain Makhana",
+    image: "/images/product-raw.webp",
+    copy: "Clean, plain makhana sourced from India and supplied in carefully graded formats for bulk buyers, food businesses and further processing.",
+    meta: ["Raw / Plain", "Bulk Supply", "Size Graded"],
+    grade: "To be confirmed",
+    format: "Raw / plain",
+    application: "Bulk supply, processing, wholesale",
+    packaging: "Bulk sacks · custom formats",
   },
+
   {
     index: "02",
-    name: "Flavoured Makhana",
-    image: "/images/product-flavoured.webp",
-    copy: "Lightly seasoned varieties developed for modern snacking — measured spice, natural ingredients and a finish tuned to international palates.",
-    meta: ["Seasoned", "Snack-Ready", "Custom Blends"],
-    grade: "Export Grade",
-    format: "Seasoned & flavoured",
-    application: "Snack retail, food service",
-    packaging: "Retail-ready · private label options",
+    name: "Premium Makhana",
+    image: "/images/premium-makhana.jpeg",
+    copy: "Premium-grade Indian makhana selected for consistent quality, clean appearance and reliable supply across international markets.",
+    meta: ["Premium Grade", "Export Supply", "Selected Quality"],
+    grade: "To be confirmed",
+    format: "Premium makhana",
+    application: "Retail, wholesale, private label",
+    packaging: "Retail packs · bulk sacks · custom formats",
   },
+
   {
     index: "03",
-    name: "Bulk & Raw Export",
+    name: "Jumbo Makhana",
+    image: "/images/product-jumbo.webp",
+    copy: "Large-size makhana selected for buyers seeking premium presentation, uniform grading and high-quality export supply.",
+    meta: ["Jumbo Size", "Premium Grade", "Export Supply"],
+    grade: "To be confirmed",
+    format: "Jumbo size",
+    application: "Premium retail, wholesale, private label",
+    packaging: "Retail packs · bulk sacks · custom formats",
+  },
+
+  {
+    index: "04",
+    name: "Roasted Makhana",
+    image: "/images/classic-roasted-salt.jpeg",
+    copy: "Carefully roasted makhana with a light, crisp texture and clean flavour, suitable for retail, food brands and private-label programs.",
+    meta: ["Roasted", "Snack-Ready", "Private Label"],
+    grade: "To be confirmed",
+    format: "Plain roasted",
+    application: "Retail, private label, food service",
+    packaging: "Retail packs · bulk sacks · custom formats",
+  },
+
+  {
+    index: "05",
+    name: "Flavoured Makhana",
+    image: "/images/product-flavoured.webp",
+    copy: "Seasoned makhana developed for modern snacking, with flexible flavour and packaging options for international markets.",
+    meta: ["Seasoned", "Snack-Ready", "Custom Blends"],
+    grade: "To be confirmed",
+    format: "Seasoned & flavoured",
+    application: "Snack retail, food service, private label",
+    packaging: "Retail-ready · private label options",
+  },
+
+  {
+    index: "06",
+    name: "Bulk Makhana",
     image: "/images/product-bulk.webp",
-    copy: "Graded raw and semi-processed fox nuts supplied in export volumes, sorted by size and packed to preserve integrity across long-haul shipping.",
-    meta: ["Size Graded", "Bulk Sacks", "Wholesale"],
-    grade: "Size-graded lots",
-    format: "Raw & semi-processed",
-    application: "Wholesale, processing, re-export",
+    copy: "Makhana supplied in export volumes for importers, distributors, manufacturers and businesses with large-volume requirements.",
+    meta: ["Bulk Supply", "Export Volumes", "Wholesale"],
+    grade: "To be confirmed",
+    format: "Bulk makhana",
+    application: "Wholesale, manufacturing, re-export",
     packaging: "Bulk sacks · container loads",
   },
-] as const
+
+  {
+    index: "07",
+    name: "Private Label Makhana",
+    image: "/images/product-private-label.webp",
+    copy: "Flexible private-label makhana solutions with customized packaging and product formats tailored to your brand requirements.",
+    meta: ["Private Label", "Custom Packaging", "Export Supply"],
+    grade: "To be confirmed",
+    format: "Customized product format",
+    application: "Private label, retail, international brands",
+    packaging: "Custom retail packs · bulk formats",
+  },
+
+  {
+    index: "08",
+    name: "Makhana Powder",
+    image: "/images/product-powder.webp",
+    copy: "Makhana powder for food manufacturers, wellness brands and other applications, subject to final product specifications and confirmation.",
+    meta: ["Powder", "Food Ingredient", "TBC"],
+    grade: "To be confirmed",
+    format: "Makhana powder",
+    application: "Food manufacturing, ingredient use",
+    packaging: "Bulk sacks · custom formats",
+  },
+] as const;
+
+// export const PROCESS_STEPS = [
+//   {
+//     num: "01",
+//     label: "Source",
+//     heading: "From the wetlands of Bihar",
+//     copy: "Every season begins in the ponds of eastern India, where makhana is harvested by hand from lotus. We partner directly with farming communities at origin.",
+//     image: "/images/process-source.webp",
+//   },
+//   {
+//     num: "02",
+//     label: "Select",
+//     heading: "Graded seed by seed",
+//     copy: "Raw seeds are cleaned, sun-dried and sorted by size and maturity. Only the grades that meet our export benchmark move forward.",
+//     image: "/images/process-select.webp",
+//   },
+//   {
+//     num: "03",
+//     label: "Process",
+//     heading: "Popped to perfection",
+//     copy: "Controlled roasting pops each seed into a light, uniform puff — preserving the natural nutrition and delicate crunch makhana is prized for.",
+//     image: "/images/process-process.webp",
+//   },
+//   {
+//     num: "04",
+//     label: "Quality",
+//     heading: "Checked at every stage",
+//     copy: "Moisture, size, colour and food-safety checks are applied before any batch is approved — ensuring consistency that holds across borders.",
+//     image: "/images/quality-macro.webp",
+//   },
+//   {
+//     num: "05",
+//     label: "Pack",
+//     heading: "Sealed for the journey",
+//     copy: "Finished makhana is packed in food-grade, moisture-protected formats — retail, private label or bulk — built to hold quality across continents.",
+//     image: "/images/process-pack.webp",
+//   },
+//   {
+//     num: "06",
+//     label: "Export",
+//     heading: "Delivered to the world",
+//     copy: "Documentation, compliance and logistics are handled end to end, moving consistent shipments to buyers across global markets.",
+//     image: "/images/process-export.webp",
+//   },
+// ] as const;
 
 export const PROCESS_STEPS = [
   {
     num: "01",
-    label: "Source",
-    heading: "From the wetlands of Bihar",
-    copy: "Every season begins in the ponds of eastern India, where makhana is harvested by hand from lotus. We partner directly with farming communities at origin.",
-    image: "/images/process-source.webp",
+    label: "Requirement",
+    heading: "Understanding buyer requirements",
+    copy: "We begin by understanding the buyer's product requirements, specifications, packaging preferences, quantity and destination market.",
+    image: "/images/requirement.webp",
   },
   {
     num: "02",
-    label: "Select",
-    heading: "Graded seed by seed",
-    copy: "Raw seeds are cleaned, sun-dried and sorted by size and maturity. Only the grades that meet our export benchmark move forward.",
-    image: "/images/process-select.webp",
+    label: "Source",
+    heading: "Product sourcing from India",
+    copy: "Products are sourced through our trusted supply network according to the buyer's requirements, product specifications and required volumes.",
+    image: "/images/source.webp",
   },
   {
     num: "03",
-    label: "Process",
-    heading: "Popped to perfection",
-    copy: "Controlled roasting pops each seed into a light, uniform puff — preserving the natural nutrition and delicate crunch makhana is prized for.",
-    image: "/images/process-process.webp",
+    label: "Quality",
+    heading: "Quality checked before dispatch",
+    copy: "Product quality is reviewed against the required specifications before moving forward to packing and export preparation.",
+    image: "/images/quality-check.webp",
   },
   {
     num: "04",
-    label: "Quality",
-    heading: "Checked at every stage",
-    copy: "Moisture, size, colour and food-safety checks are applied before any batch is approved — ensuring consistency that holds across borders.",
-    image: "/images/quality-macro.webp",
+    label: "Pack",
+    heading: "Packed for the global journey",
+    copy: "Products are prepared in suitable food-grade, bulk or customized packaging formats based on buyer requirements and destination needs.",
+    image: "/images/bulk-supply.webp",
   },
   {
     num: "05",
-    label: "Pack",
-    heading: "Sealed for the journey",
-    copy: "Finished makhana is packed in food-grade, moisture-protected formats — retail, private label or bulk — built to hold quality across continents.",
-    image: "/images/process-pack.webp",
+    label: "Documentation",
+    heading: "Export documentation prepared",
+    copy: "Required commercial, product and export documentation is coordinated to support a smooth international shipment process.",
+    image: "/images/export-documentation.webp",
   },
   {
     num: "06",
-    label: "Export",
-    heading: "Delivered to the world",
-    copy: "Documentation, compliance and logistics are handled end to end, moving consistent shipments to buyers across global markets.",
-    image: "/images/process-export.webp",
+    label: "Logistics",
+    heading: "Coordinated from origin to destination",
+    copy: "Shipping and logistics are coordinated according to the shipment requirements, destination and agreed delivery terms.",
+    image: "/images/logistics.webp",
   },
-] as const
+  {
+    num: "07",
+    label: "Dispatch",
+    heading: "Exported to global markets",
+    copy: "Once everything is ready, the shipment is dispatched and moves from India to the buyer's destination market.",
+    image: "/images/global-export.webp",
+  },
+] as const;
 
 export const QUALITY_POINTS = [
   {
@@ -96,7 +210,7 @@ export const QUALITY_POINTS = [
     title: "Full batch traceability",
     copy: "From harvest pond to pallet, each lot can be traced back to its origin and processing run.",
   },
-] as const
+] as const;
 
 export const MARKETS = [
   {
@@ -134,9 +248,9 @@ export const MARKETS = [
     y: 402,
     info: "Growing demand served through established export channels to Australia and New Zealand.",
   },
-] as const
+] as const;
 
-export const ORIGIN = { x: 662, y: 262, label: "India" }
+export const ORIGIN = { x: 662, y: 262, label: "India" };
 
 export const SERVICES = [
   {
@@ -175,7 +289,7 @@ export const SERVICES = [
     copy: "Documentation, compliance paperwork and end-to-end logistics coordination for international buyers.",
     detail: "From pallet to port to destination.",
   },
-] as const
+] as const;
 
 export const BUYER_EXPECTATIONS = [
   {
@@ -198,10 +312,10 @@ export const BUYER_EXPECTATIONS = [
     title: "Long-term partnership",
     copy: "Responsive communication and supply relationships built to last beyond a single order.",
   },
-] as const
+] as const;
 
 export const INTRO_FACTS = [
   { value: "12+", label: "Global markets served" },
   { value: "100%", label: "Traceable sourcing" },
   { value: "24T", label: "Monthly export capacity" },
-] as const
+] as const;

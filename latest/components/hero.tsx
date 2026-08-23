@@ -11,6 +11,7 @@ import {
 } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import { RevealText } from "@/components/reveal";
+import Link from "next/link";
 
 /* ------------------------------------------------------------------ */
 /*  Storyline data                                                     */
@@ -28,45 +29,56 @@ type Story = {
 
 const STORIES: Story[] = [
   {
-    id: "farming",
+    id: "makhana",
     number: "01",
-    label: "Source",
-    heading: ["Hand-Harvested,", "at the Water's Edge."],
+    label: "Premium Makhana",
+    heading: ["Premium Makhana,", "Sourced from India."],
     description:
-      "Every seed is gathered by hand from the lotus wetlands of Bihar, where generations of farmers have perfected the harvest.",
-    image: "/hero.webp",
-    mobileImage: "/hero-mobile.webp",
-    alt: "Lotus wetlands at dawn in Bihar, India",
+      "Premium Indian makhana carefully sourced and selected for quality, consistency and international markets.",
+    image: "/images/makhana-hero.webp",
+    mobileImage: "/images/makhana-hero.webp",
+    alt: "Premium Indian makhana sourced from Bihar",
   },
   {
-    id: "processing",
+    id: "guar-gum",
     number: "02",
-    label: "Process",
-    heading: ["Cleaned, Graded", "and Perfected."],
+    label: "Food Grade Guar Gum",
+    heading: ["Food Grade Guar Gum,", "Built for Global Supply."],
     description:
-      "Each batch is cleaned, roasted and graded under strict quality control before it earns the Videha name.",
-    image: "/services.jpg",
-    alt: "Makhana processing and quality grading facility",
+      "High-quality food grade guar gum for international buyers seeking reliable sourcing, consistent quality and dependable supply.",
+    image: "/images/gaur-gum.webp",
+    mobileImage: "/images/gaur-gum-mobile.webp",
+    alt: "Food grade guar gum for international supply",
   },
   {
-    id: "shipment",
+    id: "bulk-supply",
     number: "03",
-    label: "Ship",
-    heading: ["Packed and Exported", "Across the Globe."],
+    label: "Bulk Supply",
+    heading: ["Reliable Bulk Supply,", "Built for Growing Markets."],
     description:
-      "Sealed, packed and containerised for export — moving from Bihar to ports and pantries around the world.",
-    image: "/images/process-export.webp",
-    alt: "Export containers and global shipping logistics",
+      "Consistent product sourcing and dependable bulk supply for importers, distributors and businesses with large-volume requirements.",
+    image: "/images/bulk-supply.webp",
+    alt: "Bulk supply of Indian agricultural products",
   },
   {
-    id: "destination",
+    id: "private-label",
     number: "04",
-    label: "Arrive",
-    heading: ["Premium Makhana,", "from India to the World."],
+    label: "Private Label",
+    heading: ["Private Label Solutions,", "Tailored to Your Brand."],
     description:
-      "From wetlands to your table — Videha Makhana reaches discerning kitchens and markets across the globe.",
+      "Flexible private label solutions designed to help businesses bring quality Indian food ingredients and agricultural products to their markets.",
     image: "/images/process-pack.webp",
-    alt: "Videha Makhana, the final product ready for the global table",
+    alt: "Private label food products prepared for export",
+  },
+  {
+    id: "global-export",
+    number: "05",
+    label: "Global Export",
+    heading: ["From India,", "To Global Markets."],
+    description:
+      "Connecting trusted Indian agricultural sourcing with international markets through quality, reliable supply and professional export support.",
+    image: "/images/global-export.webp",
+    alt: "Indian agricultural products prepared for global export",
   },
 ];
 
@@ -177,6 +189,7 @@ function DesktopHero() {
       ref={wrapperRef}
       className="relative hidden md:block"
       style={{ height: `${(SEGMENTS + 1) * 100}vh` }}
+      id="hero"
     >
       <div className="sticky top-0 h-screen w-full overflow-hidden bg-background">
         {/* Main / active background image */}
@@ -329,9 +342,9 @@ function ThumbLabel({ story }: { story: Story }) {
 function ContentBlock({ story }: { story: Story }) {
   return (
     <>
-      <span className="mb-4 block text-[11px] font-medium uppercase tracking-[0.3em] text-white/70">
+      {/* <span className="mb-4 block text-[11px] font-medium uppercase tracking-[0.3em] text-white/70">
         {story.number} — {story.label}
-      </span>
+      </span> */}
       <h1 className="max-w-2xl text-[2.6rem] font-semibold leading-[1.04] tracking-[-0.02em] text-white text-balance sm:text-6xl md:text-[4rem]">
         <RevealText text={story.heading[0]} delay={0.1} immediate />
         <RevealText text={story.heading[1]} delay={0.22} immediate />
@@ -339,14 +352,44 @@ function ContentBlock({ story }: { story: Story }) {
       <p className="mt-6 max-w-md text-[15px] leading-relaxed text-white/85">
         {story.description}
       </p>
-      <div className="mt-9">
+      <div className="mt-9 flex flex-wrap gap-3">
         <a
-          href="#products"
+          href={`/contact?${
+            story.id === "makhana"
+              ? "product=Premium%20Makhana"
+              : story.id === "guar-gum"
+                ? "product=Food%20Grade%20Guar%20Gum"
+                : story.id === "bulk-supply"
+                  ? "service=Bulk%20Export%20Supply"
+                  : story.id === "private-label"
+                    ? "service=Private%20Label"
+                    : "service=Export%20%26%20Logistics"
+          }`}
           className="group inline-flex items-center gap-3 border border-white/40 px-7 py-4 text-[12px] font-medium uppercase tracking-[0.18em] text-white transition-colors hover:border-white hover:bg-white hover:text-[#0A0E0A]"
         >
-          Explore Products
+          Request Quotation
           <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
         </a>
+
+        {story.id === "makhana" && (
+          <a
+            href="/products"
+            className="group inline-flex items-center gap-3 border border-white/30 px-7 py-4 text-[12px] font-medium uppercase tracking-[0.18em] text-white/80 transition-colors hover:border-white hover:bg-white/10 hover:text-white"
+          >
+            Explore Products
+            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+          </a>
+        )}
+
+        {story.id === "guar-gum" && (
+          <a
+            href="/guar-gum"
+            className="group inline-flex items-center gap-3 border border-white/30 px-7 py-4 text-[12px] font-medium uppercase tracking-[0.18em] text-white/80 transition-colors hover:border-white hover:bg-white/10 hover:text-white"
+          >
+            Explore Products
+            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+          </a>
+        )}
       </div>
     </>
   );
@@ -408,30 +451,55 @@ function MobileHero() {
           <div className="absolute inset-0 bg-black/35 bg-gradient-to-r from-black/45 via-black/25 to-black/5" />
         </div>
 
-        {/* Text content — sourced straight from the active story, no
-            entrance/crossfade animation tied to `active`: it just swaps
-            the moment the banner changes. */}
-        <div className="relative z-10 flex w-full items-center pt-24 pb-16">
-          <div className="mx-auto w-full max-w-[1400px] px-5 md:px-10">
-            <h1 className="max-w-2xl text-[2.6rem] font-semibold leading-[1.04] tracking-[-0.02em] text-white text-balance sm:text-6xl md:text-[4rem]">
-              <RevealText text={story.heading[0]} delay={0.15} immediate />
-              <RevealText text={story.heading[1]} delay={0.3} immediate />
-            </h1>
+        {/* NEW: text + CTA block, synced to the active banner via AnimatePresence */}
+        <div className="relative z-10 w-full px-5 pb-24 pt-24">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={active}
+              initial={{ opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -14 }}
+              transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <h1 className="max-w-xl text-[2.1rem] font-semibold leading-[1.08] tracking-[-0.02em] text-white text-balance sm:text-5xl">
+                <span className="block">{story.heading[0]}</span>
+                <span className="block">{story.heading[1]}</span>
+              </h1>
+              <p className="mt-5 max-w-md text-[14px] leading-relaxed text-white/85">
+                {story.description}
+              </p>
 
-            <p className="mt-6 max-w-md text-[15px] leading-relaxed text-white/85">
-              {story.description}
-            </p>
+              <div className="mt-8 flex flex-wrap gap-3">
+                <a
+                  href={`/contact?${
+                    story.id === "makhana"
+                      ? "product=Premium%20Makhana"
+                      : story.id === "guar-gum"
+                        ? "product=Food%20Grade%20Guar%20Gum"
+                        : story.id === "bulk-supply"
+                          ? "service=Bulk%20Export%20Supply"
+                          : story.id === "private-label"
+                            ? "service=Private%20Label"
+                            : "service=Export%20%26%20Logistics"
+                  }`}
+                  className="group inline-flex items-center gap-3 border border-white/40 px-7 py-4 text-[12px] font-medium uppercase tracking-[0.18em] text-white transition-colors hover:border-white hover:bg-white hover:text-[#0A0E0A]"
+                >
+                  Request Quotation
+                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                </a>
 
-            <div className="mt-9">
-              <a
-                href="#products"
-                className="group inline-flex items-center gap-3 border border-white/40 px-7 py-4 text-[12px] font-medium uppercase tracking-[0.18em] text-white transition-colors hover:border-white hover:bg-white hover:text-[#0A0E0A]"
-              >
-                Explore Products
-                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-              </a>
-            </div>
-          </div>
+                {(story.id === "makhana" || story.id === "guar-gum") && (
+                  <Link
+                    href={story.id === "makhana" ? "/products" : "/guar-gum"}
+                    className="group inline-flex items-center gap-3 border border-white/30 px-7 py-4 text-[12px] font-medium uppercase tracking-[0.18em] text-white/80 transition-colors hover:border-white hover:bg-white/10 hover:text-white"
+                  >
+                    Explore Products
+                    <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                  </Link>
+                )}
+              </div>
+            </motion.div>
+          </AnimatePresence>
         </div>
 
         <div className="absolute bottom-8 left-1/2 z-20 flex -translate-x-1/2 items-center gap-0 md:bottom-10">
@@ -448,10 +516,7 @@ function MobileHero() {
                     key={active}
                     initial={{ scaleX: 0 }}
                     animate={{ scaleX: 1 }}
-                    transition={{
-                      duration: SLIDE_DURATION / 1000,
-                      ease: "linear",
-                    }}
+                    transition={{ duration: SLIDE_DURATION / 1000, ease: "linear" }}
                     className="absolute inset-0 origin-left rounded-full bg-white"
                   />
                 </span>

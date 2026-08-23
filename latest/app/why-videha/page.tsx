@@ -6,6 +6,7 @@ import Image from "next/image"
 import { ArrowRight, Check } from "lucide-react"
 import { SectionLabel } from "@/components/section-label"
 import { Reveal } from "@/components/reveal"
+import { WhyGlobalBuyersChoose } from "@/components/why-global-buyers-choose"
 
 const DIFFERENTIATORS = [
   {
@@ -100,7 +101,7 @@ export default function WhyVidehaPage() {
       </header>
 
       {/* Differentiators — alternating image/text rows */}
-      <section className="border-b border-border bg-background">
+      {/* <section className="border-b border-border bg-background">
         <div className="mx-auto max-w-[1400px] px-5 md:px-10">
           {DIFFERENTIATORS.map((item, idx) => {
             const isEven = idx % 2 === 0
@@ -111,7 +112,6 @@ export default function WhyVidehaPage() {
                   idx !== DIFFERENTIATORS.length - 1 ? "border-b border-border/50" : ""
                 }`}
               >
-                {/* Image — left on even rows, right on odd (achieved via order) */}
                 <div className={`relative aspect-[4/3] w-full overflow-hidden border border-border bg-secondary ${
                   isEven ? "lg:order-1" : "lg:order-2"
                 }`}>
@@ -127,7 +127,6 @@ export default function WhyVidehaPage() {
                   </div>
                 </div>
 
-                {/* Text content */}
                 <div className={`flex flex-col justify-center ${
                   isEven ? "lg:order-2" : "lg:order-1"
                 }`}>
@@ -155,7 +154,7 @@ export default function WhyVidehaPage() {
             )
           })}
         </div>
-      </section>
+      </section> */}
 
       {/* WHAT BUYERS CAN EXPECT */}
       <section className="py-24 md:py-32 bg-secondary/30 border-b border-border">
@@ -195,6 +194,8 @@ export default function WhyVidehaPage() {
           </div>
         </div>
       </section>
+
+      <WhyGlobalBuyersChoose />
 
       {/* CTA SECTION */}
       <section className="py-20 md:py-28 bg-foreground text-background">

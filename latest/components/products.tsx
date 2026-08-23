@@ -1,37 +1,13 @@
+"use client";
+
+import { useRef } from "react";
 import Image from "next/image";
 import { SectionLabel } from "@/components/section-label";
 import { Reveal } from "@/components/reveal";
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ArrowLeft, ArrowRight } from "lucide-react";
+import { PRODUCTS } from "@/lib/content";
 
-const PRODUCTS = [
-  {
-    index: "01",
-    name: "Classic Roasted Makhana",
-    image: "/images/product-classic.webp",
-    copy: "Pure, plain-roasted fox nuts with a delicate crunch and clean flavour — the versatile foundation of the range, ideal for retail and private label.",
-  },
-  {
-    index: "02",
-    name: "Flavoured Makhana",
-    image: "/images/product-flavoured.webp",
-    copy: "Lightly seasoned varieties developed for modern snacking — measured spice, natural ingredients and a finish tuned to international palates.",
-  },
-  {
-    index: "03",
-    name: "Bulk & Raw Export",
-    image: "/images/product-bulk.webp",
-    copy: "Graded raw and semi-processed fox nuts supplied in export volumes, sorted by size and packed to preserve integrity across long-haul shipping.",
-  },
-  {
-    index: "04",
-    name: "Makhana Powder",
-    image: "/images/product-powder.webp",
-    copy: "Premium makhana powder processed for food manufacturers, wellness brands and private-label applications with consistent quality.",
-  },
-];
-
-// Generate slugs based on product name
 const getSlug = (name: string) => {
   return name
     .toLowerCase()
@@ -40,72 +16,120 @@ const getSlug = (name: string) => {
 };
 
 export function Products() {
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const scrollProducts = (direction: "left" | "right") => {
+    if (!scrollRef.current) return;
+
+    scrollRef.current.scrollBy({
+      left: direction === "right" ? 420 : -420,
+      behavior: "smooth",
+    });
+  };
+
   return (
     <section id="products" className="border-t border-border bg-secondary/30">
-      <div className="mx-auto max-w-[1680px] px-3 py-12 md:py-8 sm:px-8 md:px-10 lg:py-12 xl:px-12">
+      <div className="mx-auto max-w-[1680px] px-3 py-12 sm:px-8 md:px-10 md:py-8 lg:py-12 xl:px-12">
         {/* Header */}
-        <div className="mb-14 md:mb-16">
-          <Reveal>
-            <SectionLabel>Our Products</SectionLabel>
-          </Reveal>
+        <div className="mb-10 flex items-end justify-between gap-4 md:mb-12">
+          <div>
+            <Reveal>
+              <SectionLabel>Our Products</SectionLabel>
+            </Reveal>
 
-          <Reveal delay={0.05}>
-            <h2 className="mt-5 max-w-3xl text-xl font-medium leading-[1.02] tracking-[-0.04em] text-foreground sm:text-2xl lg:text-3xl">
-              Our Best Makhana, Curated for the World{" "}
-            </h2>
+            <Reveal delay={0.05}>
+              <h2 className="mt-5 max-w-3xl text-xl font-medium leading-[1.02] tracking-[-0.04em] text-foreground sm:text-2xl lg:text-3xl">
+                Our Best Makhana, Curated for the World
+              </h2>
+            </Reveal>
+          </div>
+
+          {/* View All */}
+          <Reveal delay={0.1}>
+            <Link
+              href="/products"
+              className="group inline-flex max-w-[50vw] shrink-0 items-center justify-center gap-2 whitespace-nowrap border border-foreground/40 px-4 py-3 text-[10px] font-medium uppercase tracking-[0.12em] text-foreground transition-all duration-300 hover:bg-foreground hover:text-background sm:px-5 sm:text-[11px] sm:tracking-[0.14em]"
+            >
+              View All
+              <ArrowRight className="h-3.5 w-3.5 shrink-0 transition-transform duration-300 group-hover:translate-x-1" />
+            </Link>
           </Reveal>
         </div>
 
-        {/* Product Grid */}
-        <div className="grid grid-cols-2 gap-x-2 gap-y-4 md:gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {PRODUCTS.map((product, index) => (
-            <Reveal key={product.name} delay={index * 0.06} className="h-full">
-              <article className="group flex h-full flex-col overflow-hidden rounded-[5px] border border-border bg-background transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_18px_45px_rgba(0,0,0,0.08)]">
-                {/* Image */}
-                <div className="relative aspect-[5/5] md:aspect-[1.18/1] w-full overflow-hidden bg-secondary">
-                  <Image
-                    src={product.image || "/placeholder.svg"}
-                    alt={product.name}
-                    fill
-                    sizes="
-                      (max-width: 640px) 100vw,
-                      (max-width: 1024px) 50vw,
-                      25vw
-                    "
-                    className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.045]"
-                  />
-                </div>
-
-                {/* Content */}
-                <div className="flex flex-1 flex-col p-3 md:p-5">
-                  <h3 className="text-lg md:text-xl font-medium leading-[1.15] tracking-[-0.03em] text-foreground">
-                    {product.name}
-                  </h3>
-
-                  <p className="mt-2.5 line-clamp-2 text-[15px] leading-[1.55] text-muted-foreground">
-                    {product.copy}
-                  </p>
-
-                  {/* Buttons */}
-                  <div className="mt-auto pt-5 grid grid-cols-1 gap-2">
-                    <Link
-                      href={`/products/${getSlug(product.name)}`}
-                      className="group/btn flex h-10 w-full items-center justify-center border border-foreground/60 text-[11px] font-medium uppercase tracking-wide text-foreground transition-all duration-300 hover:bg-foreground hover:text-background"
-                    >
-                      Details
-                    </Link>
-                    {/* <Link
-                      href={`/contact?product=${encodeURIComponent(product.name)}`}
-                      className="group/btn flex h-10 w-full items-center justify-center gap-1 bg-foreground text-[11px] font-medium uppercase tracking-wide text-background transition-all duration-300 hover:bg-primary"
-                    >
-                      Enquire
-                      <ArrowRight className="w-3 h-3 transition-transform group-hover/btn:translate-x-0.5" />
-                    </Link> */}
+        {/* Product Rail */}
+        <div className="relative">
+          <div
+            ref={scrollRef}
+            className="flex gap-3 overflow-x-auto pb-4 snap-x snap-mandatory scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:gap-5"
+          >
+            {PRODUCTS.map((product, index) => (
+              <Reveal
+                key={product.name}
+                delay={index * 0.04}
+                className="h-full shrink-0 snap-start"
+              >
+                <article className="group flex h-full w-[60vw] md:w-[78vw] md:max-w-[330px] flex-col overflow-hidden rounded-[5px] border border-border bg-background transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_18px_45px_rgba(0,0,0,0.08)] sm:w-[46vw] md:w-[310px] lg:w-[320px]">
+                  {/* Image */}
+                  <div className="relative aspect-[1.18/1] w-full overflow-hidden bg-secondary">
+                    <Image
+                      src={product.image || "/placeholder.svg"}
+                      alt={product.name}
+                      fill
+                      sizes="320px"
+                      className="object-contain transition-transform duration-700 ease-out group-hover:scale-[1.045]"
+                    />
                   </div>
-                </div>
-              </article>
-            </Reveal>
-          ))}
+
+                  {/* Content */}
+                  <div className="flex flex-1 flex-col p-4 md:p-5">
+                    <div className="mb-2 flex items-center justify-between">
+                      <span className="text-[10px] font-mono uppercase tracking-[0.18em] text-muted-foreground">
+                        {product.index}
+                      </span>
+                    </div>
+
+                    <h3 className="text-lg font-medium leading-[1.15] tracking-[-0.03em] text-foreground md:text-xl">
+                      {product.name}
+                    </h3>
+
+                    <p className="mt-2.5 line-clamp-2 text-[14px] leading-[1.55] text-muted-foreground">
+                      {product.copy}
+                    </p>
+
+                    {/* Details */}
+                    <div className="mt-auto pt-5">
+                      <Link
+                        href={`/products/${getSlug(product.name)}`}
+                        className="group/btn flex h-10 w-full items-center justify-center gap-2 border border-foreground/60 text-[11px] font-medium uppercase tracking-wide text-foreground transition-all duration-300 hover:bg-foreground hover:text-background"
+                      >
+                        Details
+                        <ArrowRight className="h-3.5 w-3.5 transition-transform duration-300 group-hover/btn:translate-x-1" />
+                      </Link>
+                    </div>
+                  </div>
+                </article>
+              </Reveal>
+            ))}
+          </div>
+
+          {/* Scroll Controls */}
+          <button
+            type="button"
+            onClick={() => scrollProducts("left")}
+            aria-label="Previous products"
+            className="absolute left-2 top-1/2 z-20 flex h-11 w-11 -translate-y-1/2 items-center justify-center border border-border bg-background/90 text-foreground shadow-md backdrop-blur-sm transition-all duration-300 hover:cursor-pointer hover:bg-foreground hover:text-background md:left-3"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => scrollProducts("right")}
+            aria-label="Next products"
+            className="absolute right-2 top-1/2 z-20 flex h-11 w-11 -translate-y-1/2 items-center justify-center border border-border bg-background/90 text-foreground shadow-md backdrop-blur-sm transition-all duration-300 hover:cursor-pointer hover:bg-foreground hover:text-background md:right-3"
+          >
+            <ArrowRight className="h-4 w-4" />
+          </button>
         </div>
       </div>
     </section>

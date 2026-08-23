@@ -1,223 +1,272 @@
-import type { Metadata } from "next"
-import Image from "next/image"
-import Link from "next/link"
-import { ArrowRight, ShieldCheck, Check } from "lucide-react"
-import { SectionLabel } from "@/components/section-label"
-import { Reveal } from "@/components/reveal"
-import { ComplianceBadgesGraphic } from "@/components/graphics"
+import type { Metadata } from "next";
+import Link from "next/link";
+import {
+  ShieldCheck,
+  ClipboardList,
+  Users,
+  FileCheck2,
+  Building2,
+  ArrowRight,
+  FileText,
+  Info,
+} from "lucide-react";
+import { Reveal } from "@/components/reveal";
 
 export const metadata: Metadata = {
-  title: "Quality Standards — Videha Overseas",
+  title: "Quality & Compliance — Videha Overseas",
   description:
-    "Explore our rigorous export-ready quality checks. Traceability from pond to pack, moisture locking under 4.5%, and Grade AAA sizing.",
-}
+    "How Videha Overseas approaches quality control, supplier verification, documentation, and buyer-specific requirements for export shipments.",
+};
 
-const QUALITY_PILLARS = [
+/**
+ * ------------------------------------------------------------------
+ * EDITABLE CONTENT — BUSINESS REGISTRATIONS & EXPORT CREDENTIALS
+ * ------------------------------------------------------------------
+ * Only list a credential here once the corresponding document/number
+ * has been confirmed and supplied by Videha Overseas. Do NOT add
+ * ISO, HACCP, Organic, Halal, Kosher, US FDA, or any other
+ * certification unless it has been explicitly confirmed and a valid
+ * document exists to support it.
+ *
+ * Replace the "value" fields below with the real registration
+ * numbers / details, or remove a row entirely if it does not apply.
+ * ------------------------------------------------------------------
+ */
+const REGISTRATIONS = [
   {
-    num: "01",
-    title: "CONSISTENT GRADING",
-    desc: "Multi-level mechanical sieves and optical sorters verify puffed diameters (Grade AAA Jumbo is strictly locked at 6mm+), ensuring no unpopped kernels or shell fragments make it to the container."
+    label: "Company Registration / Incorporation",
+    value: "[Add company registration / incorporation number]",
   },
   {
-    num: "02",
-    title: "CONTROLLED PROCESSING",
-    desc: "Popping operates in high-heat thermal shock systems without the addition of cooking oils, preservatives, or chemical bleaches. The natural nutrients and ivory color are locked in pure."
+    label: "Import Export Code (IEC)",
+    value: "[Add IEC number]",
   },
   {
-    num: "03",
-    title: "EXPORT-READY PACKAGING",
-    desc: "To survive long transit times across ocean routes, makhana is immediately sealed in nitrogen-flushed retail pouches or double-barrier bulk bags, keeping moisture content under 4.5%."
+    label: "GST Registration",
+    value: "[Add GSTIN]",
   },
   {
-    num: "04",
-    title: "TRACEABLE SOURCING",
-    desc: "By coordinating crop procurement directly with farming clusters in Bihar's wetland belt, every batch is registered with pond origin, harvest logs, and drying statistics."
-  }
-]
+    label: "MSME / Udyam Registration",
+    value: "[Add Udyam registration number, if applicable]",
+  },
+  {
+    label: "AD Code (Authorized Dealer Code)",
+    value: "[Add AD Code, if applicable]",
+  },
+  {
+    label: "RCMC (Export Promotion Council Membership)",
+    value: "[Add RCMC number and issuing council, if applicable]",
+  },
+];
 
-const JOURNEY_STEPS = [
-  { name: "Raw Product", check: "Wetland harvest seed moisture check (<12%)" },
-  { name: "Inspection", check: "Seed sorting & size calibration" },
-  { name: "Grading", check: "Puff sorting (AAA Jumbo 6mm+ separation)" },
-  { name: "Processing", check: "Controlled flame roasting & popping" },
-  { name: "Final Check", check: "Kiln-drying moisture verification (<4.5%)" },
-  { name: "Shipment", check: "Double-barrier seal & container stuffing" }
-]
+const PILLARS = [
+  {
+    icon: ShieldCheck,
+    title: "Consistent Product Quality",
+    copy: "Every batch is produced and packed against a defined set of internal parameters, so buyers receive the same quality lot after lot, shipment after shipment.",
+  },
+  {
+    icon: Users,
+    title: "Supplier Verification",
+    copy: "Raw material is sourced from vetted growers and processors. We track where each lot originates from so quality issues can be traced back and corrected at the source.",
+  },
+  {
+    icon: ClipboardList,
+    title: "Appropriate Documentation",
+    copy: "We prepare the commercial, shipping, and quality documentation relevant to each order — matched to what the destination market and the buyer's contract actually require.",
+  },
+  {
+    icon: FileCheck2,
+    title: "Buyer-Specific Requirements",
+    copy: "Different buyers test for different parameters. We work directly with procurement and QA teams to understand their specification sheet and confirm it against our product before shipment.",
+  },
+];
 
-export default function QualityPage() {
+export default function QualityCompliancePage() {
+  const getContactLink = (subject: string, message: string) =>
+    `/contact?subject=${encodeURIComponent(subject)}&message=${encodeURIComponent(message)}`;
+
   return (
-    <main className="overflow-hidden bg-background">
-      {/* Hero Header */}
-      <header className="border-b border-border bg-secondary/30 pt-36 md:pt-48 pb-16">
-        <div className="mx-auto max-w-[1400px] px-5 md:px-10">
-          <div className="max-w-4xl">
-            <Reveal>
-              <SectionLabel>QUALITY STANDARDS</SectionLabel>
-            </Reveal>
-            <h1 className="mt-6 text-[clamp(2.5rem,7vw,5rem)] font-semibold leading-[0.98] tracking-[-0.03em] text-foreground text-balance">
-              Quality That Travels Beyond Borders.
-            </h1>
-            <Reveal delay={0.1}>
-              <p className="mt-8 max-w-xl text-[15px] leading-relaxed text-muted-foreground">
-                Agricultural exports demand strict physical limits. At Videha Overseas, we eliminate variables at origin, processing, and packaging to deliver flawless shipments.
-              </p>
-            </Reveal>
-          </div>
-        </div>
-      </header>
-
-      {/* Macro Image Section */}
-      <section className="border-b border-border bg-secondary/30 pb-20 md:pb-28">
-        <div className="mx-auto max-w-[1400px] px-5 md:px-10">
+    <main
+      className="overflow-hidden bg-background pt-24 font-poppins"
+      style={{ fontFamily: "'Poppins', sans-serif" }}
+    >
+      {/* 1. HERO */}
+      <section className="border-b border-border bg-background py-16 md:py-24">
+        <div className="mx-auto max-w-[90vw] px-5 md:px-10">
           <Reveal>
-            <div className="relative aspect-[21/9] w-full overflow-hidden border border-border bg-secondary">
-              <Image
-                src="/images/quality-macro.webp"
-                alt="Macro detail of premium popped makhana"
-                fill
-                className="object-cover"
-                sizes="100vw"
-                priority
-              />
-              <div className="absolute bottom-4 left-4 bg-background/90 px-3 py-1.5 border border-border text-[10px] font-mono uppercase text-foreground">
-                Grade AAA Macro Inspection
-              </div>
-            </div>
+            <span className="text-[10px] uppercase tracking-[0.24em] text-accent">
+              QUALITY & COMPLIANCE
+            </span>
+
+            <h1 className="mt-5 text-4xl font-semibold leading-[1.1] tracking-[-0.03em] text-foreground sm:text-5xl">
+              How We Approach Quality
+            </h1>
+          </Reveal>
+
+          <Reveal delay={0.1}>
+            <p className="mt-6 max-w-3xl text-base md:text-lg text-muted-foreground leading-relaxed">
+              Our focus is on maintaining consistent product quality, verified
+              suppliers, appropriate documentation, and the ability to meet
+              buyer-specific quality requirements — rather than on collecting
+              certification badges. Below is an honest picture of how we manage
+              quality internally, along with our actual business registrations
+              and export credentials.
+            </p>
           </Reveal>
         </div>
       </section>
 
-      {/* Typography Pillars Section */}
-      <section className="py-24 md:py-32 border-b border-border bg-background">
-        <div className="mx-auto max-w-[1400px] px-5 md:px-10">
-          <div className="max-w-2xl mb-16">
-            <span className="text-[10px] font-mono uppercase tracking-[0.24em] text-accent">
-              QUALITY CONTROL PROTOCOLS
+      {/* 2. FOUR PILLARS */}
+      <section className="py-16 md:py-24 border-b border-border bg-[#f8f6f0]">
+        <div className="mx-auto max-w-[90vw] px-5 md:px-10">
+          <div className="mb-12 max-w-3xl">
+            <span className="text-[10px] uppercase tracking-[0.24em] text-primary">
+              OUR APPROACH
             </span>
-            <h2 className="mt-2 text-3xl font-semibold text-foreground md:text-4xl">
-              Four Benchmarks of Our Sourcing Purity
+            <h2 className="mt-3 text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
+              What Quality Means at Videha Overseas
             </h2>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-16">
-            {QUALITY_PILLARS.map((pillar, idx) => (
-              <Reveal key={pillar.num} delay={idx * 0.05}>
-                <div className="flex flex-col border-t border-border pt-8 group">
-                  <span className="font-mono text-4xl font-semibold text-accent/40 group-hover:text-accent transition-colors">
-                    {pillar.num}
-                  </span>
-                  <h3 className="text-lg font-bold text-foreground mt-4 uppercase tracking-tight">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+            {PILLARS.map((pillar) => {
+              const Icon = pillar.icon;
+              return (
+                <div
+                  key={pillar.title}
+                  className="border border-border bg-background p-6 md:p-7 rounded-[5px]"
+                >
+                  <Icon className="h-6 w-6 text-accent" />
+                  <h3 className="mt-4 text-base md:text-lg font-bold text-foreground">
                     {pillar.title}
                   </h3>
-                  <p className="mt-4 text-xs md:text-sm text-muted-foreground leading-relaxed">
-                    {pillar.desc}
+                  <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
+                    {pillar.copy}
                   </p>
                 </div>
-              </Reveal>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* 3. BUSINESS REGISTRATIONS & EXPORT CREDENTIALS */}
+      <section className="py-16 md:py-24 border-b border-border bg-background">
+        <div className="mx-auto max-w-[90vw] px-5 md:px-10">
+          <div className="mb-10 max-w-3xl">
+            <span className="text-[10px] uppercase tracking-[0.24em] text-accent">
+              BUSINESS REGISTRATIONS
+            </span>
+            <h2 className="mt-3 text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
+              Registrations & Export Credentials
+            </h2>
+            <p className="mt-3 text-sm text-muted-foreground leading-relaxed">
+              The details below reflect the registrations and credentials
+              actually held by Videha Overseas. Fields marked as placeholders
+              will be updated with the final registration numbers before this
+              page goes live.
+            </p>
+          </div>
+
+          <div className="border border-border bg-card rounded-[5px] divide-y divide-border overflow-hidden">
+            {REGISTRATIONS.map((reg) => (
+              <div
+                key={reg.label}
+                className="grid grid-cols-1 sm:grid-cols-3 gap-2 px-6 py-4.5 items-baseline"
+              >
+                <span className="flex items-center gap-2 text-xs md:text-sm font-medium uppercase tracking-wider text-foreground">
+                  <Building2 className="h-4 w-4 text-primary shrink-0" />
+                  {reg.label}
+                </span>
+                <span className="sm:col-span-2 text-sm text-muted-foreground italic">
+                  {reg.value}
+                </span>
+              </div>
             ))}
           </div>
+
+          <div className="mt-6 flex items-start gap-3 border border-dashed border-border bg-secondary/20 p-4 rounded-[5px]">
+            <Info className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              We do not list product or system certifications (such as ISO,
+              HACCP, Organic, Halal, Kosher, or US FDA registration) on this
+              page unless a valid, current certificate has been confirmed and
+              provided by Videha Overseas. If any such certification applies to
+              your order, please ask our export desk and we will share the
+              relevant document directly.
+            </p>
+          </div>
         </div>
       </section>
 
-      {/* Journey Map Section */}
-      <section className="py-24 md:py-32 bg-secondary/30 border-b border-border">
-        <div className="mx-auto max-w-[1400px] px-5 md:px-10">
-          <div className="max-w-2xl mb-16">
-            <span className="text-[10px] font-mono uppercase tracking-[0.24em] text-accent">
-              AUDITED FLOW
+      {/* 4. DOCUMENTATION ON REQUEST */}
+      <section className="py-16 md:py-24 bg-[#f8f6f0] border-b border-border">
+        <div className="mx-auto max-w-[90vw] px-5 md:px-10">
+          <div className="mb-10 max-w-3xl">
+            <span className="text-[10px] uppercase tracking-[0.24em] text-primary">
+              PER-SHIPMENT DOCUMENTATION
             </span>
-            <h2 className="mt-2 text-3xl font-semibold text-foreground md:text-4xl">
-              The Journey of Audited Batches
+            <h2 className="mt-3 text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
+              What We Provide With Each Order
             </h2>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Critical checkpoints applied systematically to every export run.
+            <p className="mt-3 text-sm text-muted-foreground leading-relaxed">
+              Alongside the commercial paperwork for your shipment, we can
+              prepare the following on request, matched to what your specific
+              order and destination require:
             </p>
           </div>
 
-          {/* SVG Journey timeline */}
-          <div className="border border-border bg-background p-6 md:p-10">
-            <div className="relative">
-              {/* Connector line for desktop */}
-              <div className="hidden lg:block absolute left-6 right-6 top-1/2 -translate-y-1/2 h-0.5 bg-border z-0" />
-
-              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-6 relative z-10">
-                {JOURNEY_STEPS.map((step, idx) => (
-                  <div key={step.name} className="flex flex-col bg-background/80 border border-border p-5 h-full group hover:border-primary transition-all duration-300">
-                    <div className="w-8 h-8 rounded-full bg-background border border-border flex items-center justify-center font-mono text-[10px] font-bold text-accent mb-4 group-hover:bg-primary group-hover:text-background transition-colors">
-                      0{idx + 1}
-                    </div>
-                    <h4 className="text-xs font-bold text-foreground uppercase tracking-tight">{step.name}</h4>
-                    <p className="text-[10px] text-muted-foreground mt-2 leading-relaxed flex-1">
-                      {step.check}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Big Promise Band */}
-      <section className="bg-primary text-primary-foreground py-28 md:py-36 border-b border-border">
-        <div className="mx-auto max-w-[1400px] px-5 md:px-10 text-center max-w-4xl">
-          <Reveal>
-            <span className="text-[10px] font-mono uppercase tracking-[0.24em] text-accent font-semibold">
-              OUR SUPPLY PHILOSOPHY
-            </span>
-            <h2 className="mt-6 text-[clamp(2rem,5.5vw,4.2rem)] font-semibold leading-[1.0] tracking-[-0.03em] text-balance">
-              &ldquo;Quality should survive the journey.&rdquo;
-            </h2>
-            <p className="mt-8 text-sm md:text-base text-primary-foreground/75 max-w-xl mx-auto leading-relaxed">
-              Crispness popped in India is only valuable if it remains crispy at the destination warehouse in Hamburg or New York. We verify sealing, water bounds, and packaging strengths so our makhana survives transit climates perfectly.
-            </p>
-          </Reveal>
-        </div>
-      </section>
-
-      {/* Global Compliance & Accreditations */}
-      <section className="py-20 md:py-28 border-b border-border bg-secondary/30">
-        <div className="mx-auto max-w-[1400px] px-5 md:px-10">
-          <div className="text-center max-w-2xl mx-auto mb-12">
-            <Reveal>
-              <SectionLabel>Global Compliance</SectionLabel>
-            </Reveal>
-            <h2 className="mt-3 text-2xl md:text-3xl font-semibold text-foreground">
-              Food Safety & Sourcing Certifications
-            </h2>
-          </div>
-          <ComplianceBadgesGraphic />
-        </div>
-      </section>
-
-      {/* CTA */}
-      <section className="py-20 md:py-28 bg-foreground text-background">
-        <div className="mx-auto max-w-[1400px] px-5 md:px-10">
-          <Reveal>
-            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
-              <div>
-                <span className="text-[10px] font-mono uppercase tracking-[0.24em] text-accent">
-                  FOREIGN BUYER DESK
-                </span>
-                <h3 className="text-2xl md:text-3xl font-semibold text-background mt-2">
-                  Request Laboratory Certifications & Samples
-                </h3>
-                <p className="text-sm text-background/70 mt-2 max-w-xl">
-                  Connect with our export desk to request specific laboratory analyses, moisture lock sheets, or sample containers.
-                </p>
-              </div>
-
-              <Link
-                href="/contact?subject=Laboratory+Certifications+%26+Lab+Sheets"
-                className="group inline-flex items-center gap-3 border border-background/40 px-8 py-4 text-[12px] font-medium uppercase tracking-[0.18em] text-background hover:bg-background hover:text-foreground transition-colors whitespace-nowrap"
+          <ul className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {[
+              "Batch-specific Certificate of Analysis (COA)",
+              "Commercial Invoice & Packing List",
+              "Certificate of Origin",
+              "Buyer-specific quality declaration or checklist",
+            ].map((doc) => (
+              <li
+                key={doc}
+                className="flex items-start gap-3 border border-border bg-background p-4 rounded-[5px]"
               >
-                Request Lab Sheet
-                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-              </Link>
+                <FileText className="h-4 w-4 text-accent shrink-0 mt-0.5" />
+                <span className="text-sm text-muted-foreground">{doc}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      {/* 5. CTA */}
+      <section className="py-16 bg-background">
+        <div className="mx-auto max-w-[90vw] px-5 md:px-10">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-8 border border-border bg-[#514536] text-white p-8 md:p-12 rounded-[5px]">
+            <div>
+              <span className="text-[10px] uppercase tracking-[0.24em] text-white/60">
+                HAVE A SPECIFIC REQUIREMENT?
+              </span>
+              <h2 className="mt-3 text-2xl md:text-3xl font-semibold text-white">
+                Talk to Our Quality & Export Desk
+              </h2>
+              <p className="mt-3 max-w-2xl text-xs md:text-sm leading-relaxed text-white/70">
+                Share your specification sheet, buyer quality checklist, or any
+                documentation requirement and we will confirm what we can
+                provide before you place an order.
+              </p>
             </div>
-          </Reveal>
+
+            <Link
+              href={getContactLink(
+                "Quality & Compliance Enquiry",
+                "Hello, we would like to discuss your quality control process, supplier verification, and documentation available for our specific order requirements.",
+              )}
+              className="group inline-flex shrink-0 items-center gap-3 bg-white px-7 py-4 text-[11px] font-medium uppercase tracking-[0.18em] text-black transition-colors hover:bg-secondary"
+            >
+              Contact Quality Desk
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+            </Link>
+          </div>
         </div>
       </section>
     </main>
-  )
+  );
 }

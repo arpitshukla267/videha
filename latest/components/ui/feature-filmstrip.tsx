@@ -2,7 +2,15 @@
 
 import { useRef, type ReactNode } from "react";
 import Image from "next/image";
-import { motion, useScroll, useTransform, type MotionValue } from "framer-motion";
+import Link from "next/link";
+import { ArrowRight } from "lucide-react";
+import {
+  motion,
+  useScroll,
+  useTransform,
+  useSpring,
+  type MotionValue,
+} from "framer-motion";
 import { cn } from "@/lib/utils";
 
 export type FeatureItem = {
@@ -39,6 +47,19 @@ export function FeatureFilmstrip({
     offset: ["start start", "end end"],
   });
 
+  /*
+    Smooth the raw scroll progress with a spring so the filmstrip glides
+    instead of snapping 1:1 to scroll events. Tuned for a fluid, slightly
+    weighted feel — high-ish stiffness keeps it responsive, damping kills
+    any bounce/overshoot.
+  */
+  const smoothProgress = useSpring(scrollYProgress, {
+    stiffness: 260,
+    damping: 38,
+    mass: 0.6,
+    restDelta: 0.0005,
+  });
+
   /* 
     CRITICAL CSS TRANSFORM MATH:
     The motion.div track has width = items.length * 100vw (e.g. 400vw for 4 items, 600vw for 6 items).
@@ -51,7 +72,7 @@ export function FeatureFilmstrip({
     items.length > 1 ? ((items.length - 1) / items.length) * 100 : 0;
 
   const trackX = useTransform(
-    scrollYProgress,
+    smoothProgress,
     [0, 1],
     ["0%", `-${maxShiftPercent}%`],
   );
@@ -73,7 +94,7 @@ export function FeatureFilmstrip({
         {/* Card Filmstrip Viewport */}
         <div className="flex-1 min-h-0 flex items-center overflow-hidden -mx-5">
           <motion.div
-            style={{ x: trackX }}
+            style={{ x: trackX, translateZ: 0 }}
             className="flex will-change-transform"
           >
             {items.map((item) => (
@@ -118,6 +139,16 @@ export function FeatureFilmstrip({
                         {item.description}
                       </p>
                     </div>
+
+                    <div className="pt-3">
+                      <Link
+                        href={`/contact?service=${encodeURIComponent(item.title)}&additionalRequirement=${encodeURIComponent(`Enquiry for ${item.title} service`)}`}
+                        className="group/btn inline-flex items-center gap-2 text-xs font-semibold text-accent hover:text-primary transition-colors"
+                      >
+                        Request Quotation
+                        <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover/btn:translate-x-1" />
+                      </Link>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -132,7 +163,7 @@ export function FeatureFilmstrip({
               key={item.num}
               index={i}
               total={items.length}
-              progress={scrollYProgress}
+              progress={smoothProgress}
             />
           ))}
         </div>

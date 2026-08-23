@@ -102,7 +102,7 @@ export function SourceToPartnershipSection({
   const activeIndex = passed.lastIndexOf(true);
 
   return (
-    <section className="border-b border-border bg-[#f8f6f0] py-24 md:py-32">
+    <section className="border-b border-border bg-[#f8f6f0] py-12 md:py-32">
       <div className="mx-auto max-w-[1400px] px-5 md:px-10">
         <div className="mb-20 max-w-2xl mx-auto text-center">
           <h2 className="mt-2 text-3xl font-semibold text-foreground md:text-4xl">

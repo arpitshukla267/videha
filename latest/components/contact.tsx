@@ -8,10 +8,15 @@ import { Reveal } from "@/components/reveal";
 import { SectionCta } from "@/components/section-cta";
 
 const PRODUCTS = [
-  "Classic Roasted Makhana",
+  "Raw / Plain Makhana",
+  "Premium Makhana",
+  "Jumbo Makhana",
+  "Roasted Makhana",
   "Flavoured Makhana",
-  "Bulk & Raw Export",
+  "Bulk Makhana",
+  "Private Label Makhana",
   "Makhana Powder",
+  "Food Grade Guar Gum",
 ];
 
 const SERVICES = [
@@ -26,52 +31,73 @@ const SERVICES = [
 const FIELDS = [
   {
     name: "name",
-    label: "Name",
+    label: "Full name",
     type: "text",
     placeholder: "Your full name",
     required: true,
   },
   {
     name: "company",
-    label: "Company",
+    label: "Company name",
     type: "text",
-    placeholder: "Your Company name",
-    required: false,
+    placeholder: "Your company name",
+    required: true,
   },
   {
     name: "email",
-    label: "Email",
+    label: "Business email",
     type: "email",
-    placeholder: "Your Email",
+    placeholder: "Your business email",
+    required: true,
+  },
+  {
+    name: "phone",
+    label: "WhatsApp / Phone number",
+    type: "tel",
+    placeholder: "Your WhatsApp / phone number",
     required: true,
   },
   {
     name: "country",
     label: "Country",
     type: "text",
-    placeholder: "Destination market",
+    placeholder: "Your country",
     required: true,
   },
   {
-    name: "phone",
-    label: "Phone",
-    type: "tel",
-    placeholder: "Your Mobile No.",
+    name: "grade",
+    label: "Product grade / Specification",
+    type: "text",
+    placeholder: "Required grade or specification",
     required: false,
   },
   {
-    name: "volume",
-    label: "Expected Monthly Volume",
+    name: "quantity",
+    label: "Required quantity",
     type: "text",
-    placeholder: "",
+    placeholder: "e.g. 1,000 kg",
+    required: true,
+  },
+  {
+    name: "monthlyRequirement",
+    label: "Monthly requirement",
+    type: "text",
+    placeholder: "e.g. 5 MT / month",
+    required: false,
+  },
+  {
+    name: "packaging",
+    label: "Packaging requirement",
+    type: "text",
+    placeholder: "e.g. Bulk sacks / retail packs / custom",
     required: false,
   },
   {
     name: "port",
-    label: "Destination Port / Market",
+    label: "Destination port",
     type: "text",
-    placeholder: "",
-    required: false,
+    placeholder: "Destination port",
+    required: true,
   },
 ] as const;
 
@@ -88,6 +114,7 @@ type MultiSelectProps = {
   selected: string[];
   onChange: (value: string[]) => void;
   required?: boolean;
+  singleSelect?: boolean;
 };
 
 function MultiSelect({
@@ -97,6 +124,7 @@ function MultiSelect({
   selected,
   onChange,
   required = false,
+  singleSelect = false,
 }: MultiSelectProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -121,6 +149,12 @@ function MultiSelect({
   );
 
   function toggleOption(option: string) {
+    if (singleSelect) {
+      onChange(selected.includes(option) ? [] : [option]);
+      setOpen(false);
+      return;
+    }
+
     if (selected.includes(option)) {
       onChange(selected.filter((item) => item !== option));
     } else {
@@ -130,12 +164,11 @@ function MultiSelect({
 
   return (
     <div ref={ref} className="relative flex flex-col">
-      <label className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
+      <label className="text-xs font-medium tracking-[0.05em] text-muted-foreground">
         {label}
         {required && <span className="ml-1 text-videha-green">*</span>}
       </label>
 
-      {/* Trigger */}
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
@@ -158,7 +191,6 @@ function MultiSelect({
         />
       </button>
 
-      {/* Selected chips */}
       <AnimatePresence initial={false}>
         {selected.length > 0 && (
           <motion.div
@@ -191,7 +223,6 @@ function MultiSelect({
         )}
       </AnimatePresence>
 
-      {/* Dropdown */}
       <AnimatePresence>
         {open && (
           <motion.div
@@ -204,7 +235,6 @@ function MultiSelect({
             }}
             className="absolute left-0 top-[calc(100%+8px)] z-50 w-full overflow-hidden rounded-xl border border-border bg-background shadow-[0_20px_50px_rgba(11,38,56,0.12)]"
           >
-            {/* Search */}
             <div className="border-b border-border p-3">
               <div className="flex items-center gap-2 rounded-lg bg-videha-mist px-3">
                 <Search className="h-3.5 w-3.5 text-muted-foreground" />
@@ -218,7 +248,6 @@ function MultiSelect({
               </div>
             </div>
 
-            {/* Options */}
             <div className="max-h-56 overflow-y-auto p-2">
               {filteredOptions.length > 0 ? (
                 filteredOptions.map((option) => {
@@ -255,7 +284,6 @@ function MultiSelect({
               )}
             </div>
 
-            {/* Footer */}
             <div className="flex items-center justify-between border-t border-border px-3 py-2.5">
               <span className="text-xs text-muted-foreground">
                 {selected.length} selected
@@ -264,7 +292,7 @@ function MultiSelect({
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="text-xs font-semibold uppercase tracking-[0.12em] text-videha-green"
+                className="text-xs font-semibold text-videha-green"
               >
                 Done
               </button>
@@ -276,43 +304,113 @@ function MultiSelect({
   );
 }
 
+function SelectField({
+  label,
+  name,
+  options,
+  value,
+  onChange,
+  required = false,
+}: {
+  label: string;
+  name: string;
+  options: string[];
+  value: string;
+  onChange: (value: string) => void;
+  required?: boolean;
+}) {
+  return (
+    <div className="group flex flex-col">
+      <label
+        htmlFor={name}
+        className="text-xs font-medium tracking-[0.05em] text-muted-foreground transition-colors group-focus-within:text-videha-green"
+      >
+        {label}
+        {required && <span className="ml-1 text-videha-green">*</span>}
+      </label>
+
+      <div className="relative mt-2">
+        <select
+          id={name}
+          name={name}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          required={required}
+          className="h-[43px] w-full appearance-none border-b border-border bg-transparent pr-8 text-sm text-foreground outline-none transition-all focus:border-videha-green"
+        >
+          <option value="">Select an option</option>
+
+          {options.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+
+        <ChevronDown className="pointer-events-none absolute right-0 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+      </div>
+    </div>
+  );
+}
+
 export function Contact({
   preview = false,
   headline = "Looking for a Reliable Makhana Partner?",
-  subhead = "Tell us about your requirement — products, services, volumes, markets, specifications — and our export team will respond with a tailored proposal.",
+  subhead = "Tell us about your requirement — products, quantities, specifications, packaging and destination — and our export team will respond with a tailored proposal.",
 }: ContactProps) {
   const [sent, setSent] = useState(false);
 
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
 
+  const [privateLabel, setPrivateLabel] = useState("");
+  const [incoterm, setIncoterm] = useState("");
+  const [sampleRequired, setSampleRequired] = useState("");
+
   useEffect(() => {
     if (typeof window === "undefined") return;
 
     const params = new URLSearchParams(window.location.search);
+
     const paramProduct = params.get("product") || params.get("p");
-    const paramService = params.get("service") || params.get("s");
+
+    const paramService =
+      params.get("service") || params.get("services") || params.get("s");
+
     const paramSubject =
       params.get("subject") || params.get("interest") || params.get("enquiry");
-    const paramMessage = params.get("message");
+
+    const paramMessage =
+      params.get("additionalRequirement") ||
+      params.get("message") ||
+      params.get("purpose") ||
+      params.get("req");
+
+    const paramPrivateLabel = params.get("privateLabel") || params.get("pl");
+
+    const paramPackaging = params.get("packaging") || params.get("pack");
 
     if (paramProduct) {
       const cleanParam = decodeURIComponent(paramProduct).trim();
       const normalized = cleanParam.toLowerCase().replace(/[-_]/g, " ");
 
-      // Match against PRODUCTS
       const matched = PRODUCTS.find(
         (p) =>
           p.toLowerCase() === normalized ||
           p.toLowerCase().includes(normalized) ||
           normalized.includes(
-            p.toLowerCase().replace(/[^a-z0-9]/g, " ").trim().split(" ")[0]
-          )
+            p
+              .toLowerCase()
+              .replace(/[^a-z0-9]/g, " ")
+              .trim()
+              .split(" ")[0],
+          ),
       );
 
       const targetProduct = matched || cleanParam;
+
       setSelectedProducts((prev) =>
-        prev.includes(targetProduct) ? prev : [...prev, targetProduct]
+        prev.includes(targetProduct) ? prev : [...prev, targetProduct],
       );
     }
 
@@ -320,59 +418,147 @@ export function Contact({
       const cleanParam = decodeURIComponent(paramService).trim();
       const normalized = cleanParam.toLowerCase().replace(/[-_]/g, " ");
 
-      // Match against SERVICES
       const matched = SERVICES.find(
         (s) =>
           s.toLowerCase() === normalized ||
           s.toLowerCase().includes(normalized) ||
           normalized.includes(
-            s.toLowerCase().replace(/[^a-z0-9]/g, " ").trim().split(" ")[0]
-          )
+            s
+              .toLowerCase()
+              .replace(/[^a-z0-9]/g, " ")
+              .trim()
+              .split(" ")[0],
+          ),
       );
 
       const targetService = matched || cleanParam;
+
       setSelectedServices((prev) =>
-        prev.includes(targetService) ? prev : [...prev, targetService]
+        prev.includes(targetService) ? prev : [...prev, targetService],
       );
+    }
+
+    if (paramPrivateLabel) {
+      const cleanPl = decodeURIComponent(paramPrivateLabel).trim();
+      if (cleanPl.toLowerCase() === "yes" || cleanPl.toLowerCase() === "true") {
+        setPrivateLabel("Yes");
+      } else if (
+        cleanPl.toLowerCase() === "no" ||
+        cleanPl.toLowerCase() === "false"
+      ) {
+        setPrivateLabel("No");
+      }
     }
 
     if (paramSubject || paramMessage) {
       const textToFill =
         paramMessage ||
         (paramSubject ? `Enquiry regarding: ${paramSubject}` : "");
+
       if (textToFill) {
         setTimeout(() => {
-          const msgInput = (document.getElementById("message") ||
-            document.getElementById("preview-message")) as HTMLTextAreaElement | null;
-          if (msgInput && !msgInput.value) {
-            msgInput.value = textToFill;
+          const addReqInput = (document.getElementById(
+            "additionalRequirement",
+          ) ||
+            document.getElementById("preview-additionalRequirement") ||
+            document.getElementById("message") ||
+            document.getElementById(
+              "preview-message",
+            )) as HTMLTextAreaElement | null;
+
+          if (addReqInput && !addReqInput.value) {
+            addReqInput.value = textToFill;
+          }
+        }, 100);
+      }
+    }
+
+    if (paramPackaging) {
+      const textToFill = decodeURIComponent(paramPackaging).trim();
+      if (textToFill) {
+        setTimeout(() => {
+          const packInput = (document.getElementById("packaging") ||
+            document.getElementById(
+              "preview-packaging",
+            )) as HTMLInputElement | null;
+
+          if (packInput && !packInput.value) {
+            packInput.value = textToFill;
           }
         }, 100);
       }
     }
   }, []);
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
-    const formData = new FormData(e.currentTarget);
+    if (selectedProducts.length === 0) {
+      setError("Please select at least one product.");
+      return;
+    }
+
+    setSending(true);
+    setError("");
+
+    const form = e.currentTarget;
+    const formData = new FormData(form);
 
     const enquiry = {
-      name: formData.get("name"),
-      company: formData.get("company"),
-      email: formData.get("email"),
-      country: formData.get("country"),
-      phone: formData.get("phone"),
-      volume: formData.get("volume"),
-      port: formData.get("port"),
+      name: String(formData.get("name") || ""),
+      company: String(formData.get("company") || ""),
+      email: String(formData.get("email") || ""),
+      phone: String(formData.get("phone") || ""),
+      country: String(formData.get("country") || ""),
       products: selectedProducts,
       services: selectedServices,
-      message: formData.get("message"),
+      grade: String(formData.get("grade") || ""),
+      quantity: String(formData.get("quantity") || ""),
+      monthlyRequirement: String(formData.get("monthlyRequirement") || ""),
+      packaging: String(formData.get("packaging") || ""),
+      privateLabel,
+      port: String(formData.get("port") || ""),
+      incoterm,
+      sampleRequired,
+      additionalRequirement: String(
+        formData.get("additionalRequirement") || "",
+      ),
     };
 
-    console.log("ENQUIRY:", enquiry);
+    try {
+      const response = await fetch("/api/send-email", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(enquiry),
+      });
 
-    setSent(true);
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || "Unable to send enquiry.");
+      }
+
+      setSent(true);
+      form.reset();
+      setSelectedProducts([]);
+      setSelectedServices([]);
+      setPrivateLabel("");
+      setIncoterm("");
+      setSampleRequired("");
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Something went wrong. Please try again.",
+      );
+    } finally {
+      setSending(false);
+    }
   }
 
   return (
@@ -383,7 +569,7 @@ export function Contact({
           <div className="flex flex-col justify-between lg:col-span-5">
             <div>
               <Reveal>
-                <SectionLabel>Let&apos;s Connect</SectionLabel>
+                <SectionLabel>Let's Connect</SectionLabel>
               </Reveal>
 
               <Reveal delay={0.05}>
@@ -401,31 +587,36 @@ export function Contact({
 
             <div className="mt-10 flex flex-col gap-5 border-t border-border pt-7 text-xs">
               <div>
-                <span className="text-xs font-medium uppercase tracking-[0.15em] text-muted-foreground">
+                <span className="text-xs font-medium text-muted-foreground">
                   Export Division Email
                 </span>
 
                 <a
-                  href="mailto:export@videhaoverseas.com"
+                  href="mailto:info@videhaoverseas.com"
                   className="mt-1 block text-sm font-medium text-videha-navy hover:text-videha-green"
                 >
-                  export@videhaoverseas.com
+                  info@videhaoverseas.com
                 </a>
               </div>
 
               <div>
-                <span className="text-xs font-medium uppercase tracking-[0.15em] text-muted-foreground">
-                  Telephone Inquiries
+                <span className="text-xs font-medium text-muted-foreground">
+                  WhatsApp / Phone
                 </span>
 
-                <span className="mt-1 block text-sm font-medium text-videha-navy">
-                  +91 91234 56789
-                </span>
+                <a
+                  href="https://wa.me/919373923799"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-1 block text-sm font-medium text-videha-navy hover:text-videha-green"
+                >
+                  9373923799
+                </a>
               </div>
 
               <div className="grid grid-cols-2 gap-5">
                 <div>
-                  <span className="text-xs font-medium uppercase tracking-[0.15em] text-muted-foreground">
+                  <span className="text-xs font-medium text-muted-foreground">
                     Operating Hours
                   </span>
 
@@ -439,7 +630,7 @@ export function Contact({
                 </div>
 
                 <div>
-                  <span className="text-xs font-medium uppercase tracking-[0.15em] text-muted-foreground">
+                  <span className="text-xs font-medium text-muted-foreground">
                     Procurement Hub
                   </span>
 
@@ -495,7 +686,7 @@ export function Contact({
                           htmlFor={
                             preview ? `preview-${field.name}` : field.name
                           }
-                          className="text-xs font-medium uppercase tracking-[0.15em] text-muted-foreground transition-colors group-focus-within:text-videha-green"
+                          className="text-xs font-medium tracking-[0.05em] text-muted-foreground transition-colors group-focus-within:text-videha-green"
                         >
                           {field.label}
 
@@ -515,54 +706,101 @@ export function Contact({
                       </div>
                     ))}
 
-                    {/* Products */}
+                    {/* Product */}
                     <MultiSelect
-                      label="Products Required"
-                      placeholder="Select products"
+                      label="Product required"
+                      placeholder="Select product"
                       options={PRODUCTS}
                       selected={selectedProducts}
                       onChange={setSelectedProducts}
-                      required
                     />
 
-                    {/* Services */}
+                    {/* Service */}
                     <MultiSelect
-                      label="Services Required"
-                      placeholder="Select services"
+                      label="Service required"
+                      placeholder="Select service"
                       options={SERVICES}
                       selected={selectedServices}
                       onChange={setSelectedServices}
                     />
+
+                    {/* Private label */}
+                    <MultiSelect
+                      label="Private label required"
+                      placeholder="Select option"
+                      options={["Yes", "No"]}
+                      selected={privateLabel ? [privateLabel] : []}
+                      onChange={(value) => setPrivateLabel(value[0] || "")}
+                      required
+                      singleSelect
+                    />
+
+                    {/* Incoterm */}
+                    <MultiSelect
+                      label="Preferred incoterm"
+                      placeholder="Select incoterm"
+                      options={["EXW", "FOB", "CFR", "CIF"]}
+                      selected={incoterm ? [incoterm] : []}
+                      onChange={(value) => setIncoterm(value[0] || "")}
+                      required
+                      singleSelect
+                    />
+
+                    {/* Sample */}
+                    <MultiSelect
+                      label="Sample required"
+                      placeholder="Select option"
+                      options={["Yes", "No"]}
+                      selected={sampleRequired ? [sampleRequired] : []}
+                      onChange={(value) => setSampleRequired(value[0] || "")}
+                      required
+                      singleSelect
+                    />
                   </div>
 
-                  {/* Message */}
+                  {/* Additional Requirement */}
                   <div className="mt-8 flex flex-col group">
                     <label
-                      htmlFor={preview ? "preview-message" : "message"}
-                      className="text-xs font-medium uppercase tracking-[0.15em] text-muted-foreground transition-colors group-focus-within:text-videha-green"
+                      htmlFor={
+                        preview
+                          ? "preview-additionalRequirement"
+                          : "additionalRequirement"
+                      }
+                      className="text-xs font-medium tracking-[0.05em] text-muted-foreground transition-colors group-focus-within:text-videha-green"
                     >
-                      Requirement / Message
-                      <span className="ml-1 text-videha-green">*</span>
+                      Additional requirement
                     </label>
 
                     <textarea
-                      id={preview ? "preview-message" : "message"}
-                      name="message"
-                      required
+                      id={
+                        preview
+                          ? "preview-additionalRequirement"
+                          : "additionalRequirement"
+                      }
+                      name="additionalRequirement"
                       rows={4}
-                      placeholder="Tell us about product grade, monthly volume, destination market, packaging, certifications or any other requirement..."
+                      placeholder="Tell us about any additional requirement, certification, specification, packaging or delivery detail..."
                       className="mt-2 resize-none border-b border-border bg-transparent pb-2.5 text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground/35 focus:border-videha-green focus:pl-1"
                     />
                   </div>
+
+                  {error && (
+                    <p className="mt-6 text-sm text-red-600" role="alert">
+                      {error}
+                    </p>
+                  )}
 
                   {/* Submit */}
                   <div className="mt-9 flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
                     <button
                       type="submit"
-                      className="group inline-flex w-fit bg-black cursor-pointer items-center gap-3 bg-videha-navy px-7 py-3.5 text-[11px] font-medium uppercase tracking-[0.18em] text-white transition-colors hover:bg-videha-green"
+                      disabled={sending}
+                      className="group inline-flex w-fit cursor-pointer items-center gap-3 bg-videha-navy px-7 py-3.5 text-[11px] font-medium uppercase tracking-[0.18em] text-black border border-gray-700 transition-colors hover:bg-black hover:text-white hover:bg-videha-green disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      Send Enquiry
-                      <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                      {sending ? "Sending..." : "Send Business Enquiry"}
+                      {!sending && (
+                        <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                      )}
                     </button>
 
                     <span className="max-w-xs text-[10px] leading-relaxed text-muted-foreground">
