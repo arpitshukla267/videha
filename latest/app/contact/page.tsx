@@ -45,7 +45,7 @@ export default function ContactPage() {
             <span className="text-[10px] font-mono uppercase tracking-[0.24em] text-accent">
               REGIONAL OPERATIONS DIRECTORY
             </span>
-            <h2 className="mt-2 text-3xl font-semibold text-foreground md:text-4xl">
+            <h2 className="mt-2 text-2xl font-medium md:font-semibold text-foreground md:text-4xl">
               Procurement & Warehousing Coordinates
             </h2>
           </div>
@@ -53,7 +53,7 @@ export default function ContactPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="p-8 bg-background border border-border">
               <MapPin className="w-8 h-8 text-primary mb-4" />
-              <h3 className="text-lg font-bold text-foreground">Sourcing & Sorting Depot</h3>
+              <h3 className="text-lg font-medium md:font-bold text-foreground">Sourcing & Sorting Depot</h3>
               <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
                 Located directly at the heart of Mithila wetland belt, Bihar. Handles cooperative seed receipts, sieving, mechanical calibration, and initial sun-drying audits.
               </p>
@@ -62,7 +62,7 @@ export default function ContactPage() {
 
             <div className="p-8 bg-background border border-border">
               <ShieldCheck className="w-8 h-8 text-primary mb-4" />
-              <h3 className="text-lg font-bold text-foreground">Processing & Export Warehouse</h3>
+              <h3 className="text-lg font-medium md:font-bold text-foreground">Processing & Export Warehouse</h3>
               <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
                 Dry-kiln moisture management, batch roasting, flavoring lines, nitrogen sealing, and container stuffing. Conveniently linked to Kolkata and JNPT dispatch ports.
               </p>
@@ -79,7 +79,7 @@ export default function ContactPage() {
             <span className="text-[10px] font-mono uppercase tracking-[0.24em] text-accent">
               EXIM ADVISORY
             </span>
-            <h2 className="mt-2 text-3xl font-semibold text-foreground md:text-4xl">
+            <h2 className="mt-2 text-2xl font-medium md:font-semibold text-foreground md:text-4xl">
               Sourcing & Trade FAQ Directory
             </h2>
           </div>
@@ -88,7 +88,7 @@ export default function ContactPage() {
             {FAQ_LIST.map((faq, idx) => (
               <div key={idx} className="flex flex-col border-t border-border/70 pt-8 first:border-t-0 md:first:border-t-0 md:pt-8">
                 <span className="font-mono text-xs text-accent font-bold">FAQ 0{idx + 1}</span>
-                <h3 className="text-base font-bold text-foreground mt-2">{faq.q}</h3>
+                <h3 className="text-base font-medium md:font-bold text-foreground mt-2">{faq.q}</h3>
                 <p className="mt-3 text-xs md:text-sm text-muted-foreground leading-relaxed">
                   {faq.a}
                 </p>
