@@ -17,48 +17,48 @@ const WHY_BUYERS_CHOOSE = [
   {
     icon: Globe,
     title: "Reliable Indian Sourcing",
-    desc: "Direct origin crop procurement from premier farming clusters in Rajasthan and Bihar."
+    desc: "Sourcing can be arranged through approved processing and supply partners in India.",
   },
   {
     icon: ShieldCheck,
     title: "Quality-Focused Procurement",
-    desc: "Strict multi-stage moisture audits, mechanical sieving, and defect calibration."
+    desc: "Strict multi-stage moisture audits, mechanical sieving, and defect calibration.",
   },
   {
     icon: FileCheck,
     title: "Export-Ready Documentation",
-    desc: "Compliant phytosanitary certs, Certificate of Origin (COO), and batch-specific COAs."
+    desc: "Compliant phytosanitary certs, Certificate of Origin (COO), and batch-specific COAs.",
   },
   {
     icon: Boxes,
     title: "Flexible Bulk Packaging",
-    desc: "From 25kg multi-wall paper sacks and vacuum bags to bulk jumbo FIBC bags."
+    desc: "From 25kg multi-wall paper sacks and vacuum bags to bulk jumbo FIBC bags.",
   },
   {
     icon: Tag,
     title: "Private Label Support",
-    desc: "Complete OEM brand development, layout design, and customized retail packing."
+    desc: "Complete OEM brand development, layout design, and customized retail packing.",
   },
   {
     icon: Coins,
     title: "Competitive Export Pricing",
-    desc: "Locked seasonal contracts protecting buyers from sudden agricultural market volatility."
+    desc: "Seasonal sourcing can be arranged subject to product availability and buyer requirements.",
   },
   {
     icon: MessageSquare,
     title: "Responsive Customer Support",
-    desc: "Dedicated export coordinators available across global time zones within 24 hours."
+    desc: "Our export team supports buyer enquiries and coordinates requirements throughout the order process.",
   },
   {
     icon: Sliders,
     title: "Customized Buyer Requirements",
-    desc: "Bespoke sizing parameters, seasoning blends, and tailored chemical specifications."
+    desc: "Bespoke sizing parameters, seasoning blends, and tailored chemical specifications.",
   },
   {
     icon: Handshake,
     title: "Long-Term Supply Partnership",
-    desc: "Committed annual crop volume allocations designed for recurring multi-year buyers."
-  }
+    desc: "Annual supply volumes can be discussed and planned based on buyer requirements and availability.",
+  },
 ];
 
 export function WhyGlobalBuyersChoose() {
@@ -73,7 +73,7 @@ export function WhyGlobalBuyersChoose() {
             Why Global Buyers Choose Videha Overseas
           </h2>
           <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-            We streamline international trade by replacing regional agricultural volatility with consistent, certifiable, and customer-centric supply lines.
+            We streamline international trade by replacing regional agricultural volatility with consistent, reliable, and customer-centric supply lines.
           </p>
         </div>
 

@@ -12,62 +12,70 @@ const DIFFERENTIATORS = [
   {
     num: "01",
     title: "PREMIUM SOURCING",
-    heading: "Direct Wetland Sourcing Eliminates Middlemen Risks",
-    desc: "By coordinating crop procurement directly with local cooperatives in Bihar's wetland belt, we eliminate intermediate traders. This ensures batch purity, seasonal cost savings, and direct origin certifications matching the strict trace requests of international importers.",
-    image: "/images/process-source.png"
+    heading: "Quality-Focused Sourcing from Trusted Indian Supply Partners",
+    desc: "We work with approved sourcing and processing partners across India to support consistent product quality and export requirements. Sourcing and origin documentation can be arranged based on product and buyer requirements.",
+    image: "/images/process-source.png",
   },
+
   {
     num: "02",
     title: "CONSISTENT QUALITY",
-    heading: "Grade AAA Uniformity, Batch After Batch",
-    desc: "Export markets cannot tolerate batch variation. Every popped lot passes mechanical diameter grading, optical color checks, and moisture testing. Our strict double-sorting limits unpopped kernels and shell rates below 0.5%.",
-    image: "/images/quality-macro.png"
+    heading: "Quality Checks Aligned with Buyer Requirements",
+    desc: "Our products undergo appropriate cleaning, grading, and quality checks to support consistent export quality. Final specifications and quality parameters can be confirmed according to the agreed product specification and buyer requirements.",
+    image: "/images/quality-macro.png",
   },
+
   {
     num: "03",
     title: "EXPORT-READY STANDARDS",
-    heading: "Nitrogen Flushed & Vacuum Sealed Transit Protection",
-    desc: "To survive varied shipping climates and transit timelines without going soft, we drop moisture levels below 4.5% in kiln dryers and immediately pack makhana in nitrogen-flushed or heavy-duty vacuum bags.",
-    image: "/images/process-pack.png"
+    heading: "Packaging Solutions Designed for Export Requirements",
+    desc: "We offer packaging options suitable for export handling and can arrange customized formats according to product specifications, destination requirements, and buyer preferences. Final packaging details are confirmed prior to order.",
+    image: "/images/process-pack.png",
   },
+
   {
     num: "04",
     title: "RELIABLE SUPPLY",
-    heading: "Monthly Capacities & Season Contract Price Locking",
-    desc: "Agricultural prices can be volatile. We lock crop season supply pricing for our contract partners and maintain a 24 Metric Ton monthly processing capacity, buffering you from seasonal price spikes and supply deficits.",
-    image: "/images/process-process.png"
+    heading: "Flexible Supply Planning for International Buyers",
+    desc: "Supply volumes and delivery schedules can be discussed and planned according to buyer requirements, product availability, and order specifications. Seasonal sourcing and customized supply arrangements can be coordinated where applicable.",
+    image: "/images/process-process.png",
   },
+
   {
     num: "05",
     title: "LONG-TERM PARTNERSHIPS",
-    heading: "End-to-End Coordination & Transparent Support",
-    desc: "We function as a reliable extension of your procurement division. Our team clears phytosanitary checks, prepares customized labeling conforming to destination custom authorities, and handles sea dispatches transparently.",
-    image: "/images/process-export.png"
-  }
-]
+    heading: "Clear Coordination from Enquiry to Export",
+    desc: "We support buyers throughout the order process, coordinating product requirements, documentation, packaging, and export arrangements. Destination-specific requirements and customized solutions can be discussed and arranged as needed.",
+    image: "/images/process-export.png",
+  },
+];
 
 const BUYER_EXPECTATIONS = [
   {
     title: "Moisture consistency",
-    desc: "Batch moisture guaranteed under 4.5% to maintain crunch through global transit."
+    desc: "Moisture specifications can be maintained as per the agreed product specification and buyer requirements.",
   },
+
   {
     title: "Physical calibration",
-    desc: "Jumbo sorting limits small or broken puffs to under 1.5% trace limits."
+    desc: "Product grading and sorting can be arranged according to the required size, grade, and buyer specifications.",
   },
+
   {
-    title: "Phytosanitary clearance",
-    desc: "Certified inspections by ministry agents ensure clean customs releases."
+    title: "Phytosanitary requirements",
+    desc: "Required export and phytosanitary documentation can be arranged based on destination and buyer requirements.",
   },
+
   {
     title: "Packaging integrity",
-    desc: "Triple-ply cartons and thick barrier liners avoid transit damages."
+    desc: "Suitable export packaging options can be arranged according to product requirements, destination, and buyer preferences.",
   },
+
   {
-    title: "Pricing stability",
-    desc: "Locked seasonal volumes protect you from regional market volatility."
-  }
-]
+    title: "Pricing & supply planning",
+    desc: "Supply volumes and pricing can be discussed and planned based on product availability, order requirements, and agreed terms.",
+  },
+];
 
 export default function WhyVidehaPage() {
   return (

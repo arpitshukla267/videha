@@ -23,10 +23,25 @@ export const metadata: Metadata = {
 
 const SPECIFICATIONS = [
   {
+    group: "Product Specification",
+    items: [
+      { label: "Origin", value: "India" },
+      { label: "Grade", value: "Food Grade" },
+      { label: "E Number", value: "E412" },
+      { label: "Mesh Size", value: "200 Mesh / Customized" },
+      { label: "Viscosity", value: "Multiple grades available" },
+      { label: "Moisture", value: "≤12%" },
+      { label: "Packaging", value: "25 kg / Customized" },
+      { label: "Private Label", value: "Available" },
+    ],
+  },
+
+  // Existing additional technical parameters retained for reference.
+  // Do not display unless specifically required.
+  /*
+  {
     group: "Identification",
     items: [
-      { label: "Product Name", value: "Food Grade Guar Gum Powder" },
-      { label: "E Number", value: "E412" },
       { label: "CAS Number", value: "9000-30-0" },
       { label: "HS Code", value: "1302.32.30" },
     ],
@@ -34,21 +49,7 @@ const SPECIFICATIONS = [
   {
     group: "Physical & Chemical Parameters",
     items: [
-      { label: "Origin", value: "Rajasthan / Haryana, India" },
-      {
-        label: "Appearance",
-        value: "Creamish-white, free-flowing, fine powder",
-      },
-      {
-        label: "Mesh Size",
-        value: "Min. 92% passing through 200 Mesh (or custom calibrated mesh)",
-      },
-      {
-        label: "Viscosity",
-        value:
-          "3,500 cps to 5,500 cps (1% cold solution, Brookfield viscometer at 25°C, 20 RPM after 2 hours)",
-      },
-      { label: "Moisture", value: "Max. 12.0% (typically 8.0% - 11.5%)" },
+      { label: "Appearance", value: "Creamish-white, free-flowing, fine powder" },
       { label: "pH", value: "5.5 – 7.0 (1% aqueous solution)" },
       { label: "Ash (Total)", value: "Max. 1.0%" },
       { label: "Acid Insoluble Ash", value: "Max. 0.5%" },
@@ -65,36 +66,7 @@ const SPECIFICATIONS = [
       { label: "Coliforms", value: "Negative in 1g" },
     ],
   },
-  {
-    group: "Commercial & Logistical Terms",
-    items: [
-      {
-        label: "Shelf Life",
-        value:
-          "24 months from manufacturing date when stored in clean, cool, and dry warehouses",
-      },
-      {
-        label: "Packaging",
-        value:
-          "25 kg multi-wall kraft paper bags with inner polyethylene liner; jumbo FIBC bags (500kg / 1,000kg) available upon request",
-      },
-      {
-        label: "Minimum Order (MOQ)",
-        value:
-          "1 x 20ft FCL (18-20 Metric Tons palletized, 19-21 MT loose loaded)",
-      },
-      {
-        label: "Loading Quantity",
-        value:
-          "Approx. 18-20 MT per 20ft FCL with shrink-wrapped ISPM-15 wooden pallets",
-      },
-      {
-        label: "COA Availability",
-        value:
-          "Batch-specific Certificate of Analysis (COA) issued by factory QA or independent ISO/IEC 17025 accredited laboratory with each consignment",
-      },
-    ],
-  },
+  */
 ];
 
 const APPLICATIONS = [
@@ -138,12 +110,12 @@ const APPLICATIONS = [
 const PACKAGING_OPTIONS = [
   {
     icon: Boxes,
-    title: "Standard Industrial / Food Grade Bags",
-    copy: "25 kg multi-wall kraft paper bags with an inner polyethylene liner for standard export shipments, plus jumbo FIBC bags (500kg / 1,000kg) for bulk industrial buyers.",
+    title: "Standard industrial/export bags",
+    copy: "25 kg multi-wall kraft paper bags with inner PE liner, plus jumbo FIBC bags (500 kg / 1,000 kg) for standard industrial and export shipments.",
   },
   {
     icon: Settings2,
-    title: "Customized Packaging",
+    title: "Customized packaging as per buyer requirement",
     copy: "Bag sizes, materials, labelling, and palletization adapted to buyer specifications, destination requirements, and handling conditions.",
   },
 ];
@@ -154,6 +126,11 @@ export default function GuarGumPage() {
     let message = "";
 
     switch (type) {
+      case "spec-coa":
+        subject = "Request Detailed Specification / COA - Food Grade Guar Gum";
+        message =
+          "Hello, we would like to request the detailed product specification and Certificate of Analysis (COA) for Food Grade Guar Gum Powder (E412). Please share the documents with us.";
+        break;
       case "spec":
         subject = "Request Technical Specification (E412)";
         message =
@@ -224,9 +201,9 @@ export default function GuarGumPage() {
                 </p>
                 <p className="mt-4 text-sm md:text-base text-muted-foreground leading-relaxed">
                   Tailored for demanding B2B food processing applications, it
-                  guarantees viscosity stability, excellent hydration rates, and
-                  strict adherence to global food safety limits (including FSSC
-                  22000, Halal, and Kosher standards).
+                  offers viscosity stability, excellent hydration rates, and
+                  food-grade specifications confirmed per buyer requirement and
+                  batch COA.
                 </p>
               </Reveal>
 
@@ -262,10 +239,10 @@ export default function GuarGumPage() {
                 <div className="border border-border p-4 bg-card text-center rounded-[5px]">
                   <ClipboardCheck className="mx-auto h-5 w-5 text-accent" />
                   <span className="mt-2 block text-xs font-semibold uppercase text-foreground">
-                    Certifiable
+                    Export Registrations
                   </span>
                   <span className="mt-1 block text-[11px] text-muted-foreground">
-                    Halal & Kosher compliant
+                    IEC · GST · FSSAI · APEDA
                   </span>
                 </div>
               </div>
@@ -348,18 +325,16 @@ export default function GuarGumPage() {
         <div className="mx-auto max-w-[1400px] px-5 md:px-10">
           <div className="mb-12 max-w-3xl">
             <span className="text-[10px] uppercase tracking-[0.24em] text-primary">
-              CERTIFIED B2B PARAMETERS
+              FOOD GRADE GUAR GUM POWDER
             </span>
 
             <h2 className="mt-3 text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
-              Technical Specification Matrix
+              Product Specification
             </h2>
 
             <p className="mt-3 text-sm text-muted-foreground leading-relaxed">
-              These values represent our standard high-viscosity food-grade
-              parameters. Batch-specific Certificates of Analysis (COAs) are
-              compiled in accordance with standard test protocols and dispatched
-              with each batch.
+              Note: Final technical parameters are confirmed as per buyer
+              requirement and Certificate of Analysis (COA).
             </p>
           </div>
 
@@ -392,6 +367,16 @@ export default function GuarGumPage() {
                 </div>
               </div>
             ))}
+          </div>
+
+          <div className="mt-8">
+            <Link
+              href={getContactLink("spec-coa")}
+              className="group inline-flex items-center gap-2 border border-foreground/60 px-6 py-3.5 text-[11px] font-medium uppercase tracking-[0.18em] text-foreground transition-colors hover:bg-foreground hover:text-background"
+            >
+              Request Detailed Specification / COA
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+            </Link>
           </div>
         </div>
       </section>
@@ -465,7 +450,7 @@ export default function GuarGumPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
             <div>
               <span className="text-[10px] uppercase tracking-[0.24em] text-primary">
-                QUALITY MANAGEMENT & HACCP
+                QUALITY MANAGEMENT & TRACEABILITY
               </span>
               <h2 className="mt-3 text-2xl md:text-3xl font-semibold text-foreground">
                 Rigorous Sourcing & Traceability Standards
@@ -482,8 +467,9 @@ export default function GuarGumPage() {
                 <li className="flex items-start gap-3">
                   <CheckCircle2 className="h-5 w-5 text-accent shrink-0 mt-0.5" />
                   <span className="text-xs md:text-sm text-muted-foreground">
-                    **Certified Facilities**: Processed in sites operating under
-                    FSSC 22000, ISO 9001:2015, and HACCP standards.
+                    **Registered Export Operations**: Videha Overseas holds
+                    applicable Indian business registrations including IEC, GST,
+                    FSSAI, APEDA / RCMC, and CIN.
                   </span>
                 </li>
                 <li className="flex items-start gap-3">
@@ -527,7 +513,7 @@ export default function GuarGumPage() {
                 <div className="flex items-center gap-2">
                   <ShieldCheck className="h-5 w-5 text-primary" />
                   <span className="text-xs font-medium text-foreground">
-                    Independent Lab Audited
+                    COA Available on Request
                   </span>
                 </div>
               </div>
@@ -545,16 +531,19 @@ export default function GuarGumPage() {
             </span>
 
             <h2 className="mt-3 text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
-              Packaging Solutions
+              Packaging
             </h2>
 
             <p className="mt-3 text-sm text-muted-foreground leading-relaxed">
-              Food Grade Guar Gum Powder is offered in standard industrial and
-              food-grade formats, with customization available to match buyer
-              specifications. Final packaging sizes and technical specifications
-              will be shared and confirmed prior to order production.
+              Food Grade Guar Gum Powder is offered in the following packaging
+              formats. Final packaging sizes and technical specifications will be
+              shared and confirmed with the buyer prior to order production.
             </p>
           </div>
+
+          <p className="mb-6 text-sm font-semibold text-foreground">
+            Guar Gum:
+          </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {PACKAGING_OPTIONS.map(({ icon: Icon, title, copy }) => (
@@ -571,7 +560,13 @@ export default function GuarGumPage() {
             ))}
           </div>
 
-          <div className="mt-8">
+          <div className="mt-8 border border-border bg-secondary/20 px-6 py-5 rounded-[5px]">
+            <p className="text-sm font-semibold text-foreground">
+              Private Label / Buyer Brand Packaging Available.
+            </p>
+          </div>
+
+          <div className="mt-8 flex flex-wrap gap-4">
             <Link
               href={getContactLink("packaging")}
               className="group inline-flex items-center gap-2 text-xs font-semibold text-accent hover:text-primary transition-colors"

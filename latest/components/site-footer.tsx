@@ -6,6 +6,7 @@ import {
   FaLinkedinIn,
   FaWhatsapp,
 } from "react-icons/fa6";
+import { COMPANY_REGISTRATIONS } from "@/lib/registrations";
 
 const NAV = [
   { label: "About", href: "/about" },
@@ -130,30 +131,12 @@ export function SiteFooter() {
             </span>
 
             <div className="mt-4 flex flex-col gap-2.5 text-[11px] text-white/55">
-              <div>
-                <span className="mr-2 text-white/30">CIN</span>
-                [CIN Number]
-              </div>
-
-              <div>
-                <span className="mr-2 text-white/30">GST</span>
-                [GST Number]
-              </div>
-
-              <div>
-                <span className="mr-2 text-white/30">IEC</span>
-                [IEC Number]
-              </div>
-
-              <div>
-                <span className="mr-2 text-white/30">FSSAI</span>
-                [FSSAI Details]
-              </div>
-
-              <div>
-                <span className="mr-2 text-white/30">APEDA</span>
-                [APEDA Details]
-              </div>
+              {COMPANY_REGISTRATIONS.map((reg) => (
+                <div key={reg.id}>
+                  <span className="mr-2 text-white/30">{reg.shortLabel}</span>
+                  {reg.value}
+                </div>
+              ))}
             </div>
           </div>
 

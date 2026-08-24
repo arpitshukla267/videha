@@ -15,46 +15,63 @@ const DETAILED_PROCESS_DATA = [
   {
     num: "01",
     phase: "SOURCING",
-    happens: "We secure direct seasonal crop volumes from harvesting cooperatives in Bihar's wetland clusters. Seeds are gathered manually from lotus lilies.",
-    matters: "Bypassing intermediate traders ensures raw seed purity, preventing stale crop blending and securing cost advantages.",
-    receives: "Wetland origin certificate containing harvesting coop details and pond lot coordinates."
+    happens:
+      "We secure direct seasonal crop volumes from harvesting cooperatives in Bihar's wetland clusters. Seeds are gathered manually from lotus lilies.",
+    matters:
+      "Bypassing intermediate traders ensures raw seed purity, preventing stale crop blending and securing cost advantages.",
+    receives:
+      "Wetland origin certificate containing harvesting coop details and pond lot coordinates.",
   },
   {
     num: "02",
     phase: "SELECTING",
-    happens: "Harvested seeds undergo rigorous sun-drying, sieving, and mechanical diameter sizing to isolate premier popping candidates.",
-    matters: "Consistent seed diameters ensure uniform heat absorption during roasting, optimizing expansion and roundness.",
-    receives: "Seed dimension grading certificates and moisture logs post drying."
+    happens:
+      "Harvested seeds undergo rigorous sun-drying, sieving, and mechanical diameter sizing to isolate premier popping candidates.",
+    matters:
+      "Consistent seed diameters ensure uniform heat absorption during roasting, optimizing expansion and roundness.",
+    receives:
+      "Seed dimension grading certificates and moisture logs post drying.",
   },
   {
     num: "03",
     phase: "PROCESSING",
-    happens: "Controlled dry roasting in small batches pops the sieved seeds under thermal shock, expanding them into ivory-white puffs.",
-    matters: "Pop expansion without oil retains makhana's native micro-nutrients, clean natural flavor, and signature crunch.",
-    receives: "Roasting batch logs and expansion ratio checks."
+    happens:
+      "Controlled dry roasting in small batches pops the sieved seeds under thermal shock, expanding them into ivory-white puffs.",
+    matters:
+      "Pop expansion without oil retains makhana's native micro-nutrients, clean natural flavor, and signature crunch.",
+    receives: "Roasting batch logs and expansion ratio checks.",
   },
   {
     num: "04",
     phase: "QUALITY",
-    happens: "Popped lots are cleaned of seed coats, sieved to isolate Grade AAA sizes, and moisture-analyzed under dry-kiln chambers.",
-    matters: "Puffs exceeding 4.5% moisture turn soft during sea transit. Eliminating shell fragments avoids product recall risk.",
-    receives: "Laboratory Certificate of Analysis (COA) specifying moisture, sizing, and microbiological compliance."
+    happens:
+      "Popped lots are cleaned of seed coats, sieved to isolate Grade AAA sizes, and moisture-analyzed under dry-kiln chambers.",
+    matters:
+      "Puffs exceeding 4.5% moisture turn soft during sea transit. Eliminating shell fragments avoids product recall risk.",
+    receives:
+      "Laboratory Certificate of Analysis (COA) specifying moisture, sizing, and microbiological compliance.",
   },
   {
     num: "05",
     phase: "PACKING",
-    happens: "Finished lots are immediately sealed in heavy double-barrier vacuum bags or nitrogen-flushed retail packaging.",
-    matters: "Prevents atmospheric moisture absorption and oil oxidation during long-haul transit across shipping zones.",
-    receives: "Packaging barrier specification documents and nitrogen audit certificates."
+    happens:
+      "Specialized packaging options can be arranged according to product requirements and buyer specifications.",
+    matters:
+      "Prevents atmospheric moisture absorption and oil oxidation during long-haul transit across shipping zones.",
+    receives:
+      "Packaging barrier specification documents and nitrogen audit certificates.",
   },
   {
     num: "06",
     phase: "EXPORT",
-    happens: "Container stuffing at our deport, customs inspection, phytosanitary clearance, and ocean liner booking.",
-    matters: "Ensures trouble-free customs entry at destination ports, eliminating demurrage risk or import delays.",
-    receives: "Phytosanitary Certificate, Bill of Lading, Certificate of Origin, and packing lists."
-  }
-]
+    happens:
+      "Container stuffing at our deport, customs inspection, phytosanitary clearance, and ocean liner booking.",
+    matters:
+      "Ensures trouble-free customs entry at destination ports, eliminating demurrage risk or import delays.",
+    receives:
+      "Phytosanitary Certificate, Bill of Lading, Certificate of Origin, and packing lists.",
+  },
+];
 
 export default function OurProcessPage() {
   return (

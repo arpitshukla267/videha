@@ -40,7 +40,11 @@ export function Intro() {
               </h2>
             </Reveal>
 
-            <Reveal as="figure" delay={0.12} className="md:hidden py-8 lg:col-span-6">
+            <Reveal
+              as="figure"
+              delay={0.12}
+              className="md:hidden py-8 lg:col-span-6"
+            >
               <div className="relative h-full min-h-[420px] w-full overflow-hidden rounded-[4px] md:min-h-[520px] lg:min-h-[580px]">
                 <Image
                   src="/images/intro.webp"
@@ -55,11 +59,14 @@ export function Intro() {
             <div className="md:mt-8 max-w-[650px] space-y-5">
               <Reveal delay={0.1}>
                 <p className="text-[15px] leading-[1.75] text-[#66635C] md:text-[16px]">
-                  Videha Overseas was founded on a simple conviction — that
-                  India&apos;s makhana deserves a place on the world&apos;s
-                  finest shelves. We work directly with farming communities in
-                  the wetlands of Bihar, then apply exacting processing and
-                  quality standards built for international trade.
+                  Videha Overseas was built with a clear purpose — to connect
+                  quality Indian products with buyers and markets across the
+                  world. We focus on reliable sourcing, consistent quality,
+                  export-ready standards, and flexible solutions tailored to
+                  buyer requirements. From product specifications and packaging
+                  to documentation and export coordination, we work closely with
+                  our buyers to deliver solutions that are practical,
+                  transparent, and suited to their individual requirements.
                 </p>
               </Reveal>
 

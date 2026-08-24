@@ -23,7 +23,6 @@ import {
   Ship,
 } from "lucide-react";
 import { Lens } from "@/components/ui/lens";
-import { ComplianceBadgesGraphic } from "@/components/graphics";
 import { WhatsAppButton } from "@/components/ui/whatsapp-button";
 
 const poppins = Poppins({
@@ -127,51 +126,44 @@ const DETAIL_MAP: Record<string, ProductDetail> = {
     tagline: "Consistent, Export-Grade Fox Nuts",
 
     description:
-      "Premium Makhana is selected for consistent quality, clean appearance and reliable supply across international markets. It is suited to retail brands, wholesale buyers and private label programs seeking a dependable premium-grade product.",
+      "Premium Makhana sourced from India and supplied for international buyers, retail brands, wholesalers and private label programs.",
 
-    origin: "Mithila, Bihar, India",
+    origin: "India",
 
-    gradeSize:
-      "To be confirmed — final grade and size specifications will be provided separately.",
+    gradeSize: "Premium / Export Grade — Multiple grades available",
 
-    appearance:
-      "Premium ivory-white makhana with a clean, uniform appearance. Final appearance parameters to be confirmed.",
+    appearance: "Clean, premium-grade fox nuts with a consistent appearance.",
 
-    moisture:
-      "To be confirmed — final moisture specification will be provided separately.",
+    moisture: "≤7%",
 
     qualityParameters: [
-      { label: "Grade", value: "To be confirmed" },
-      { label: "Size", value: "To be confirmed" },
-      { label: "Purity", value: "To be confirmed" },
-      { label: "Defect Tolerance", value: "To be confirmed" },
-      { label: "Food Safety Parameters", value: "To be confirmed" },
+      { label: "Grade", value: "Premium / Export Grade" },
+      { label: "Size", value: "Multiple grades available" },
+      { label: "Purity", value: "≥99%" },
     ],
 
-    packagingOptions:
-      "Retail packs, bulk sacks and custom formats available. Final pack sizes, materials and specifications to be confirmed.",
+    packagingOptions: "100 g, 250 g, 5 kg, 10 kg / Customized",
 
-    moq: "To be confirmed based on product, packaging and destination market.",
+    moq: "To be confirmed based on product, packaging and buyer requirements.",
 
     shelfLife:
       "To be confirmed based on final product specification and packaging format.",
 
     privateLabel:
-      "Available. Private label packaging and customized retail formats can be discussed based on buyer requirements.",
+      "Available. Private label packaging can be customized according to buyer requirements.",
 
     bulkSupply:
-      "Available for international distributors, wholesalers, food brands and other large-volume buyers.",
+      "Available for international distributors, wholesalers, food brands and large-volume buyers.",
 
     exportMarkets:
-      "International markets. Specific destination markets and export suitability to be confirmed based on buyer requirements.",
+      "International markets, subject to destination-specific requirements.",
 
     sampleAvailability:
       "Samples available on request, subject to product and destination requirements.",
 
     processingSteps: [
-      "Raw seed sourcing",
+      "Sourcing",
       "Cleaning and grading",
-      "Premium quality selection",
       "Quality inspection",
       "Final packing and export preparation",
     ],
@@ -614,514 +606,528 @@ export default async function ProductDetailPage({ params }: PageProps) {
   ];
 
   return (
-   <>
-    <script
-      type="application/ld+json"
-      dangerouslySetInnerHTML={{
-        __html: JSON.stringify({
-          "@context": "https://schema.org",
-          "@type": "Product",
-          name: product.name,
-          description: product.description,
-          image: [`https://www.videhaoverseas.com${product.image}`],
-          brand: {
-            "@type": "Brand",
-            name: "Videha Overseas",
-          },
-          manufacturer: {
-            "@type": "Organization",
-            name: "Videha Overseas",
-          },
-        }),
-      }}
-    /> 
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Product",
+            name: product.name,
+            description: product.description,
+            image: [`https://www.videhaoverseas.com${product.image}`],
+            brand: {
+              "@type": "Brand",
+              name: "Videha Overseas",
+            },
+            manufacturer: {
+              "@type": "Organization",
+              name: "Videha Overseas",
+            },
+          }),
+        }}
+      />
 
-    <main
-      className={`${poppins.variable} font-sans overflow-hidden bg-background`}
-    >
-      {/* Breadcrumb */}
-      <div className="pt-28 md:pt-30 pb-6 bg-background">
-        <div className="mx-auto max-w-[1400px] px-5 md:px-8">
-          <Link
-            href="/products"
-            className="inline-flex items-center gap-2 text-md  text-muted-foreground hover:text-foreground transition-colors"
-          >
-            ← Back to Product Range
-          </Link>
+      <main
+        className={`${poppins.variable} font-sans overflow-hidden bg-background`}
+      >
+        {/* Breadcrumb */}
+        <div className="pt-28 md:pt-30 pb-6 bg-background">
+          <div className="mx-auto max-w-[1400px] px-5 md:px-8">
+            <Link
+              href="/products"
+              className="inline-flex items-center gap-2 text-md  text-muted-foreground hover:text-foreground transition-colors"
+            >
+              ← Back to Product Range
+            </Link>
+          </div>
         </div>
-      </div>
 
-      {/* PRODUCT HERO */}
-      <section className="border-b border-border bg-background py-0 md:py-4">
-        <div className="mx-auto max-w-[1400px] px-5 md:px-10">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-start">
-            {/* Product Image */}
-            <div className="relative aspect-square w-full overflow-hidden border border-border bg-secondary">
-              <Lens
-                src={product.image}
-                alt={product.name}
-                zoomFactor={2.2}
-                lensSize={180}
-                className="h-full w-full object-contain"
-              />
-            </div>
-
-            {/* Product Information */}
-            <div className="flex flex-col">
-              <h1 className="text-[clamp(2rem,4vw,3rem)] font-semibold leading-[1.05] tracking-[-0.02em] text-foreground">
-                {product.name}
-              </h1>
-
-              <p className="mt-3 text-base text-primary font-medium tracking-tight">
-                {product.tagline}
-              </p>
-
-              {/* Product Description */}
-              <p className="mt-6 text-sm md:text-base text-muted-foreground leading-relaxed">
-                {product.description}
-              </p>
-
-              {/* Origin */}
-              <div className="mt-6 border-t border-border pt-5">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                  <div>
-                    <span className="text-[16px] text-muted-foreground">
-                      Origin
-                    </span>
-                    <p className="mt-1 text-sm font-medium text-foreground">
-                      {product.origin}
-                    </p>
-                  </div>
-
-                  <div>
-                    <span className="text-[16px] text-muted-foreground">
-                      Grade / Size
-                    </span>
-                    <p className="mt-1 text-sm font-medium text-foreground">
-                      {product.gradeSize}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Request Quote */}
-              <div className="flex flex-wrap items-center gap-3 mt-6">
-                <Link
-                  href={`/contact?product=${encodeURIComponent(
-                    product.name,
-                  )}&additionalRequirement=${encodeURIComponent(
-                    `Instant Enquiry for ${product.name}`,
-                  )}`}
-                  className="group inline-flex items-center justify-center gap-2 bg-foreground px-8 py-4 text-sm font-medium text-background transition-colors hover:bg-primary"
-                >
-                  Request Quote
-                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                </Link>
-
-                <WhatsAppButton
-                  productName={product.name}
-                  label="Get Export Price"
+        {/* PRODUCT HERO */}
+        <section className="border-b border-border bg-background py-0 md:py-4">
+          <div className="mx-auto max-w-[1400px] px-5 md:px-10">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-start">
+              {/* Product Image */}
+              <div className="relative aspect-square w-full overflow-hidden border border-border bg-secondary">
+                <Lens
+                  src={product.image}
+                  alt={product.name}
+                  zoomFactor={2.2}
+                  lensSize={180}
+                  className="h-full w-full object-contain"
                 />
               </div>
 
-              {/* Badges */}
-              <div className="mt-10 grid grid-cols-2 sm:grid-cols-4 gap-4">
-                {badges.map(({ icon: Icon, label }) => (
-                  <div
-                    key={label}
-                    className="flex flex-col items-center text-center gap-2 border border-border p-4"
-                  >
-                    <Icon className="w-6 h-6 text-primary" />
-                    <span className="text-xs text-muted-foreground">
-                      {label}
-                    </span>
+              {/* Product Information */}
+              <div className="flex flex-col">
+                <h1 className="text-[clamp(2rem,4vw,3rem)] font-semibold leading-[1.05] tracking-[-0.02em] text-foreground">
+                  {product.name}
+                </h1>
+
+                <p className="mt-3 text-base text-primary font-medium tracking-tight">
+                  {product.tagline}
+                </p>
+
+                {/* Product Description */}
+                <p className="mt-6 text-sm md:text-base text-muted-foreground leading-relaxed">
+                  {product.description}
+                </p>
+
+                {/* Origin */}
+                <div className="mt-6 border-t border-border pt-5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    <div>
+                      <span className="text-[16px] text-muted-foreground">
+                        Origin
+                      </span>
+                      <p className="mt-1 text-sm font-medium text-foreground">
+                        {product.origin}
+                      </p>
+                    </div>
+
+                    <div>
+                      <span className="text-[16px] text-muted-foreground">
+                        Grade / Size
+                      </span>
+                      <p className="mt-1 text-sm font-medium text-foreground">
+                        {product.gradeSize}
+                      </p>
+                    </div>
                   </div>
-                ))}
+                </div>
+
+                {/* Request Quote */}
+                <div className="flex flex-wrap items-center gap-3 mt-6">
+                  <Link
+                    href={`/contact?product=${encodeURIComponent(
+                      product.name,
+                    )}&additionalRequirement=${encodeURIComponent(
+                      `Instant Enquiry for ${product.name}`,
+                    )}`}
+                    className="group inline-flex items-center justify-center gap-2 bg-foreground px-8 py-4 text-sm font-medium text-background transition-colors hover:bg-primary"
+                  >
+                    Request Quote
+                    <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                  </Link>
+
+                  <WhatsAppButton
+                    productName={product.name}
+                    label="Get Export Price"
+                  />
+                  <Link
+                    href={`/contact?product=${encodeURIComponent(
+                      product.name,
+                    )}&additionalRequirement=${encodeURIComponent(
+                      `Request Product Specification / COA for ${product.name}`,
+                    )}`}
+                    className="group inline-flex items-center gap-2 border border-foreground/60 px-6 py-3.5 text-[11px] font-medium uppercase tracking-[0.18em] text-foreground transition-colors hover:bg-foreground hover:text-background"
+                  >
+                    Request COA / Specification
+                    <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                  </Link>
+                </div>
+
+                {/* Badges */}
+                <div className="mt-10 grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  {badges.map(({ icon: Icon, label }) => (
+                    <div
+                      key={label}
+                      className="flex flex-col items-center text-center gap-2 border border-border p-4"
+                    >
+                      <Icon className="w-6 h-6 text-primary" />
+                      <span className="text-xs text-muted-foreground">
+                        {label}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* PRODUCT SPECIFICATIONS */}
-      <section className="py-8 md:py-12 border-b border-border bg-[#f8f6f0]">
-        <div className="mx-auto max-w-[1400px] px-5 md:px-10">
-          <div className="mb-8">
-            <span className="text-[10px] font-mono uppercase tracking-[0.24em] text-primary">
-              PRODUCT SPECIFICATIONS
-            </span>
-
-            <h2 className="mt-2 text-2xl md:text-3xl font-semibold tracking-tight text-foreground">
-              Product Specifications
-            </h2>
-
-            <p className="mt-2 max-w-2xl text-sm text-muted-foreground leading-relaxed">
-              Technical specifications shown below are editable and subject to
-              final confirmation based on the buyer requirement and approved
-              product specification sheet.
-            </p>
-          </div>
-
-          <div className="border border-border bg-background">
-            {/* Appearance */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 px-6 py-5 border-b border-border">
-              <span className="font-medium text-sm uppercase">Appearance</span>
-
-              <span className="sm:col-span-2 text-sm text-muted-foreground">
-                {product.appearance}
+        {/* PRODUCT SPECIFICATIONS */}
+        <section className="py-8 md:py-12 border-b border-border bg-[#f8f6f0]">
+          <div className="mx-auto max-w-[1400px] px-5 md:px-10">
+            <div className="mb-8">
+              <span className="text-[10px] font-mono uppercase tracking-[0.24em] text-primary">
+                PRODUCT SPECIFICATIONS
               </span>
+
+              <h2 className="mt-2 text-2xl md:text-3xl font-semibold tracking-tight text-foreground">
+                Product Specifications
+              </h2>
+
+              <p className="mt-2 max-w-2xl text-sm text-muted-foreground leading-relaxed">
+                Detailed product specification and COA are available upon
+                request.
+              </p>
             </div>
 
-            {/* Moisture */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 px-6 py-5 border-b border-border">
-              <span className="font-medium text-sm uppercase">Moisture</span>
-
-              <span className="sm:col-span-2 text-sm text-muted-foreground">
-                {product.moisture}
-              </span>
-            </div>
-
-            {/* Quality Parameters */}
-            {product.qualityParameters.map((spec, index) => (
-              <div
-                key={spec.label}
-                className={`grid grid-cols-1 sm:grid-cols-3 gap-2 px-6 py-5 ${
-                  index !== product.qualityParameters.length - 1
-                    ? "border-b border-border"
-                    : ""
-                }`}
-              >
+            <div className="border border-border bg-background">
+              {/* Appearance */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 px-6 py-5 border-b border-border">
                 <span className="font-medium text-sm uppercase">
-                  {spec.label}
+                  Appearance
                 </span>
 
                 <span className="sm:col-span-2 text-sm text-muted-foreground">
-                  {spec.value}
+                  {product.appearance}
                 </span>
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
 
-      {/* COMMERCIAL INFORMATION */}
-      <section className="py-8 md:py-12 border-b border-border bg-background">
-        <div className="mx-auto max-w-[1400px] px-5 md:px-10">
-          <div className="mb-8">
-            <span className="text-[10px] font-mono uppercase tracking-[0.24em] text-primary">
-              COMMERCIAL INFORMATION
-            </span>
+              {/* Moisture */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 px-6 py-5 border-b border-border">
+                <span className="font-medium text-sm uppercase">Moisture</span>
 
-            <h2 className="mt-2 text-2xl md:text-3xl font-semibold tracking-tight text-foreground">
-              Supply & Export Details
-            </h2>
-          </div>
+                <span className="sm:col-span-2 text-sm text-muted-foreground">
+                  {product.moisture}
+                </span>
+              </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Packaging */}
-            <div className="border border-border p-6 bg-[#f8f6f0]">
-              <span className="text-[10px] font-mono uppercase tracking-[0.18em] text-muted-foreground">
-                Packaging Options
-              </span>
-
-              <p className="mt-3 text-sm leading-relaxed text-foreground">
-                {product.packagingOptions}
-              </p>
-            </div>
-
-            {/* MOQ */}
-            <div className="border border-border p-6 bg-[#f8f6f0]">
-              <span className="text-[10px] font-mono uppercase tracking-[0.18em] text-muted-foreground">
-                MOQ
-              </span>
-
-              <p className="mt-3 text-sm leading-relaxed text-foreground">
-                {product.moq}
-              </p>
-            </div>
-
-            {/* Shelf Life */}
-            <div className="border border-border p-6 bg-[#f8f6f0]">
-              <span className="text-[10px] font-mono uppercase tracking-[0.18em] text-muted-foreground">
-                Shelf Life
-              </span>
-
-              <p className="mt-3 text-sm leading-relaxed text-foreground">
-                {product.shelfLife}
-              </p>
-            </div>
-
-            {/* Private Label */}
-            <div className="border border-border p-6 bg-[#f8f6f0]">
-              <span className="text-[10px] font-mono uppercase tracking-[0.18em] text-muted-foreground">
-                Private Label Availability
-              </span>
-
-              <p className="mt-3 text-sm leading-relaxed text-foreground">
-                {product.privateLabel}
-              </p>
-            </div>
-
-            {/* Bulk Supply */}
-            <div className="border border-border p-6 bg-[#f8f6f0]">
-              <span className="text-[10px] font-mono uppercase tracking-[0.18em] text-muted-foreground">
-                Bulk Supply
-              </span>
-
-              <p className="mt-3 text-sm leading-relaxed text-foreground">
-                {product.bulkSupply}
-              </p>
-            </div>
-
-            {/* Export Markets */}
-            <div className="border border-border p-6 bg-[#f8f6f0]">
-              <span className="text-[10px] font-mono uppercase tracking-[0.18em] text-muted-foreground">
-                Export Markets
-              </span>
-
-              <p className="mt-3 text-sm leading-relaxed text-foreground">
-                {product.exportMarkets}
-              </p>
-            </div>
-
-            {/* Sample */}
-            <div className="border border-border p-6 bg-[#f8f6f0] md:col-span-2">
-              <span className="text-[10px] font-mono uppercase tracking-[0.18em] text-muted-foreground">
-                Sample Availability
-              </span>
-
-              <p className="mt-3 text-sm leading-relaxed text-foreground">
-                {product.sampleAvailability}
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* PACKAGING SOLUTIONS */}
-      <section className="py-16 md:py-20 border-b border-border bg-[#f8f6f0]">
-        <div className="mx-auto max-w-[1400px] px-5 md:px-10">
-          <div className="mb-12 max-w-3xl">
-            <span className="text-[10px] font-mono uppercase tracking-[0.24em] text-primary">
-              PACKAGING CAPABILITIES
-            </span>
-
-            <h2 className="mt-2 text-2xl md:text-3xl font-semibold tracking-tight text-foreground">
-              Packaging Solutions
-            </h2>
-
-            <p className="mt-3 max-w-2xl text-sm text-muted-foreground leading-relaxed">
-              We offer flexible packaging formats across our Makhana and Guar
-              Gum product lines to suit retail, food-service, industrial and
-              private label requirements. Final packaging sizes and technical
-              specifications will be shared and confirmed with the buyer prior
-              to production.
-            </p>
-          </div>
-
-          {/* Makhana Packaging */}
-          <div className="mb-10">
-            <span className="text-xs font-semibold uppercase tracking-wider text-foreground">
-              Makhana
-            </span>
-
-            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {MAKHANA_PACKAGING.map(({ icon: Icon, title, copy }) => (
+              {/* Quality Parameters */}
+              {product.qualityParameters.map((spec, index) => (
                 <div
-                  key={title}
-                  className="border border-border bg-background p-6 flex flex-col gap-3"
+                  key={spec.label}
+                  className={`grid grid-cols-1 sm:grid-cols-3 gap-2 px-6 py-5 ${
+                    index !== product.qualityParameters.length - 1
+                      ? "border-b border-border"
+                      : ""
+                  }`}
                 >
-                  <Icon className="h-6 w-6 text-accent" />
-                  <h3 className="text-sm font-bold text-foreground">{title}</h3>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    {copy}
-                  </p>
+                  <span className="font-medium text-sm uppercase">
+                    {spec.label}
+                  </span>
+
+                  <span className="sm:col-span-2 text-sm text-muted-foreground">
+                    {spec.value}
+                  </span>
                 </div>
               ))}
             </div>
           </div>
+        </section>
 
-          <div className="mt-8">
-            <Link
-              href={`/contact?product=${encodeURIComponent(
-                product.name,
-              )}&additionalRequirement=${encodeURIComponent(
-                `Discuss Packaging Requirement for ${product.name}`,
-              )}&packaging=${encodeURIComponent(product.packagingOptions)}`}
-              className="group inline-flex items-center gap-2 text-xs font-semibold text-accent hover:text-primary transition-colors"
-            >
-              Discuss Packaging Requirement
-              <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
-            </Link>
-          </div>
-        </div>
-      </section>
+        {/* COMMERCIAL INFORMATION */}
+        <section className="py-8 md:py-12 border-b border-border bg-background">
+          <div className="mx-auto max-w-[1400px] px-5 md:px-10">
+            <div className="mb-8">
+              <span className="text-[10px] font-mono uppercase tracking-[0.24em] text-primary">
+                COMMERCIAL INFORMATION
+              </span>
 
-      {/* PRIVATE LABEL PROGRAM */}
-      <section className="py-16 md:py-20 border-b border-border bg-background">
-        <div className="mx-auto max-w-[1400px] px-5 md:px-10">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-stretch">
-            {/* Left Content */}
-            <div className="lg:col-span-5 flex flex-col justify-between">
-              <div>
-                <span className="text-[10px] font-mono uppercase tracking-[0.24em] text-primary">
-                  PRIVATE LABEL PROGRAM
+              <h2 className="mt-2 text-2xl md:text-3xl font-semibold tracking-tight text-foreground">
+                Supply & Export Details
+              </h2>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Packaging */}
+              <div className="border border-border p-6 bg-[#f8f6f0]">
+                <span className="text-[10px] font-mono uppercase tracking-[0.18em] text-muted-foreground">
+                  Packaging Options
                 </span>
 
-                <h2 className="mt-2 text-2xl md:text-3xl font-semibold tracking-tight text-foreground">
-                  Your Brand. Our Product. <br className="hidden sm:inline" />
-                  Reliable Export Support.
-                </h2>
-
-                <p className="mt-4 text-sm text-muted-foreground leading-relaxed">
-                  We work with retail brands, distributors and importers to
-                  develop Makhana products under their own label — from grade
-                  and flavour selection through to branded packaging and export
-                  delivery. Our team supports each stage of the process so
-                  partner brands can launch with confidence.
+                <p className="mt-3 text-sm leading-relaxed text-foreground">
+                  {product.packagingOptions}
                 </p>
               </div>
 
-              <div className="mt-8">
-                <Link
-                  href={`/contact?product=${encodeURIComponent(
-                    product.name,
-                  )}&additionalRequirement=${encodeURIComponent(
-                    `Discuss Private Label Requirement for ${product.name}`,
-                  )}&privateLabel=Yes`}
-                  className="group inline-flex items-center justify-center gap-2 bg-foreground text-background px-8 py-4 text-sm font-medium hover:bg-primary transition-colors"
-                >
-                  Discuss Private Label Requirement
-                  <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-                </Link>
+              {/* MOQ */}
+              <div className="border border-border p-6 bg-[#f8f6f0]">
+                <span className="text-[10px] font-mono uppercase tracking-[0.18em] text-muted-foreground">
+                  MOQ
+                </span>
+
+                <p className="mt-3 text-sm leading-relaxed text-foreground">
+                  {product.moq}
+                </p>
+              </div>
+
+              {/* Shelf Life */}
+              <div className="border border-border p-6 bg-[#f8f6f0]">
+                <span className="text-[10px] font-mono uppercase tracking-[0.18em] text-muted-foreground">
+                  Shelf Life
+                </span>
+
+                <p className="mt-3 text-sm leading-relaxed text-foreground">
+                  {product.shelfLife}
+                </p>
+              </div>
+
+              {/* Private Label */}
+              <div className="border border-border p-6 bg-[#f8f6f0]">
+                <span className="text-[10px] font-mono uppercase tracking-[0.18em] text-muted-foreground">
+                  Private Label Availability
+                </span>
+
+                <p className="mt-3 text-sm leading-relaxed text-foreground">
+                  {product.privateLabel}
+                </p>
+              </div>
+
+              {/* Bulk Supply */}
+              <div className="border border-border p-6 bg-[#f8f6f0]">
+                <span className="text-[10px] font-mono uppercase tracking-[0.18em] text-muted-foreground">
+                  Bulk Supply
+                </span>
+
+                <p className="mt-3 text-sm leading-relaxed text-foreground">
+                  {product.bulkSupply}
+                </p>
+              </div>
+
+              {/* Export Markets */}
+              <div className="border border-border p-6 bg-[#f8f6f0]">
+                <span className="text-[10px] font-mono uppercase tracking-[0.18em] text-muted-foreground">
+                  Export Markets
+                </span>
+
+                <p className="mt-3 text-sm leading-relaxed text-foreground">
+                  {product.exportMarkets}
+                </p>
+              </div>
+
+              {/* Sample */}
+              <div className="border border-border p-6 bg-[#f8f6f0] md:col-span-2">
+                <span className="text-[10px] font-mono uppercase tracking-[0.18em] text-muted-foreground">
+                  Sample Availability
+                </span>
+
+                <p className="mt-3 text-sm leading-relaxed text-foreground">
+                  {product.sampleAvailability}
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* PACKAGING SOLUTIONS */}
+        <section className="py-16 md:py-20 border-b border-border bg-[#f8f6f0]">
+          <div className="mx-auto max-w-[1400px] px-5 md:px-10">
+            <div className="mb-12 max-w-3xl">
+              <span className="text-[10px] font-mono uppercase tracking-[0.24em] text-primary">
+                PACKAGING CAPABILITIES
+              </span>
+
+              <h2 className="mt-2 text-2xl md:text-3xl font-semibold tracking-tight text-foreground">
+                Packaging Solutions
+              </h2>
+
+              <p className="mt-3 max-w-2xl text-sm text-muted-foreground leading-relaxed">
+                We offer flexible packaging formats across our Makhana and Guar
+                Gum product lines to suit retail, food-service, industrial and
+                private label requirements. Final packaging sizes and technical
+                specifications will be shared and confirmed with the buyer prior
+                to production.
+              </p>
+            </div>
+
+            {/* Makhana Packaging */}
+            <div className="mb-10">
+              <span className="text-xs font-semibold uppercase tracking-wider text-foreground">
+                Makhana
+              </span>
+
+              <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {MAKHANA_PACKAGING.map(({ icon: Icon, title, copy }) => (
+                  <div
+                    key={title}
+                    className="border border-border bg-background p-6 flex flex-col gap-3"
+                  >
+                    <Icon className="h-6 w-6 text-accent" />
+                    <h3 className="text-sm font-bold text-foreground">
+                      {title}
+                    </h3>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      {copy}
+                    </p>
+                  </div>
+                ))}
               </div>
             </div>
 
-            {/* How It Works */}
-            <div className="lg:col-span-7 h-full">
-              <div className="h-full border border-border bg-[#f8f6f0] p-5 md:p-6 flex flex-col">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm tracking-[0.1em] text-muted-foreground">
-                    How It Works
+            <div className="mt-8">
+              <Link
+                href={`/contact?product=${encodeURIComponent(
+                  product.name,
+                )}&additionalRequirement=${encodeURIComponent(
+                  `Discuss Packaging Requirement for ${product.name}`,
+                )}&packaging=${encodeURIComponent(product.packagingOptions)}`}
+                className="group inline-flex items-center gap-2 text-xs font-semibold text-accent hover:text-primary transition-colors"
+              >
+                Discuss Packaging Requirement
+                <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        {/* PRIVATE LABEL PROGRAM */}
+        <section className="py-16 md:py-20 border-b border-border bg-background">
+          <div className="mx-auto max-w-[1400px] px-5 md:px-10">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-stretch">
+              {/* Left Content */}
+              <div className="lg:col-span-5 flex flex-col justify-between">
+                <div>
+                  <span className="text-[10px] font-mono uppercase tracking-[0.24em] text-primary">
+                    PRIVATE LABEL PROGRAM
                   </span>
 
-                  {/* <span className="text-[9px] font-mono uppercase tracking-[0.14em] text-muted-foreground">
-                    6 Steps
-                  </span> */}
+                  <h2 className="mt-2 text-2xl md:text-3xl font-semibold tracking-tight text-foreground">
+                    Your Brand. Our Product. <br className="hidden sm:inline" />
+                    Reliable Export Support.
+                  </h2>
+
+                  <p className="mt-4 text-sm text-muted-foreground leading-relaxed">
+                    We work with retail brands, distributors and importers to
+                    develop Makhana products under their own label — from grade
+                    and flavour selection through to branded packaging and
+                    export delivery. Our team supports each stage of the process
+                    so partner brands can launch with confidence.
+                  </p>
                 </div>
 
-                <div className="mt-5 flex-1 grid grid-cols-2 grid-rows-3 border border-border">
-                  {PRIVATE_LABEL_FLOW.map(({ icon: Icon, label }, idx) => (
-                    <div
-                      key={label}
-                      className={`
+                <div className="mt-8">
+                  <Link
+                    href={`/contact?product=${encodeURIComponent(
+                      product.name,
+                    )}&additionalRequirement=${encodeURIComponent(
+                      `Discuss Private Label Requirement for ${product.name}`,
+                    )}&privateLabel=Yes`}
+                    className="group inline-flex items-center justify-center gap-2 bg-foreground text-background px-8 py-4 text-sm font-medium hover:bg-primary transition-colors"
+                  >
+                    Discuss Private Label Requirement
+                    <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                  </Link>
+                </div>
+              </div>
+
+              {/* How It Works */}
+              <div className="lg:col-span-7 h-full">
+                <div className="h-full border border-border bg-[#f8f6f0] p-5 md:p-6 flex flex-col">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm tracking-[0.1em] text-muted-foreground">
+                      How It Works
+                    </span>
+
+                    {/* <span className="text-[9px] font-mono uppercase tracking-[0.14em] text-muted-foreground">
+                    6 Steps
+                  </span> */}
+                  </div>
+
+                  <div className="mt-5 flex-1 grid grid-cols-2 grid-rows-3 border border-border">
+                    {PRIVATE_LABEL_FLOW.map(({ icon: Icon, label }, idx) => (
+                      <div
+                        key={label}
+                        className={`
                   group relative flex flex-col justify-between
                   p-4 md:p-5 bg-background
                   transition-colors duration-300 hover:bg-[#f3f0e9]
                   ${idx % 2 === 0 ? "border-r border-border" : ""}
                   ${idx < 4 ? "border-b border-border" : ""}
                 `}
-                    >
-                      {/* <span className="absolute top-3 right-4 text-[8px] font-mono tracking-[0.12em] text-muted-foreground/60">
+                      >
+                        {/* <span className="absolute top-3 right-4 text-[8px] font-mono tracking-[0.12em] text-muted-foreground/60">
                         {String(idx + 1).padStart(2, "0")}
                       </span> */}
 
-                      <div className="flex h-8 w-8 items-center justify-center border border-border bg-[#f8f6f0]">
-                        <Icon
-                          className="h-4 w-4 text-accent"
-                          strokeWidth={1.7}
-                        />
-                      </div>
+                        <div className="flex h-8 w-8 items-center justify-center border border-border bg-[#f8f6f0]">
+                          <Icon
+                            className="h-4 w-4 text-accent"
+                            strokeWidth={1.7}
+                          />
+                        </div>
 
-                      <div className="flex items-center gap-2 mt-3">
-                        <span className="text-[11px] md:text-[12px] font-semibold text-foreground leading-tight">
-                          {label}
-                        </span>
+                        <div className="flex items-center gap-2 mt-3">
+                          <span className="text-[11px] md:text-[12px] font-semibold text-foreground leading-tight">
+                            {label}
+                          </span>
 
-                        {/* {idx !== PRIVATE_LABEL_FLOW.length - 1 && (
+                          {/* {idx !== PRIVATE_LABEL_FLOW.length - 1 && (
                           <ArrowRight className="h-3 w-3 shrink-0 text-muted-foreground/60 transition-transform duration-300 group-hover:translate-x-1" />
                         )} */}
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
 
-                {/* <div className="mt-4 flex items-center gap-3">
+                  {/* <div className="mt-4 flex items-center gap-3">
                   <div className="h-px w-7 bg-border" />
 
                   <span className="text-[8px] font-mono uppercase tracking-[0.14em] text-muted-foreground">
                     From selection to export delivery
                   </span>
                 </div> */}
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </section>
-      {/* PROCESSING JOURNEY */}
-      <section className="py-8 md:py-12 border-b border-border bg-[#f8f6f0]">
-        <div className="mx-auto max-w-[1400px] px-5 md:px-10">
-          <div className="mb-8">
-            <span className="text-[10px] font-mono uppercase tracking-[0.24em] text-primary">
-              QUALITY PROCESS
-            </span>
-
-            <h2 className="mt-2 text-2xl md:text-3xl font-semibold tracking-tight text-foreground">
-              Quality Control Process
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {product.processingSteps.map((step, idx) => (
-              <div
-                key={idx}
-                className="flex items-start gap-4 border border-border p-5 bg-background"
-              >
-                <span className="font-mono text-xs font-bold text-accent bg-secondary px-2.5 py-1">
-                  {String(idx + 1).padStart(2, "0")}
-                </span>
-
-                <p className="text-xs md:text-sm text-foreground font-medium mt-1">
-                  {step}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* REQUEST QUOTE CTA */}
-      <section className="py-16 md:py-20 bg-background border-b border-border">
-        <div className="mx-auto max-w-[1400px] px-5 md:px-10">
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-8 border border-border bg-[#f8f6f0] p-8 md:p-10">
-            <div>
+        </section>
+        {/* PROCESSING JOURNEY */}
+        <section className="py-8 md:py-12 border-b border-border bg-[#f8f6f0]">
+          <div className="mx-auto max-w-[1400px] px-5 md:px-10">
+            <div className="mb-8">
               <span className="text-[10px] font-mono uppercase tracking-[0.24em] text-primary">
-                BUYER ENQUIRY
+                QUALITY PROCESS
               </span>
 
-              <h2 className="mt-2 text-2xl md:text-3xl font-semibold text-foreground">
-                Interested in {product.name}?
+              <h2 className="mt-2 text-2xl md:text-3xl font-semibold tracking-tight text-foreground">
+                Quality Control Process
               </h2>
-
-              <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-                Request pricing, samples, technical specifications, packaging
-                options or export details from our team.
-              </p>
             </div>
 
-            <Link
-              href={`/contact?product=${encodeURIComponent(product.name)}&additionalRequirement=${encodeURIComponent(`Requesting Quote for ${product.name}`)}`}
-              className="group inline-flex shrink-0 items-center gap-3 bg-foreground px-7 py-4 text-[11px] font-medium uppercase tracking-[0.18em] text-background transition-colors hover:bg-primary"
-            >
-              Request Quote
-              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-            </Link>
-          </div>
-        </div>
-      </section>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {product.processingSteps.map((step, idx) => (
+                <div
+                  key={idx}
+                  className="flex items-start gap-4 border border-border p-5 bg-background"
+                >
+                  <span className="font-mono text-xs font-bold text-accent bg-secondary px-2.5 py-1">
+                    {String(idx + 1).padStart(2, "0")}
+                  </span>
 
-      {/* COMPLIANCE */}
-      {/* <section className="border-t border-border py-16 bg-background">
+                  <p className="text-xs md:text-sm text-foreground font-medium mt-1">
+                    {step}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* REQUEST QUOTE CTA */}
+        <section className="py-16 md:py-20 bg-background border-b border-border">
+          <div className="mx-auto max-w-[1400px] px-5 md:px-10">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-8 border border-border bg-[#f8f6f0] p-8 md:p-10">
+              <div>
+                <span className="text-[10px] font-mono uppercase tracking-[0.24em] text-primary">
+                  BUYER ENQUIRY
+                </span>
+
+                <h2 className="mt-2 text-2xl md:text-3xl font-semibold text-foreground">
+                  Interested in {product.name}?
+                </h2>
+
+                <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+                  Request pricing, samples, technical specifications, packaging
+                  options or export details from our team.
+                </p>
+              </div>
+
+              <Link
+                href={`/contact?product=${encodeURIComponent(product.name)}&additionalRequirement=${encodeURIComponent(`Requesting Quote for ${product.name}`)}`}
+                className="group inline-flex shrink-0 items-center gap-3 bg-foreground px-7 py-4 text-[11px] font-medium uppercase tracking-[0.18em] text-background transition-colors hover:bg-primary"
+              >
+                Request Quote
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        {/* COMPLIANCE */}
+        {/* <section className="border-t border-border py-16 bg-background">
         <div className="mx-auto max-w-[1400px] px-5 md:px-10">
           <div className="text-center mb-8">
             <span className="text-[9px] font-mono uppercase text-muted-foreground">
@@ -1132,7 +1138,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
           <ComplianceBadgesGraphic />
         </div>
       </section> */}
-    </main>
-  </>  
+      </main>
+    </>
   );
 }

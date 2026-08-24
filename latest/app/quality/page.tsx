@@ -18,46 +18,10 @@ export const metadata: Metadata = {
     "How Videha Overseas approaches quality control, supplier verification, documentation, and buyer-specific requirements for export shipments.",
 };
 
-/**
- * ------------------------------------------------------------------
- * EDITABLE CONTENT — BUSINESS REGISTRATIONS & EXPORT CREDENTIALS
- * ------------------------------------------------------------------
- * Only list a credential here once the corresponding document/number
- * has been confirmed and supplied by Videha Overseas. Do NOT add
- * ISO, HACCP, Organic, Halal, Kosher, US FDA, or any other
- * certification unless it has been explicitly confirmed and a valid
- * document exists to support it.
- *
- * Replace the "value" fields below with the real registration
- * numbers / details, or remove a row entirely if it does not apply.
- * ------------------------------------------------------------------
- */
-const REGISTRATIONS = [
-  {
-    label: "Company Registration / Incorporation",
-    value: "[Add company registration / incorporation number]",
-  },
-  {
-    label: "Import Export Code (IEC)",
-    value: "[Add IEC number]",
-  },
-  {
-    label: "GST Registration",
-    value: "[Add GSTIN]",
-  },
-  {
-    label: "MSME / Udyam Registration",
-    value: "[Add Udyam registration number, if applicable]",
-  },
-  {
-    label: "AD Code (Authorized Dealer Code)",
-    value: "[Add AD Code, if applicable]",
-  },
-  {
-    label: "RCMC (Export Promotion Council Membership)",
-    value: "[Add RCMC number and issuing council, if applicable]",
-  },
-];
+import {
+  COMPANY_REGISTRATIONS,
+  REGISTRATION_DISCLAIMER,
+} from "@/lib/registrations";
 
 const PILLARS = [
   {
@@ -156,30 +120,29 @@ export default function QualityCompliancePage() {
         <div className="mx-auto max-w-[95vw] md:max-w-[90vw] px-5 md:px-10">
           <div className="mb-10 max-w-3xl">
             <span className="text-[10px] uppercase tracking-[0.24em] text-accent">
-              BUSINESS REGISTRATIONS
+              REGISTRATIONS &amp; COMPLIANCE
             </span>
             <h2 className="mt-3 text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
-              Registrations & Export Credentials
+              Business Registrations &amp; Export Credentials
             </h2>
             <p className="mt-3 text-sm text-muted-foreground leading-relaxed">
-              The details below reflect the registrations and credentials
-              actually held by Videha Overseas. Fields marked as placeholders
-              will be updated with the final registration numbers before this
-              page goes live.
+              The registrations below reflect the credentials actually held by
+              Videha Overseas. Placeholder values will be updated with confirmed
+              numbers before this page goes live.
             </p>
           </div>
 
-          <div className="border border-border bg-card rounded-[5px] divide-y divide-border overflow-hidden">
-            {REGISTRATIONS.map((reg) => (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {COMPANY_REGISTRATIONS.map((reg) => (
               <div
-                key={reg.label}
-                className="grid grid-cols-1 sm:grid-cols-3 gap-2 px-6 py-4.5 items-baseline"
+                key={reg.id}
+                className="border border-border bg-card p-5 rounded-[5px] flex flex-col gap-3"
               >
-                <span className="flex items-center gap-2 text-xs md:text-sm font-medium uppercase tracking-wider text-foreground">
+                <span className="flex items-center gap-2 text-xs md:text-sm font-semibold uppercase tracking-wider text-foreground">
                   <Building2 className="h-4 w-4 text-primary shrink-0" />
                   {reg.label}
                 </span>
-                <span className="sm:col-span-2 text-sm text-muted-foreground italic">
+                <span className="text-sm text-muted-foreground italic">
                   {reg.value}
                 </span>
               </div>
@@ -189,12 +152,9 @@ export default function QualityCompliancePage() {
           <div className="mt-6 flex items-start gap-3 border border-dashed border-border bg-secondary/20 p-4 rounded-[5px]">
             <Info className="h-4 w-4 text-primary shrink-0 mt-0.5" />
             <p className="text-xs text-muted-foreground leading-relaxed">
-              We do not list product or system certifications (such as ISO,
-              HACCP, Organic, Halal, Kosher, or US FDA registration) on this
-              page unless a valid, current certificate has been confirmed and
-              provided by Videha Overseas. If any such certification applies to
-              your order, please ask our export desk and we will share the
-              relevant document directly.
+              {REGISTRATION_DISCLAIMER} If any such certification applies to your
+              order, please ask our export desk and we will share the relevant
+              document directly.
             </p>
           </div>
         </div>

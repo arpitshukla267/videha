@@ -6,6 +6,7 @@ import { SectionLabel } from "@/components/section-label";
 import { Reveal } from "@/components/reveal";
 import { SourceToPartnershipSection } from "@/components/source-to-partnership";
 import { FeatureFilmstrip } from "@/components/ui/feature-filmstrip";
+import { CompanyCredibilitySection } from "@/components/company-credibility-section";
 
 export const metadata: Metadata = {
   title: "About Us — Videha Overseas",
@@ -197,7 +198,7 @@ export default function AboutPage() {
                 <p className="mt-4 text-sm md:text-base text-muted-foreground leading-relaxed">
                   By controlling the supply chain from raw agricultural
                   collections to container stuffing, we offer global buyers
-                  predictable cargo deliveries, compliant certifications, and
+                  predictable cargo deliveries, export documentation, and
                   multi-year contract stability.
                 </p>
               </Reveal>
@@ -220,8 +221,9 @@ export default function AboutPage() {
                   <p className="mt-1.5 text-xs md:text-sm text-muted-foreground leading-relaxed">
                     Naturally cultivated popped fox nuts graded systematically
                     by puff size (ranging from 6mm+ Super Jumbo to raw seeds and
-                    milling powders). Packaged in nitrogen-flushed bulk
-                    containers or OEM private labels to preserve transit crunch.
+                    milling powders). pecialized packaging options can be
+                    arranged according to product requirements and buyer
+                    specifications..
                   </p>
                 </div>
 
@@ -232,8 +234,8 @@ export default function AboutPage() {
                   <p className="mt-1.5 text-xs md:text-sm text-muted-foreground leading-relaxed">
                     A high-purity natural hydrocolloid milled from premium guar
                     splits. We supply standardized viscosity grades (up to 5,500
-                    cps) and custom mesh sizes certifiable to international food
-                    safety regulations.
+                    cps) and custom mesh sizes aligned with buyer-defined
+                    food-grade specifications.
                   </p>
                 </div>
               </div>
@@ -256,7 +258,7 @@ export default function AboutPage() {
                   Our Mission
                 </h3>
                 <p className="mt-4 text-sm md:text-base text-muted-foreground leading-relaxed">
-                  To supply certified, industrial-grade Indian agricultural
+                  To supply industrial-grade Indian agricultural
                   ingredients to global food and manufacturing sectors through
                   transparent sourcing, rigorous batch compliance, and reliable
                   contract execution. We aim to replace market uncertainty with
@@ -460,6 +462,8 @@ export default function AboutPage() {
           </div>
         </div>
       </section>
+
+      <CompanyCredibilitySection />
 
       {/* 8. CTA SECTION */}
       <section className="py-20 md:py-28 bg-secondary/30">

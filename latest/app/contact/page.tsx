@@ -13,21 +13,24 @@ export const metadata: Metadata = {
 const FAQ_LIST = [
   {
     q: "How is product crispness preserved during ocean transit?",
-    a: "We dry all popped makhana lots below 4.5% moisture limits prior to packaging. Shipments are immediately enclosed inside nitrogen-flushed retail pouches or double-barrier bulk vacuum bags. This stops atmospheric dampness from turning the puffs soft."
+    a: "Product moisture specifications and packaging formats can be agreed according to the product, destination, and buyer requirements. Suitable export packaging can be arranged to support product quality during transit.",
   },
+
   {
     q: "Do you offer private label or custom seasoning services?",
-    a: "Yes. We offer complete OEM private label printing and packaging. Our flavor technologists match custom spice blends (Truffle, Herbs, Salt, Peri Peri) sprayed uniformly using cold-pressed vegetable binders."
+    a: "Private label packaging can be arranged according to buyer requirements. Customized product and seasoning options can also be discussed based on the required product format and applicable specifications.",
   },
+
   {
     q: "What export certifications are provided with the cargo?",
-    a: "Every container lot comes with a batch Certificate of Analysis (COA) from an independent laboratory, Phytosanitary Certificate from the Ministry of Agriculture, FSSAI Export License, Certificate of Origin (COO), and full bills of lading."
+    a: "Required export documentation and product certificates can be arranged based on the destination, product, shipment, and buyer requirements. Applicable documentation is confirmed prior to dispatch.",
   },
+
   {
     q: "What is your standard Minimum Order Quantity (MOQ)?",
-    a: "Our standard export MOQ is 1 x 20ft FCL container (which fits roughly 3.5 to 4.5 Metric Tons of expanded popped makhana due to its volumetric density). LCL sample lots can be arranged for verified buyers."
-  }
-]
+    a: "MOQ depends on the product, packaging format, order volume, and buyer requirements. Sample quantities and larger export orders can be discussed and arranged based on the specific enquiry.",
+  },
+];
 
 export default function ContactPage() {
   return (
@@ -39,7 +42,7 @@ export default function ContactPage() {
       />
 
       {/* 2. Procurement Hub & Warehouse Coordinates */}
-      <section className="bg-secondary/30 border-b border-border py-16 md:py-24">
+      {/* <section className="bg-secondary/30 border-b border-border py-16 md:py-24">
         <div className="mx-auto max-w-[95vw] md:max-w-[1400px] px-5 md:px-10">
           <div className="max-w-2xl mb-12">
             <span className="text-[10px] font-mono uppercase tracking-[0.24em] text-accent">
@@ -70,7 +73,7 @@ export default function ContactPage() {
             </div>
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* 3. B2B Sourcing FAQs */}
       <section className="py-24 md:py-32 border-t border-border bg-background">

@@ -4,62 +4,28 @@ import {
   ShieldCheck,
   Landmark,
   Globe2,
-  FileText,
 } from "lucide-react";
 import { Reveal } from "@/components/reveal";
+import {
+  COMPANY_REGISTRATIONS,
+  REGISTRATION_DISCLAIMER,
+} from "@/lib/registrations";
 
-/**
- * ------------------------------------------------------------------
- * EDITABLE CONTENT — COMPANY CREDENTIALS
- * ------------------------------------------------------------------
- * Replace each "value" below with the real registration number once
- * confirmed. Remove a row entirely if it does not apply to Videha
- * Overseas Private Limited. Do not add any product/system
- * certification (ISO, HACCP, Organic, Halal, Kosher, US FDA, etc.)
- * here unless a valid document has been separately confirmed.
- * ------------------------------------------------------------------
- */
-const CREDENTIALS = [
-  {
-    icon: FileCheck2,
-    label: "IEC (Import Export Code)",
-    value: "[Add IEC number]",
-  },
-  {
-    icon: Landmark,
-    label: "GST Registration",
-    value: "[Add GSTIN]",
-  },
-  {
-    icon: ShieldCheck,
-    label: "FSSAI License",
-    value: "[Add FSSAI license number]",
-  },
-  {
-    icon: Globe2,
-    label: "APEDA / RCMC",
-    value: "[Add APEDA Registration-cum-Membership Certificate number]",
-  },
-  {
-    icon: Building2,
-    label: "CIN (Corporate Identity Number)",
-    value: "[Add CIN]",
-  },
-  {
-    icon: FileText,
-    label: "Other Export Registrations",
-    value: "[Add any additional applicable registration]",
-  },
-];
+const REGISTRATION_ICONS = {
+  iec: FileCheck2,
+  gst: Landmark,
+  fssai: ShieldCheck,
+  "apeda-rcmc": Globe2,
+  cin: Building2,
+} as const;
 
 export function CompanyCredibilitySection() {
   return (
     <section className="border-b border-border bg-background py-16 md:py-24 font-poppins">
       <div className="mx-auto max-w-[95vw] md:max-w-[90vw] px-5 md:px-10">
-        {/* Company identity */}
         <Reveal>
           <span className="text-[10px] uppercase tracking-[0.24em] text-accent">
-            COMPANY CREDIBILITY
+            REGISTRATIONS &amp; COMPLIANCE
           </span>
 
           <h2 className="mt-4 text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
@@ -75,28 +41,27 @@ export function CompanyCredibilitySection() {
           <p className="mt-6 max-w-3xl text-sm md:text-base text-muted-foreground leading-relaxed">
             Videha Overseas Private Limited is a registered Indian company
             engaged in the export of agricultural and food products to
-            international buyers. Our registration and export credentials are
-            listed below, and full copies of any document are available on
-            request.
+            international buyers. Our actual business registrations and export
+            credentials are listed below. Full copies of any document are
+            available on request.
           </p>
         </Reveal>
 
-        {/* Credentials grid */}
-        <div className="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {CREDENTIALS.map((cred) => {
-            const Icon = cred.icon;
+        <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {COMPANY_REGISTRATIONS.map((cred) => {
+            const Icon = REGISTRATION_ICONS[cred.id];
             return (
               <div
-                key={cred.label}
+                key={cred.id}
                 className="border border-border bg-card p-5 rounded-[5px] flex flex-col gap-3"
               >
-                <div className="flex flex-col md:flex-row items-center gap-2.5">
+                <div className="flex items-center gap-2.5">
                   <Icon className="h-4.5 w-4.5 text-accent shrink-0" />
-                  <span className="text-xs font-semibold uppercase tracking-wider text-foreground text-center">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-foreground">
                     {cred.label}
                   </span>
                 </div>
-                <span className="text-sm text-muted-foreground italic text-center md:text-left">
+                <span className="text-sm text-muted-foreground italic">
                   {cred.value}
                 </span>
               </div>
@@ -105,11 +70,7 @@ export function CompanyCredibilitySection() {
         </div>
 
         <p className="mt-6 text-[11px] text-muted-foreground leading-relaxed">
-          Registration details above will be updated with confirmed numbers
-          before this section goes live. We do not display product or system
-          certifications (such as ISO, HACCP, Organic, Halal, Kosher, or US FDA
-          registration) unless a valid, current certificate has been confirmed
-          and supplied by Videha Overseas.
+          {REGISTRATION_DISCLAIMER}
         </p>
       </div>
     </section>
