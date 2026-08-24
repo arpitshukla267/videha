@@ -11,7 +11,7 @@ import { CompanyCredibilitySection } from "@/components/company-credibility-sect
 export const metadata: Metadata = {
   title: "About Us — Videha Overseas",
   description:
-    "Learn about Videha Overseas — a professional Indian agricultural exporter dedicated to transparent sourcing, strict quality compliance, and long-term global trade partnerships.",
+    "Learn about Videha Overseas — an agricultural products exporter from India supplying makhana, fox nuts, and food grade guar gum to global B2B buyers.",
 };
 
 const PRINCIPLES = [
@@ -164,10 +164,11 @@ export default function AboutPage() {
               max-md:leading-[1.7]
             "
                 >
-                  Videha Overseas is a professional agricultural export merchant
-                  based in India. We bridge farming cooperatives at origin with
-                  international food manufacturers, distributors, and brands
-                  seeking reliable B2B supply lines.
+                  Videha Overseas is a professional agricultural products
+                  exporter from India. As a makhana exporter from India, we
+                  bridge farming cooperatives at origin with international food
+                  manufacturers, distributors, and brands seeking reliable B2B
+                  supply lines.
                 </p>
               </Reveal>
             </div>

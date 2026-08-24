@@ -7,7 +7,7 @@ import { Reveal } from "@/components/reveal"
 export const metadata: Metadata = {
   title: "Contact — Videha Overseas",
   description:
-    "Contact Videha Overseas for makhana export enquiries — bulk supply, private label and international trade partnerships.",
+    "Contact Videha Overseas for makhana export, bulk makhana supply, private label makhana, and food grade guar gum enquiries from international buyers.",
 }
 
 const FAQ_LIST = [

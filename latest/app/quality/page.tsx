@@ -15,7 +15,7 @@ import { Reveal } from "@/components/reveal";
 export const metadata: Metadata = {
   title: "Quality & Compliance — Videha Overseas",
   description:
-    "How Videha Overseas approaches quality control, supplier verification, documentation, and buyer-specific requirements for export shipments.",
+    "Quality and compliance approach for an agricultural products exporter from India — registrations, supplier verification, and export documentation.",
 };
 
 import {

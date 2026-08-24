@@ -61,7 +61,8 @@ export function Intro() {
                 <p className="text-[15px] leading-[1.75] text-[#66635C] md:text-[16px]">
                   Videha Overseas was built with a clear purpose — to connect
                   quality Indian products with buyers and markets across the
-                  world. We focus on reliable sourcing, consistent quality,
+                  world. As a makhana exporter from India and fox nuts supplier
+                  from India, we focus on reliable sourcing, consistent quality,
                   export-ready standards, and flexible solutions tailored to
                   buyer requirements. From product specifications and packaging
                   to documentation and export coordination, we work closely with

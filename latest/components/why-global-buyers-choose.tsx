@@ -73,7 +73,9 @@ export function WhyGlobalBuyersChoose() {
             Why Global Buyers Choose Videha Overseas
           </h2>
           <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-            We streamline international trade by replacing regional agricultural volatility with consistent, reliable, and customer-centric supply lines.
+            We streamline international trade by replacing regional agricultural
+            volatility with consistent, reliable supply — from bulk makhana and
+            private label makhana to food grade guar gum for global buyers.
           </p>
         </div>
 

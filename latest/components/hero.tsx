@@ -34,7 +34,7 @@ const STORIES: Story[] = [
     label: "Premium Makhana",
     heading: ["Premium Makhana,", "Sourced from India."],
     description:
-      "Premium Indian makhana carefully sourced and selected for quality, consistency and international markets.",
+      "Premium Indian makhana and fox nuts, carefully sourced for quality, consistency, and international export markets.",
     image: "/images/makhana-hero.webp",
     mobileImage: "/images/makhana-hero.webp",
     alt: "Premium Indian makhana sourced from Bihar",
@@ -45,7 +45,7 @@ const STORIES: Story[] = [
     label: "Food Grade Guar Gum",
     heading: ["Food Grade Guar Gum,", "Built for Global Supply."],
     description:
-      "High-quality food grade guar gum for international buyers seeking reliable sourcing, consistent quality and dependable supply.",
+      "Food grade guar gum powder for international buyers — a reliable guar gum supplier from India with consistent quality and dependable bulk supply.",
     image: "/images/gaur-gum.webp",
     mobileImage: "/images/gaur-gum-mobile.webp",
     alt: "Food grade guar gum for international supply",
@@ -56,7 +56,7 @@ const STORIES: Story[] = [
     label: "Bulk Supply",
     heading: ["Reliable Bulk Supply,", "Built for Growing Markets."],
     description:
-      "Consistent product sourcing and dependable bulk supply for importers, distributors and businesses with large-volume requirements.",
+      "Dependable bulk makhana supply for importers, distributors, and businesses with large-volume requirements across global markets.",
     image: "/images/bulk-supply.webp",
     alt: "Bulk supply of Indian agricultural products",
   },
@@ -66,7 +66,7 @@ const STORIES: Story[] = [
     label: "Private Label",
     heading: ["Private Label Solutions,", "Tailored to Your Brand."],
     description:
-      "Flexible private label solutions designed to help businesses bring quality Indian food ingredients and agricultural products to their markets.",
+      "Private label makhana and flexible branding solutions for businesses bringing quality Indian food ingredients to their markets.",
     image: "/images/process-pack.webp",
     alt: "Private label food products prepared for export",
   },
@@ -76,7 +76,7 @@ const STORIES: Story[] = [
     label: "Global Export",
     heading: ["From India,", "To Global Markets."],
     description:
-      "Connecting trusted Indian agricultural sourcing with international markets through quality, reliable supply and professional export support.",
+      "An agricultural products exporter from India, connecting trusted sourcing with international markets through professional export support.",
     image: "/images/global-export.webp",
     alt: "Indian agricultural products prepared for global export",
   },

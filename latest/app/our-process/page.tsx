@@ -8,7 +8,7 @@ import { ProcessStory } from "@/components/process-story"
 export const metadata: Metadata = {
   title: "Our Process — Videha Overseas",
   description:
-    "Follow the journey of Videha makhana — from Bihar wetlands through grading, processing, quality checks, packing and export.",
+    "Follow the journey of Videha makhana — from Bihar wetlands through grading, processing, quality checks, packing, and export as a makhana exporter from India.",
 }
 
 const DETAILED_PROCESS_DATA = [

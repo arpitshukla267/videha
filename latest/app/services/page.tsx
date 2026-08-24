@@ -167,9 +167,11 @@ export default function ServicesPage() {
           </h1>
           <Reveal delay={0.1}>
             <p className="mt-6 max-w-sm md:max-w-2xl mx-auto text-md lg:text-lg leading-relaxed text-white">
-              Videha Overseas is a dedicated supply chain partner. We coordinate
-              procurement, processing, grading, packaging, and logistics to make
-              importing premium Indian makhana reliable and risk-free.
+              Videha Overseas is a dedicated supply chain partner for
+              international buyers. We coordinate procurement, processing,
+              grading, packaging, and logistics — including bulk makhana supply
+              and private label makhana — to make importing premium Indian
+              makhana reliable and risk-free.
             </p>
           </Reveal>
         </div>

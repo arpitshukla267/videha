@@ -35,7 +35,11 @@ export function GlobalReach({ preview = false }: GlobalReachProps) {
 
               <Reveal delay={0.1}>
                 <p className="mt-6 max-w-lg text-[15px] leading-[1.75] text-slate-600">
-                  We are structured to serve international distributors, food brands, and wholesale buyers across key global regions. Our export logistics, compliance standards, and packaging formats are tailored to meet import requirements across major international markets.
+                  We are structured to serve international distributors, food
+                  brands, and wholesale buyers across key global regions. As an
+                  agricultural products exporter from India, we tailor export
+                  logistics, compliance standards, and packaging formats to meet
+                  import requirements across major international markets.
                 </p>
               </Reveal>
 

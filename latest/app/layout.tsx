@@ -18,7 +18,7 @@ const poppins = Poppins({
 export const metadata: Metadata = {
   title: "Videha Overseas Private Limited",
   description:
-    "Videha Overseas is an India-based export company delivering premium, export-ready products to global markets. From sourcing to shipment, we focus on quality, reliability, and long-term international partnerships.",
+    "Videha Overseas is an agricultural products exporter from India, supplying premium makhana, fox nuts, and food grade guar gum to international buyers.",
   icons: {
     icon: "/logo.png",
     apple: "/logo.png",

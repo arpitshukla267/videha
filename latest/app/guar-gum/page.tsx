@@ -18,7 +18,7 @@ import { Reveal } from "@/components/reveal";
 export const metadata: Metadata = {
   title: "Food Grade Guar Gum Powder (E412) — Videha Overseas",
   description:
-    "Technical B2B specification page for Food Grade Guar Gum Powder. Origin, viscosity grades, mesh size, microbiological limits, and export packaging.",
+    "Food grade guar gum exporter and guar gum powder supplier from India. Technical specifications, viscosity grades, mesh size, and export packaging for B2B buyers.",
 };
 
 const SPECIFICATIONS = [
@@ -192,12 +192,12 @@ export default function GuarGumPage() {
 
               <Reveal delay={0.1}>
                 <p className="mt-6 text-base md:text-lg text-muted-foreground leading-relaxed">
-                  Our Food Grade Guar Gum Powder is a premium, high-purity
-                  natural hydrocolloid derived from the endosperm of the guar
-                  seed (*Cyamopsis tetragonoloba*). Extracted and milled under
-                  strict hygienic standards, it functions as an extremely
-                  efficient cold-water soluble thickening agent, binder, and
-                  emulsion stabilizer.
+                  As a food grade guar gum exporter and guar gum powder supplier
+                  from India, we offer a premium, high-purity natural hydrocolloid
+                  derived from the endosperm of the guar seed (*Cyamopsis
+                  tetragonoloba*). Extracted and milled under strict hygienic
+                  standards, it functions as an extremely efficient cold-water
+                  soluble thickening agent, binder, and emulsion stabilizer.
                 </p>
                 <p className="mt-4 text-sm md:text-base text-muted-foreground leading-relaxed">
                   Tailored for demanding B2B food processing applications, it

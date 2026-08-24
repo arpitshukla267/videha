@@ -16,7 +16,7 @@ const poppins = Poppins({
 export const metadata: Metadata = {
   title: "Products — Videha Overseas",
   description:
-    "Explore our premium export-ready makhana range. Size-graded classic roasted, seasoned gourmet, and bulk raw fox nuts.",
+    "Explore our export-ready makhana range — bulk makhana supplier and fox nuts supplier from India, with private label makhana and food grade guar gum options.",
 };
 
 // Generate slugs based on product name
@@ -40,6 +40,13 @@ export default function ProductsPage() {
               <h2 className="mt-5 max-w-3xl text-2xl font-semibold leading-[1.05] tracking-[-0.03em] text-foreground sm:text-3xl lg:text-4xl">
                 Every Grade, Every Format, Export Ready.
               </h2>
+            </Reveal>
+            <Reveal delay={0.1}>
+              <p className="mt-5 max-w-3xl text-[15px] leading-relaxed text-muted-foreground">
+                From bulk makhana and private label makhana to food grade guar
+                gum, our product range is built for international distributors,
+                food brands, and wholesale buyers sourcing from India.
+              </p>
             </Reveal>
           </div>
 

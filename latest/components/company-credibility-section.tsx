@@ -41,9 +41,10 @@ export function CompanyCredibilitySection() {
           <p className="mt-6 max-w-3xl text-sm md:text-base text-muted-foreground leading-relaxed">
             Videha Overseas Private Limited is a registered Indian company
             engaged in the export of agricultural and food products to
-            international buyers. Our actual business registrations and export
-            credentials are listed below. Full copies of any document are
-            available on request.
+            international buyers — including makhana, fox nuts, and food grade
+            guar gum. Our actual business registrations and export credentials
+            are listed below. Full copies of any document are available on
+            request.
           </p>
         </Reveal>
 

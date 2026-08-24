@@ -51,6 +51,13 @@ export function Products() {
                 Our Best Makhana, Curated for the World
               </h2>
             </Reveal>
+
+            <Reveal delay={0.08}>
+              <p className="mt-4 max-w-3xl text-sm leading-relaxed text-muted-foreground">
+                Premium makhana and fox nuts for global markets — from bulk
+                supply to private label formats.
+              </p>
+            </Reveal>
           </div>
 
           {/* View All */}
