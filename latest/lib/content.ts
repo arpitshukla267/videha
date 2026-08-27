@@ -14,7 +14,7 @@ export const PRODUCTS = [
   {
     index: "02",
     name: "Premium Makhana",
-    image: "/images/premium-makhana.jpeg",
+    image: "/images/premium-makhana2.jpeg",
     copy: "Premium-grade Indian makhana selected for consistent quality, clean appearance and reliable supply across international markets.",
     meta: ["Premium Grade", "Export Supply", "Selected Quality"],
     grade: "To be confirmed",

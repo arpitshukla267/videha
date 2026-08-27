@@ -122,7 +122,7 @@ const DETAIL_MAP: Record<string, ProductDetail> = {
   "premium-makhana": {
     index: "02",
     name: "Premium Makhana",
-    image: "/images/premium-makhana.jpeg",
+    image: "/images/premium-makhana2.jpeg",
     tagline: "Consistent, Export-Grade Fox Nuts",
 
     description:
