@@ -35,7 +35,7 @@ const STORIES: Story[] = [
     heading: ["Premium Makhana,", "Sourced from India."],
     description:
       "Premium Indian makhana and fox nuts, carefully sourced for quality, consistency, and international export markets.",
-    image: "/images/makhana-hero.webp",
+    image: "/images/hero-makhana-2.webp",
     mobileImage: "/images/makhana-hero.webp",
     alt: "Premium Indian makhana sourced from Bihar",
   },

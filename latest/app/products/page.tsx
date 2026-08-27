@@ -59,13 +59,13 @@ export default function ProductsPage() {
               >
                 <article className="group flex h-full flex-col overflow-hidden border border-border bg-background transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_18px_45px_rgba(0,0,0,0.08)]">
                   {/* Image */}
-                  <div className="relative aspect-[5/5] md:aspect-[16/11] w-full overflow-hidden bg-secondary">
+                  <div className="relative aspect-[5/5] md:aspect-[10/8] w-full overflow-hidden bg-secondary">
                     <Image
                       src={product.image}
                       alt={product.name}
                       fill
                       sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                      className="object-contain transition-transform duration-700 ease-out group-hover:scale-[1.045]"
+                      className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.045]"
                     />
                   </div>
 

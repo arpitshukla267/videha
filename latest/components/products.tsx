@@ -108,17 +108,17 @@ export function Products() {
                         alt={product.name}
                         fill
                         sizes="(max-width: 768px) 68vw, 320px"
-                        className="object-contain transition-transform duration-700 ease-out md:group-hover:scale-[1.045]"
+                        className="object-cover transition-transform duration-700 ease-out md:group-hover:scale-[1.045]"
                       />
                     </div>
 
                     {/* Content */}
                     <div className="flex flex-1 flex-col p-4 md:p-5">
-                      <div className="mb-2 flex items-center justify-between">
+                      {/* <div className="mb-2 flex items-center justify-between">
                         <span className="text-[10px] font-mono uppercase tracking-[0.18em] text-muted-foreground">
                           {product.index}
                         </span>
-                      </div>
+                      </div> */}
 
                       <h3 className="text-lg font-medium leading-[1.15] tracking-[-0.03em] text-foreground md:text-xl">
                         {product.name}

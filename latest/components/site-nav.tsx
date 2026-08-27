@@ -319,7 +319,7 @@ export function SiteNav() {
 
                 useLightNav
                   ? "border border-white/40 text-white hover:bg-white hover:text-black"
-                  : "border border-foreground/25 text-foreground hover:bg-foreground hover:text-background",
+                  : "border border-foreground/25 bg-foreground text-white hover:bg-background hover:text-foreground",
               )}
             >
               Download Brochure
@@ -540,13 +540,13 @@ export function SiteNav() {
                         "group flex w-full items-center px-7 py-5",
                         "text-left",
                         "transition-colors duration-200",
-                        "hover:bg-muted/40",
+                        "bg-muted/90",
                       )}
                     >
                       <span
                         className={cn(
                           "text-[17px] font-medium tracking-tight",
-                          "text-muted-foreground",
+                          "text-black",
                           "transition-transform duration-200",
                           "group-hover:translate-x-1 group-hover:text-foreground",
                         )}

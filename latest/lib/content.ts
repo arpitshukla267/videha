@@ -2,7 +2,7 @@ export const PRODUCTS = [
   {
     index: "01",
     name: "Raw / Plain Makhana",
-    image: "/images/product-raw.webp",
+    image: "/images/product-classic.webp",
     copy: "Clean, plain makhana sourced from India and supplied in carefully graded formats for bulk buyers, food businesses and further processing.",
     meta: ["Raw / Plain", "Bulk Supply", "Size Graded"],
     grade: "To be confirmed",
@@ -26,7 +26,7 @@ export const PRODUCTS = [
   {
     index: "03",
     name: "Jumbo Makhana",
-    image: "/images/product-jumbo.webp",
+    image: "/images/jumbo.jpeg",
     copy: "Large-size makhana selected for buyers seeking premium presentation, uniform grading and high-quality export supply.",
     meta: ["Jumbo Size", "Premium Grade", "Export Supply"],
     grade: "To be confirmed",
@@ -50,7 +50,7 @@ export const PRODUCTS = [
   {
     index: "05",
     name: "Flavoured Makhana",
-    image: "/images/product-flavoured.webp",
+    image: "/images/flavoured.jpeg",
     copy: "Seasoned makhana developed for modern snacking, with flexible flavour and packaging options for international markets.",
     meta: ["Seasoned", "Snack-Ready", "Custom Blends"],
     grade: "To be confirmed",
@@ -74,7 +74,7 @@ export const PRODUCTS = [
   {
     index: "07",
     name: "Private Label Makhana",
-    image: "/images/product-private-label.webp",
+    image: "/images/process-pack.webp",
     copy: "Flexible private-label makhana solutions with customized packaging and product formats tailored to your brand requirements.",
     meta: ["Private Label", "Custom Packaging", "Export Supply"],
     grade: "To be confirmed",
