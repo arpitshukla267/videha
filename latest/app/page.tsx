@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Hero } from "@/components/hero"
 import { Intro } from "@/components/intro"
 import { Products } from "@/components/products"
@@ -30,7 +31,9 @@ export default function Page() {
       <CompanyCredibilitySection />
       <ExportDocumentation />
       <BrandStatement />
-      <Contact preview />
+      <Suspense fallback={null}>
+        <Contact preview />
+      </Suspense>
     </main>
   );
 }

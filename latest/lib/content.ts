@@ -73,6 +73,18 @@ export const PRODUCTS = [
 
   {
     index: "07",
+    name: "Mint Masala Makhana",
+    image: "/images/mint.jpeg",
+    copy: "Mint masala seasoned makhana with a fresh, aromatic profile for retail, food service and international snack brands.",
+    meta: ["Mint Masala", "Snack-Ready", "Private Label"],
+    grade: "To be confirmed",
+    format: "Mint masala flavoured",
+    application: "Snack retail, food service, private label",
+    packaging: "Retail-ready · private label options",
+  },
+
+  {
+    index: "08",
     name: "Bulk Makhana",
     image: "/images/product-bulk.webp",
     copy: "Makhana supplied in export volumes for importers, distributors, manufacturers and businesses with large-volume requirements.",
@@ -84,7 +96,7 @@ export const PRODUCTS = [
   },
 
   {
-    index: "08",
+    index: "09",
     name: "Private Label Makhana",
     image: "/images/process-pack.webp",
     copy: "Flexible private-label makhana solutions with customized packaging and product formats tailored to your brand requirements.",
@@ -96,7 +108,7 @@ export const PRODUCTS = [
   },
 
   {
-    index: "09",
+    index: "10",
     name: "Makhana Powder",
     image: "/images/makhana-powder.jpeg",
     copy: "Makhana powder for food manufacturers, wellness brands and other applications, subject to final product specifications and confirmation.",

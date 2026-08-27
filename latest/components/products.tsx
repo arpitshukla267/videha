@@ -7,13 +7,9 @@ import { Reveal } from "@/components/reveal";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { PRODUCTS } from "@/lib/content";
+import { getProductSlug } from "@/lib/product-options";
 
-const getSlug = (name: string) => {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
-};
+const getSlug = getProductSlug;
 
 export function Products() {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -55,8 +51,8 @@ export function Products() {
             <Reveal delay={0.08}>
               <p className="mt-4 max-w-3xl text-sm leading-relaxed text-muted-foreground">
                 Premium makhana and fox nuts for global markets — including peri
-                peri and cream & onion flavoured makhana, bulk supply, and
-                private label formats.
+                peri, cream & onion, and mint masala flavoured makhana, bulk
+                supply, and private label formats.
               </p>
             </Reveal>
           </div>
@@ -98,8 +94,8 @@ export function Products() {
                 className="h-full shrink-0 snap-start"
               >
                 <Reveal delay={index * 0.04} className="h-full">
-                  <article
-                    style={panXStyle}
+                  <Link
+                    href={`/products/${getSlug(product.name)}`}
                     className="group flex h-full w-[68vw] md:w-[78vw] md:max-w-[330px] flex-col overflow-hidden rounded-[5px] border border-border bg-background transition-all duration-300 md:hover:-translate-y-1 md:hover:shadow-[0_18px_45px_rgba(0,0,0,0.08)] sm:w-[46vw] md:w-[310px] lg:w-[320px]"
                   >
                     {/* Image */}
@@ -115,12 +111,6 @@ export function Products() {
 
                     {/* Content */}
                     <div className="flex flex-1 flex-col p-4 md:p-5">
-                      {/* <div className="mb-2 flex items-center justify-between">
-                        <span className="text-[10px] font-mono uppercase tracking-[0.18em] text-muted-foreground">
-                          {product.index}
-                        </span>
-                      </div> */}
-
                       <h3 className="text-lg font-medium leading-[1.15] tracking-[-0.03em] text-foreground md:text-xl">
                         {product.name}
                       </h3>
@@ -129,18 +119,14 @@ export function Products() {
                         {product.copy}
                       </p>
 
-                      {/* Details */}
                       <div className="mt-auto pt-5">
-                        <Link
-                          href={`/products/${getSlug(product.name)}`}
-                          className="group/btn flex h-10 w-full items-center justify-center gap-2 border border-foreground/60 text-[11px] font-medium uppercase tracking-wide text-foreground transition-all duration-300 hover:bg-foreground hover:text-background"
-                        >
+                        <span className="group/btn flex h-10 w-full items-center justify-center gap-2 border border-foreground/60 text-[11px] font-medium uppercase tracking-wide text-foreground transition-all duration-300 group-hover:bg-foreground group-hover:text-background">
                           Details
                           <ArrowRight className="h-3.5 w-3.5 transition-transform duration-300 group-hover/btn:translate-x-1" />
-                        </Link>
+                        </span>
                       </div>
                     </div>
-                  </article>
+                  </Link>
                 </Reveal>
               </div>
             ))}

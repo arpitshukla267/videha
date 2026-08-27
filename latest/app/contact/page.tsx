@@ -1,4 +1,5 @@
-import type { Metadata } from "next"
+import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Contact } from "@/components/contact"
 import { MapPin, ShieldCheck, Mail, Phone, Calendar } from "lucide-react"
 import { SectionLabel } from "@/components/section-label"
@@ -36,10 +37,12 @@ export default function ContactPage() {
   return (
     <main className="overflow-hidden bg-background pt-8 md:pt-12">
       {/* 1. Split-Panel Contact form */}
-      <Contact
-        headline="Let's Build Something That Travels."
-        subhead="Share your target volumes, product grades, and destination ports. Our export desk will draft an EXIM specification sheet and container rates."
-      />
+      <Suspense fallback={null}>
+        <Contact
+          headline="Let's Build Something That Travels."
+          subhead="Share your target volumes, product grades, and destination ports. Our export desk will draft an EXIM specification sheet and container rates."
+        />
+      </Suspense>
 
       {/* 2. Procurement Hub & Warehouse Coordinates */}
       {/* <section className="bg-secondary/30 border-b border-border py-16 md:py-24">

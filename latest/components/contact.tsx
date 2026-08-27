@@ -6,19 +6,13 @@ import { ArrowRight, Check, ChevronDown, Search, X } from "lucide-react";
 import { SectionLabel } from "@/components/section-label";
 import { Reveal } from "@/components/reveal";
 import { SectionCta } from "@/components/section-cta";
+import {
+  CONTACT_PRODUCT_OPTIONS,
+  matchProductOption,
+} from "@/lib/product-options";
+import { useSearchParams } from "next/navigation";
 
-const PRODUCTS = [
-  "Raw / Plain Makhana",
-  "Premium Makhana",
-  "Jumbo Makhana",
-  "Roasted Makhana",
-  "Peri Peri Makhana",
-  "Cream & Onion Makhana",
-  "Bulk Makhana",
-  "Private Label Makhana",
-  "Makhana Powder",
-  "Food Grade Guar Gum",
-];
+const PRODUCTS = CONTACT_PRODUCT_OPTIONS;
 
 const SERVICES = [
   "Private Label",
@@ -28,6 +22,28 @@ const SERVICES = [
   "Global Sourcing",
   "Export & Logistics",
 ];
+
+function normalizeParam(value: string) {
+  return value.toLowerCase().replace(/[-_]/g, " ").trim().replace(/\s+/g, " ");
+}
+
+function matchFromList(param: string, options: readonly string[]) {
+  const normalized = normalizeParam(param);
+
+  const exact = options.find((option) => normalizeParam(option) === normalized);
+  if (exact) return exact;
+
+  const candidates = options.filter((option) => {
+    const label = normalizeParam(option);
+    return label.includes(normalized) || normalized.includes(label);
+  });
+
+  if (candidates.length > 0) {
+    return [...candidates].sort((a, b) => b.length - a.length)[0];
+  }
+
+  return param.trim();
+}
 
 const FIELDS = [
   {
@@ -379,76 +395,43 @@ export function Contact({
   const [privateLabel, setPrivateLabel] = useState("");
   const [incoterm, setIncoterm] = useState("");
   const [sampleRequired, setSampleRequired] = useState("");
+  const searchParams = useSearchParams();
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const params = new URLSearchParams(window.location.search);
-
-    const paramProduct = params.get("product") || params.get("p");
+    const paramProduct = searchParams.get("product") || searchParams.get("p");
 
     const paramService =
-      params.get("service") || params.get("services") || params.get("s");
+      searchParams.get("service") ||
+      searchParams.get("services") ||
+      searchParams.get("s");
 
     const paramSubject =
-      params.get("subject") || params.get("interest") || params.get("enquiry");
+      searchParams.get("subject") ||
+      searchParams.get("interest") ||
+      searchParams.get("enquiry");
 
     const paramMessage =
-      params.get("additionalRequirement") ||
-      params.get("message") ||
-      params.get("purpose") ||
-      params.get("req");
+      searchParams.get("additionalRequirement") ||
+      searchParams.get("message") ||
+      searchParams.get("purpose") ||
+      searchParams.get("req");
 
-    const paramPrivateLabel = params.get("privateLabel") || params.get("pl");
+    const paramPrivateLabel =
+      searchParams.get("privateLabel") || searchParams.get("pl");
 
-    const paramPackaging = params.get("packaging") || params.get("pack");
+    const paramPackaging =
+      searchParams.get("packaging") || searchParams.get("pack");
 
     if (paramProduct) {
       const cleanParam = decodeURIComponent(paramProduct).trim();
-      const normalized = cleanParam.toLowerCase().replace(/[-_]/g, " ");
-
-      const matched = PRODUCTS.find(
-        (p) =>
-          p.toLowerCase() === normalized ||
-          p.toLowerCase().includes(normalized) ||
-          normalized.includes(
-            p
-              .toLowerCase()
-              .replace(/[^a-z0-9]/g, " ")
-              .trim()
-              .split(" ")[0],
-          ),
-      );
-
-      const targetProduct = matched || cleanParam;
-
-      setSelectedProducts((prev) =>
-        prev.includes(targetProduct) ? prev : [...prev, targetProduct],
-      );
+      const targetProduct = matchProductOption(cleanParam);
+      setSelectedProducts([targetProduct]);
     }
 
     if (paramService) {
       const cleanParam = decodeURIComponent(paramService).trim();
-      const normalized = cleanParam.toLowerCase().replace(/[-_]/g, " ");
-
-      const matched = SERVICES.find(
-        (s) =>
-          s.toLowerCase() === normalized ||
-          s.toLowerCase().includes(normalized) ||
-          normalized.includes(
-            s
-              .toLowerCase()
-              .replace(/[^a-z0-9]/g, " ")
-              .trim()
-              .split(" ")[0],
-          ),
-      );
-
-      const targetService = matched || cleanParam;
-
-      setSelectedServices((prev) =>
-        prev.includes(targetService) ? prev : [...prev, targetService],
-      );
+      const targetService = matchFromList(cleanParam, SERVICES);
+      setSelectedServices([targetService]);
     }
 
     if (paramPrivateLabel) {
@@ -501,7 +484,7 @@ export function Contact({
         }, 100);
       }
     }
-  }, []);
+  }, [searchParams]);
 
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");

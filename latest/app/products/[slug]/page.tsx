@@ -397,8 +397,65 @@ const DETAIL_MAP: Record<string, ProductDetail> = {
     ],
   },
 
-  "bulk-makhana": {
+  "mint-masala-makhana": {
     index: "07",
+    name: "Mint Masala Makhana",
+    image: "/images/mint.jpeg",
+    tagline: "Fresh, Aromatic Seasoned Puffs for Global Snack Brands",
+
+    description:
+      "Our mint masala makhana is a ready-to-sell flavoured fox nut snack with a fresh, aromatic mint masala profile. Suited to snack brands, distributors and private label buyers seeking a distinctive mint masala flavour for international retail and food-service markets.",
+
+    origin: "India — final sourcing origin to be confirmed per product lot.",
+
+    gradeSize:
+      "To be confirmed — final grade and size specifications will be provided separately.",
+
+    appearance:
+      "Crisp roasted makhana with an even mint masala seasoning and clean finished appearance. Final appearance and coating parameters to be confirmed.",
+
+    moisture:
+      "To be confirmed — final moisture specification will be provided separately.",
+
+    qualityParameters: [
+      { label: "Grade", value: "To be confirmed" },
+      { label: "Size", value: "To be confirmed" },
+      { label: "Flavour Profile", value: "Mint Masala" },
+      { label: "Seasoning Uniformity", value: "To be confirmed" },
+      { label: "Food Safety Parameters", value: "To be confirmed" },
+    ],
+
+    packagingOptions:
+      "Retail pouches, customized private label packaging, jars and other retail-ready formats may be available depending on requirements.",
+
+    moq: "To be confirmed based on flavour, packaging format and order requirements.",
+
+    shelfLife:
+      "To be confirmed based on final formulation, packaging and storage conditions.",
+
+    privateLabel:
+      "Available. Custom packaging and private label formats can be developed according to buyer requirements.",
+
+    bulkSupply:
+      "Available for snack brands, distributors, food-service buyers and international retail programs.",
+
+    exportMarkets:
+      "International markets. Destination-specific requirements can be discussed during quotation.",
+
+    sampleAvailability:
+      "Samples available on request. Mint masala flavour samples can be discussed based on buyer requirements.",
+
+    processingSteps: [
+      "Grade selection",
+      "Controlled roasting",
+      "Mint masala seasoning application",
+      "Quality inspection",
+      "Final packaging and export preparation",
+    ],
+  },
+
+  "bulk-makhana": {
+    index: "08",
     name: "Bulk Makhana",
     image: "/images/product-bulk.webp",
     tagline: "Export-Volume Supply for Importers & Distributors",
@@ -458,7 +515,7 @@ const DETAIL_MAP: Record<string, ProductDetail> = {
   },
 
   "private-label-makhana": {
-    index: "08",
+    index: "09",
     name: "Private Label Makhana",
     image: "/images/process-pack.webp",
     tagline: "Your Brand. Our Product. Reliable Export Support.",
@@ -515,7 +572,7 @@ const DETAIL_MAP: Record<string, ProductDetail> = {
   },
 
   "makhana-powder": {
-    index: "09",
+    index: "10",
     name: "Makhana Powder",
     image: "/images/makhana-powder.jpeg",
     tagline: "Milled Fox Nut Powder for Food & Wellness Applications",

@@ -6,6 +6,7 @@ import { ArrowRight } from "lucide-react";
 import { SectionLabel } from "@/components/section-label";
 import { Reveal } from "@/components/reveal";
 import { PRODUCTS } from "@/lib/content";
+import { getProductSlug } from "@/lib/product-options";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -20,12 +21,7 @@ export const metadata: Metadata = {
 };
 
 // Generate slugs based on product name
-const getSlug = (name: string) => {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
-};
+const getSlug = getProductSlug;
 
 export default function ProductsPage() {
   return (
@@ -43,10 +39,11 @@ export default function ProductsPage() {
             </Reveal>
             <Reveal delay={0.1}>
               <p className="mt-5 max-w-3xl text-[15px] leading-relaxed text-muted-foreground">
-                From bulk makhana and private label makhana to peri peri and
-                cream & onion flavoured makhana and food grade guar gum, our
-                product range is built for international distributors, food
-                brands, and wholesale buyers sourcing from India.
+                From bulk makhana and private label makhana to peri peri,
+                cream & onion, and mint masala flavoured makhana and food grade
+                guar gum, our product range is built for international
+                distributors, food brands, and wholesale buyers sourcing from
+                India.
               </p>
             </Reveal>
           </div>
@@ -58,7 +55,10 @@ export default function ProductsPage() {
                 delay={index * 0.06}
                 className="h-full"
               >
-                <article className="group flex h-full flex-col overflow-hidden border border-border bg-background transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_18px_45px_rgba(0,0,0,0.08)]">
+                <Link
+                  href={`/products/${getSlug(product.name)}`}
+                  className="group flex h-full flex-col overflow-hidden border border-border bg-background transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_18px_45px_rgba(0,0,0,0.08)]"
+                >
                   {/* Image */}
                   <div className="relative aspect-[5/5] md:aspect-[10/8] w-full overflow-hidden bg-secondary">
                     <Image
@@ -79,25 +79,13 @@ export default function ProductsPage() {
                       {product.copy}
                     </p>
 
-
-                    {/* Buttons */}
-                    <div className="mt-auto pt-6 grid grid-cols-1 gap-2">
-                      <Link
-                        href={`/products/${getSlug(product.name)}`}
-                        className="group/btn flex h-10 w-full items-center justify-center border border-foreground/60 text-[11px] font-medium uppercase tracking-wide text-foreground transition-all duration-300 hover:bg-foreground hover:text-background"
-                      >
+                    <div className="mt-auto pt-6">
+                      <span className="flex h-10 w-full items-center justify-center border border-foreground/60 text-[11px] font-medium uppercase tracking-wide text-foreground transition-all duration-300 group-hover:bg-foreground group-hover:text-background">
                         Details
-                      </Link>
-                      {/* <Link
-                        href={`/contact?product=${encodeURIComponent(product.name)}`}
-                        className="group/btn flex h-10 w-full items-center justify-center gap-1 bg-foreground text-[11px] font-medium uppercase tracking-wide text-background transition-all duration-300 hover:bg-primary"
-                      >
-                        Enquire
-                        <ArrowRight className="w-3 h-3 transition-transform group-hover/btn:translate-x-0.5" />
-                      </Link> */}
+                      </span>
                     </div>
                   </div>
-                </article>
+                </Link>
               </Reveal>
             ))}
           </div>
