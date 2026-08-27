@@ -54,8 +54,9 @@ export function Products() {
 
             <Reveal delay={0.08}>
               <p className="mt-4 max-w-3xl text-sm leading-relaxed text-muted-foreground">
-                Premium makhana and fox nuts for global markets — from bulk
-                supply to private label formats.
+                Premium makhana and fox nuts for global markets — including peri
+                peri and cream & onion flavoured makhana, bulk supply, and
+                private label formats.
               </p>
             </Reveal>
           </div>

@@ -43,9 +43,10 @@ export default function ProductsPage() {
             </Reveal>
             <Reveal delay={0.1}>
               <p className="mt-5 max-w-3xl text-[15px] leading-relaxed text-muted-foreground">
-                From bulk makhana and private label makhana to food grade guar
-                gum, our product range is built for international distributors,
-                food brands, and wholesale buyers sourcing from India.
+                From bulk makhana and private label makhana to peri peri and
+                cream & onion flavoured makhana and food grade guar gum, our
+                product range is built for international distributors, food
+                brands, and wholesale buyers sourcing from India.
               </p>
             </Reveal>
           </div>

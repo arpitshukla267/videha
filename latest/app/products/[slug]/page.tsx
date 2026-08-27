@@ -65,7 +65,7 @@ const DETAIL_MAP: Record<string, ProductDetail> = {
   "raw-plain-makhana": {
     index: "01",
     name: "Raw / Plain Makhana",
-    image: "/images/product-raw.webp",
+    image: "/images/product-classic.jpeg",
     tagline: "Clean, Graded Fox Nuts for Bulk & Processing",
 
     description:
@@ -172,7 +172,7 @@ const DETAIL_MAP: Record<string, ProductDetail> = {
   "jumbo-makhana": {
     index: "03",
     name: "Jumbo Makhana",
-    image: "/images/product-jumbo.webp",
+    image: "/images/jumbo.jpeg",
     tagline: "Large-Size Fox Nuts for Premium Presentation",
 
     description:
@@ -229,7 +229,7 @@ const DETAIL_MAP: Record<string, ProductDetail> = {
   "roasted-makhana": {
     index: "04",
     name: "Roasted Makhana",
-    image: "/images/classic-roasted-salt.jpeg",
+    image: "/images/roasted.webp",
     tagline: "Light, Crisp, Plain-Roasted Puffs",
 
     description:
@@ -283,14 +283,14 @@ const DETAIL_MAP: Record<string, ProductDetail> = {
     ],
   },
 
-  "flavoured-makhana": {
+  "peri-peri-makhana": {
     index: "05",
-    name: "Flavoured Makhana",
+    name: "Peri Peri Makhana",
     image: "/images/flavoured.jpeg",
-    tagline: "Gourmet Seasoned Puffs for Global Brands",
+    tagline: "Spicy Seasoned Puffs for Global Snack Brands",
 
     description:
-      "Our flavoured makhana range is designed for snack brands and international buyers looking for ready-to-sell seasoned makhana products. Flavour profiles and formulations can be adapted according to market requirements, brand positioning and customer specifications.",
+      "Our peri peri makhana is a ready-to-sell flavoured fox nut snack with a bold, spicy seasoning profile. Suited to snack brands, distributors and private label programs seeking a popular peri peri flavour for international retail and food-service markets.",
 
     origin: "India — final sourcing origin to be confirmed per product lot.",
 
@@ -298,7 +298,7 @@ const DETAIL_MAP: Record<string, ProductDetail> = {
       "To be confirmed — final grade and size specifications will be provided separately.",
 
     appearance:
-      "Crisp roasted makhana with an even seasoning and clean finished appearance. Final appearance and coating parameters to be confirmed.",
+      "Crisp roasted makhana with an even peri peri seasoning and clean finished appearance. Final appearance and coating parameters to be confirmed.",
 
     moisture:
       "To be confirmed — final moisture specification will be provided separately.",
@@ -306,10 +306,7 @@ const DETAIL_MAP: Record<string, ProductDetail> = {
     qualityParameters: [
       { label: "Grade", value: "To be confirmed" },
       { label: "Size", value: "To be confirmed" },
-      {
-        label: "Flavour Profile",
-        value: "To be confirmed based on selected formulation",
-      },
+      { label: "Flavour Profile", value: "Peri Peri" },
       { label: "Seasoning Uniformity", value: "To be confirmed" },
       { label: "Food Safety Parameters", value: "To be confirmed" },
     ],
@@ -323,7 +320,7 @@ const DETAIL_MAP: Record<string, ProductDetail> = {
       "To be confirmed based on final formulation, packaging and storage conditions.",
 
     privateLabel:
-      "Available. Custom flavour profiles, packaging and private label formats can be developed according to buyer requirements.",
+      "Available. Custom packaging and private label formats can be developed according to buyer requirements.",
 
     bulkSupply:
       "Available for snack brands, distributors, food-service buyers and international retail programs.",
@@ -332,19 +329,76 @@ const DETAIL_MAP: Record<string, ProductDetail> = {
       "International markets. Destination-specific requirements can be discussed during quotation.",
 
     sampleAvailability:
-      "Samples available on request. Flavour samples can be discussed based on buyer requirements.",
+      "Samples available on request. Peri peri flavour samples can be discussed based on buyer requirements.",
 
     processingSteps: [
       "Grade selection",
       "Controlled roasting",
-      "Flavour and seasoning application",
+      "Peri peri seasoning application",
+      "Quality inspection",
+      "Final packaging and export preparation",
+    ],
+  },
+
+  "cream-onion-makhana": {
+    index: "06",
+    name: "Cream & Onion Makhana",
+    image: "/images/cream&onion.webp",
+    tagline: "Savoury Seasoned Puffs for Global Snack Brands",
+
+    description:
+      "Our cream & onion makhana is a ready-to-sell flavoured fox nut snack with a creamy, savoury onion profile. Ideal for snack brands, distributors and private label buyers looking for a familiar cream & onion flavour for international retail and food-service channels.",
+
+    origin: "India — final sourcing origin to be confirmed per product lot.",
+
+    gradeSize:
+      "To be confirmed — final grade and size specifications will be provided separately.",
+
+    appearance:
+      "Crisp roasted makhana with an even cream & onion seasoning and clean finished appearance. Final appearance and coating parameters to be confirmed.",
+
+    moisture:
+      "To be confirmed — final moisture specification will be provided separately.",
+
+    qualityParameters: [
+      { label: "Grade", value: "To be confirmed" },
+      { label: "Size", value: "To be confirmed" },
+      { label: "Flavour Profile", value: "Cream & Onion" },
+      { label: "Seasoning Uniformity", value: "To be confirmed" },
+      { label: "Food Safety Parameters", value: "To be confirmed" },
+    ],
+
+    packagingOptions:
+      "Retail pouches, customized private label packaging, jars and other retail-ready formats may be available depending on requirements.",
+
+    moq: "To be confirmed based on flavour, packaging format and order requirements.",
+
+    shelfLife:
+      "To be confirmed based on final formulation, packaging and storage conditions.",
+
+    privateLabel:
+      "Available. Custom packaging and private label formats can be developed according to buyer requirements.",
+
+    bulkSupply:
+      "Available for snack brands, distributors, food-service buyers and international retail programs.",
+
+    exportMarkets:
+      "International markets. Destination-specific requirements can be discussed during quotation.",
+
+    sampleAvailability:
+      "Samples available on request. Cream & onion flavour samples can be discussed based on buyer requirements.",
+
+    processingSteps: [
+      "Grade selection",
+      "Controlled roasting",
+      "Cream & onion seasoning application",
       "Quality inspection",
       "Final packaging and export preparation",
     ],
   },
 
   "bulk-makhana": {
-    index: "06",
+    index: "07",
     name: "Bulk Makhana",
     image: "/images/product-bulk.webp",
     tagline: "Export-Volume Supply for Importers & Distributors",
@@ -404,9 +458,9 @@ const DETAIL_MAP: Record<string, ProductDetail> = {
   },
 
   "private-label-makhana": {
-    index: "07",
+    index: "08",
     name: "Private Label Makhana",
-    image: "/images/product-private-label.webp",
+    image: "/images/process-pack.webp",
     tagline: "Your Brand. Our Product. Reliable Export Support.",
 
     description:
@@ -461,9 +515,9 @@ const DETAIL_MAP: Record<string, ProductDetail> = {
   },
 
   "makhana-powder": {
-    index: "08",
+    index: "09",
     name: "Makhana Powder",
-    image: "/images/product-powder.webp",
+    image: "/images/makhana-powder.jpeg",
     tagline: "Milled Fox Nut Powder for Food & Wellness Applications",
 
     description:

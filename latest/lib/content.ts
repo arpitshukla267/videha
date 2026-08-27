@@ -2,7 +2,7 @@ export const PRODUCTS = [
   {
     index: "01",
     name: "Raw / Plain Makhana",
-    image: "/images/product-classic.webp",
+    image: "/images/product-classic.jpeg",
     copy: "Clean, plain makhana sourced from India and supplied in carefully graded formats for bulk buyers, food businesses and further processing.",
     meta: ["Raw / Plain", "Bulk Supply", "Size Graded"],
     grade: "To be confirmed",
@@ -38,7 +38,7 @@ export const PRODUCTS = [
   {
     index: "04",
     name: "Roasted Makhana",
-    image: "/images/classic-roasted-salt.jpeg",
+    image: "/images/roasted.webp",
     copy: "Carefully roasted makhana with a light, crisp texture and clean flavour, suitable for retail, food brands and private-label programs.",
     meta: ["Roasted", "Snack-Ready", "Private Label"],
     grade: "To be confirmed",
@@ -49,18 +49,30 @@ export const PRODUCTS = [
 
   {
     index: "05",
-    name: "Flavoured Makhana",
+    name: "Peri Peri Makhana",
     image: "/images/flavoured.jpeg",
-    copy: "Seasoned makhana developed for modern snacking, with flexible flavour and packaging options for international markets.",
-    meta: ["Seasoned", "Snack-Ready", "Custom Blends"],
+    copy: "Spicy peri peri seasoned makhana for modern snacking, with export-ready retail and private label packaging options.",
+    meta: ["Peri Peri", "Snack-Ready", "Private Label"],
     grade: "To be confirmed",
-    format: "Seasoned & flavoured",
+    format: "Peri peri flavoured",
     application: "Snack retail, food service, private label",
     packaging: "Retail-ready · private label options",
   },
 
   {
     index: "06",
+    name: "Cream & Onion Makhana",
+    image: "/images/cream&onion.webp",
+    copy: "Cream & onion seasoned makhana with a savoury profile for retail, food service and international snack brands.",
+    meta: ["Cream & Onion", "Snack-Ready", "Private Label"],
+    grade: "To be confirmed",
+    format: "Cream & onion flavoured",
+    application: "Snack retail, food service, private label",
+    packaging: "Retail-ready · private label options",
+  },
+
+  {
+    index: "07",
     name: "Bulk Makhana",
     image: "/images/product-bulk.webp",
     copy: "Makhana supplied in export volumes for importers, distributors, manufacturers and businesses with large-volume requirements.",
@@ -72,7 +84,7 @@ export const PRODUCTS = [
   },
 
   {
-    index: "07",
+    index: "08",
     name: "Private Label Makhana",
     image: "/images/process-pack.webp",
     copy: "Flexible private-label makhana solutions with customized packaging and product formats tailored to your brand requirements.",
@@ -84,9 +96,9 @@ export const PRODUCTS = [
   },
 
   {
-    index: "08",
+    index: "09",
     name: "Makhana Powder",
-    image: "/images/product-powder.webp",
+    image: "/images/makhana-powder.jpeg",
     copy: "Makhana powder for food manufacturers, wellness brands and other applications, subject to final product specifications and confirmation.",
     meta: ["Powder", "Food Ingredient", "TBC"],
     grade: "To be confirmed",
