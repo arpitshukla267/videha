@@ -68,7 +68,7 @@ export function SiteFooter() {
 
               {/* Facebook */}
               <a
-                href="#"
+                href="https://www.facebook.com/share/1Yta2hcPKY/?mibextid=wwXIfr"
                 aria-label="Facebook"
                 className="flex h-8 w-8 items-center justify-center rounded-full bg-white/5 text-white/45 transition-all duration-200 hover:bg-white/10 hover:text-white"
               >
@@ -122,9 +122,8 @@ export function SiteFooter() {
               REGISTRATION & CERTIFICATIONS
           ======================================================= */}
           <div className="col-span-1 lg:col-span-1">
-            <span 
-             className="text-[9px] font-semibold uppercase tracking-[0.18em] text-white/35">
-              Registration 
+            <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-white/35">
+              Registration
               {/* &amp;
               <br />
               Certifications */}
