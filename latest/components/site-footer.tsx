@@ -58,13 +58,13 @@ export function SiteFooter() {
             {/* Social Media */}
             <div className="mt-5 flex items-center gap-2">
               {/* LinkedIn */}
-              <a
+              {/* <a
                 href="#"
                 aria-label="LinkedIn"
                 className="flex h-8 w-8 items-center justify-center rounded-full bg-white/5 text-white/45 transition-all duration-200 hover:bg-white/10 hover:text-white"
               >
                 <FaLinkedinIn className="h-3.5 w-3.5" />
-              </a>
+              </a> */}
 
               {/* Facebook */}
               <a
@@ -77,7 +77,7 @@ export function SiteFooter() {
 
               {/* Instagram */}
               <a
-                href="#"
+                href="https://www.instagram.com/videhaoverseas/"
                 aria-label="Instagram"
                 className="flex h-8 w-8 items-center justify-center rounded-full bg-white/5 text-white/45 transition-all duration-200 hover:bg-white/10 hover:text-white"
               >
