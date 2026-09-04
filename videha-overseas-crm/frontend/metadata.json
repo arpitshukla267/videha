@@ -1,0 +1,6 @@
+{
+  "name": "Videha Overseas CRM",
+  "description": "Enterprise Customer Relationship Management and Operations Portal for Videha Overseas with lead tracking, task automation, RBAC, and order fulfillment.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

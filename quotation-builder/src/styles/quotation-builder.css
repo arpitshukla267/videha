@@ -1,0 +1,569 @@
+/* Scoped styles for Quotation Builder — portable, no Tailwind required */
+
+.qb-root {
+  --qb-ink: #1f2421;
+  --qb-muted: #665e52;
+  --qb-line: #e2d9cb;
+  --qb-paper: #ffffff;
+  --qb-cream: #f7f4ef;
+  --qb-accent: #c86d3b;
+  --qb-primary: #483226;
+  --qb-surface: #faf8f5;
+  --qb-workspace: #ebe5d9;
+  --qb-danger: #c0392b;
+  --qb-font: "Poppins", "Segoe UI", system-ui, sans-serif;
+
+  box-sizing: border-box;
+  font-family: var(--qb-font);
+  color: var(--qb-ink);
+  background: var(--qb-workspace);
+  height: 100%;
+  min-height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+.qb-root *,
+.qb-root *::before,
+.qb-root *::after {
+  box-sizing: border-box;
+}
+
+.qb-shell {
+  display: grid;
+  grid-template-columns: minmax(300px, 38%) minmax(0, 1fr);
+  gap: 0;
+  height: 100%;
+  min-height: 100%;
+  align-items: stretch;
+}
+
+@media (max-width: 900px) {
+  .qb-root {
+    overflow: auto;
+  }
+  .qb-shell {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+  .qb-form-col,
+  .qb-preview-col {
+    max-height: none !important;
+    height: auto !important;
+  }
+}
+
+/* ── Form column ─────────────────────────────────────────── */
+.qb-form-col {
+  background: var(--qb-cream);
+  border-right: 1px solid var(--qb-line);
+  padding: 28px 24px 48px;
+  overflow-y: auto;
+  height: 100%;
+  max-height: 100%;
+}
+
+.qb-form-header {
+  margin-bottom: 28px;
+}
+
+.qb-form-header h1 {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--qb-primary);
+}
+
+.qb-form-header p {
+  margin: 6px 0 0;
+  font-size: 0.8rem;
+  color: var(--qb-muted);
+  line-height: 1.5;
+}
+
+.qb-section {
+  margin-bottom: 22px;
+  padding-bottom: 22px;
+  border-bottom: 1px solid var(--qb-line);
+}
+
+.qb-section:last-of-type {
+  border-bottom: none;
+}
+
+.qb-section-title {
+  margin: 0 0 14px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--qb-accent);
+}
+
+.qb-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.qb-grid-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+}
+
+.qb-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 10px;
+}
+
+.qb-field label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--qb-muted);
+}
+
+.qb-field input,
+.qb-field select,
+.qb-field textarea {
+  width: 100%;
+  border: 1px solid var(--qb-line);
+  background: var(--qb-paper);
+  color: var(--qb-ink);
+  border-radius: 4px;
+  padding: 9px 11px;
+  font-size: 0.875rem;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.qb-field input:focus,
+.qb-field select:focus,
+.qb-field textarea:focus {
+  border-color: var(--qb-primary);
+}
+
+.qb-field textarea {
+  min-height: 72px;
+  resize: vertical;
+  line-height: 1.45;
+}
+
+.qb-line-card {
+  border: 1px solid var(--qb-line);
+  background: var(--qb-surface);
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 10px;
+}
+
+.qb-line-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.qb-line-top span {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--qb-muted);
+  letter-spacing: 0.08em;
+}
+
+.qb-icon-btn {
+  border: none;
+  background: transparent;
+  color: var(--qb-muted);
+  cursor: pointer;
+  padding: 4px;
+  display: inline-flex;
+  border-radius: 4px;
+}
+
+.qb-icon-btn:hover {
+  color: var(--qb-danger);
+  background: rgba(192, 57, 43, 0.08);
+}
+
+.qb-btn-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.qb-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  border-radius: 4px;
+  padding: 12px 18px;
+  transition: background 0.15s, color 0.15s, opacity 0.15s;
+}
+
+.qb-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.qb-btn-primary {
+  background: var(--qb-primary);
+  color: #f7f4ef;
+  width: 100%;
+  margin-top: 8px;
+}
+
+.qb-btn-primary:hover:not(:disabled) {
+  background: #3a281f;
+}
+
+.qb-btn-ghost {
+  background: transparent;
+  color: var(--qb-primary);
+  border: 1px solid var(--qb-line);
+  padding: 8px 12px;
+}
+
+.qb-btn-ghost:hover:not(:disabled) {
+  border-color: var(--qb-primary);
+}
+
+.qb-hint {
+  font-size: 0.72rem;
+  color: var(--qb-muted);
+  margin-top: 8px;
+  line-height: 1.4;
+}
+
+/* ── Preview column ──────────────────────────────────────── */
+.qb-preview-col {
+  height: 100%;
+  max-height: 100%;
+  overflow-y: auto;
+  padding: 28px 32px 48px;
+  background: linear-gradient(180deg, #d9d0c2 0%, #ebe5d9 40%, #e5ddd0 100%);
+}
+
+.qb-preview-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.qb-preview-toolbar span {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--qb-muted);
+}
+
+.qb-paper-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  align-items: center;
+}
+
+/* Off-screen host for PDF-only A4 sheet */
+.qb-export-host {
+  position: fixed;
+  left: -12000px;
+  top: 0;
+  width: 794px;
+  margin: 0;
+  padding: 0;
+  pointer-events: none;
+  z-index: -1;
+  overflow: visible;
+}
+
+/*
+ * A4 document — brand tokens live ON the paper so PDF capture
+ * keeps colors / divider lines even when cloned outside .qb-root.
+ */
+.qb-a4 {
+  --qb-ink: #1f2421;
+  --qb-muted: #665e52;
+  --qb-line: #d4c8b6;
+  --qb-paper: #ffffff;
+  --qb-accent: #c86d3b;
+  --qb-primary: #483226;
+  --qb-soft: #f3ece3;
+
+  width: min(794px, 100%);
+  min-height: 1123px;
+  background: #ffffff;
+  color: #1f2421;
+  font-family: "Poppins", "Segoe UI", system-ui, sans-serif;
+  box-shadow: 0 12px 40px rgba(31, 36, 33, 0.12), 0 2px 8px rgba(31, 36, 33, 0.06);
+  padding: 40px 48px 48px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.qb-a4--export {
+  width: 794px !important;
+  max-width: none !important;
+  min-height: 1123px;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.qb-a4-inner {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Document content */
+.qb-doc-header {
+  display: grid;
+  grid-template-columns: 1.35fr 0.9fr;
+  gap: 28px;
+  padding-bottom: 18px;
+  border-bottom: 2.5px solid #483226;
+  margin-bottom: 22px;
+  align-items: end;
+}
+
+.qb-doc-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.qb-doc-logo {
+  width: 104px;
+  height: 104px;
+  object-fit: contain;
+  flex-shrink: 0;
+  display: block;
+  margin: 0 0 2px;
+}
+
+.qb-doc-brand-text {
+  width: 100%;
+}
+
+.qb-doc-brand-text strong {
+  display: block;
+  font-size: 1.18rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: #483226;
+  line-height: 1.2;
+}
+
+.qb-doc-brand-text em {
+  display: block;
+  font-style: normal;
+  font-size: 0.7rem;
+  color: #c86d3b;
+  margin-top: 4px;
+  letter-spacing: 0.02em;
+}
+
+.qb-doc-company-meta {
+  margin-top: 8px;
+  font-size: 0.7rem;
+  line-height: 1.55;
+  color: #665e52;
+}
+
+.qb-doc-meta-block {
+  justify-self: end;
+  align-self: end;
+  display: grid;
+  grid-template-columns: auto auto;
+  column-gap: 14px;
+  row-gap: 4px;
+  align-items: baseline;
+}
+
+.qb-doc-meta-row {
+  display: contents;
+}
+
+.qb-doc-meta-label {
+  font-size: 0.74rem;
+  line-height: 1.75;
+  color: #665e52;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.qb-doc-meta-value {
+  font-size: 0.74rem;
+  line-height: 1.75;
+  color: #1f2421;
+  text-align: left;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.qb-doc-client {
+  margin-bottom: 20px;
+  padding: 0;
+  background: transparent;
+  border: none;
+}
+
+.qb-doc-label {
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #c86d3b;
+  margin-bottom: 6px;
+}
+
+.qb-doc-client h3 {
+  margin: 0 0 4px;
+  font-size: 0.98rem;
+  font-weight: 600;
+  color: #483226;
+}
+
+.qb-doc-client p {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.55;
+  color: #665e52;
+  white-space: pre-line;
+}
+
+.qb-doc-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.72rem;
+  margin-bottom: 18px;
+  border-top: 1.5px solid #483226;
+  border-bottom: 1.5px solid #483226;
+}
+
+.qb-doc-table th {
+  text-align: left;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-size: 0.6rem;
+  color: #665e52;
+  background: #f7f4ef;
+  border-bottom: 1.5px solid #483226;
+  padding: 10px 7px;
+}
+
+.qb-doc-table th.num,
+.qb-doc-table td.num {
+  text-align: right;
+}
+
+.qb-doc-table th.center,
+.qb-doc-table td.center {
+  text-align: center;
+}
+
+.qb-doc-table td {
+  padding: 10px 7px;
+  border-bottom: 1px solid #d4c8b6;
+  vertical-align: top;
+  color: #1f2421;
+}
+
+.qb-doc-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.qb-doc-table td.desc {
+  font-weight: 500;
+  max-width: 220px;
+  color: #483226;
+}
+
+.qb-doc-totals {
+  margin-left: auto;
+  width: min(290px, 100%);
+  margin-bottom: 26px;
+  padding-top: 4px;
+}
+
+.qb-doc-totals-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.76rem;
+  padding: 6px 0;
+  color: #665e52;
+  border-bottom: 1px solid #e8dfd2;
+}
+
+.qb-doc-totals-row.grand {
+  margin-top: 4px;
+  padding: 12px 0 4px;
+  border-bottom: none;
+  border-top: 2.5px solid #483226;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #483226;
+}
+
+.qb-doc-footer-blocks {
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1.5px solid #d4c8b6;
+  display: grid;
+  gap: 14px;
+}
+
+.qb-doc-block h4 {
+  margin: 0 0 5px;
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #c86d3b;
+}
+
+.qb-doc-block p {
+  margin: 0;
+  font-size: 0.72rem;
+  line-height: 1.55;
+  color: #665e52;
+  white-space: pre-line;
+}
+
+.qb-doc-thanks {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1.5px solid #d4c8b6;
+  font-size: 0.76rem;
+  font-style: italic;
+  color: #483226;
+}
+
+.qb-doc-contact-bar {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid #e8dfd2;
+  font-size: 0.68rem;
+  color: #665e52;
+  line-height: 1.5;
+  text-align: center;
+}
