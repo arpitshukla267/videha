@@ -25,9 +25,9 @@ export function SiteFooter({ settings = DEFAULT_SITE_SETTINGS }: SiteFooterProps
   const { contact, registrations } = settings;
 
   return (
-    <footer className="border-t border-[#5A4938]/20 bg-[#514536] text-white">
+    <footer className="overflow-x-clip border-t border-[#5A4938]/20 bg-[#514536] text-white">
       <div className="mx-auto max-w-[1400px] px-5 py-8 sm:px-8 md:px-10 md:py-9">
-        <div className="grid grid-cols-2 gap-x-8 gap-y-7 lg:grid-cols-4 lg:gap-10">
+        <div className="grid min-w-0 grid-cols-2 gap-x-8 gap-y-7 lg:grid-cols-4 lg:gap-10">
           <div className="col-span-2 min-w-0 lg:col-span-1">
             <Link href="/" className="inline-flex flex-col leading-none">
               <span className="text-[21px] font-semibold tracking-[-0.03em]">
@@ -123,16 +123,18 @@ export function SiteFooter({ settings = DEFAULT_SITE_SETTINGS }: SiteFooterProps
             <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-white/35">
               Registration
             </span>
-            <div className="mt-4 flex flex-col gap-2.5 text-[11px] text-white/55">
+            <div className="mt-4 flex min-w-0 flex-col gap-2.5 text-[11px] text-white/55">
               {registrations.items.map((reg, idx) => (
                 <div
                   key={`${reg.id || reg.shortLabel || "reg"}-${idx}`}
-                  className="min-w-0 break-words"
+                  className="min-w-0"
                 >
                   <span className="mr-2 text-white/30">
                     {reg.shortLabel || reg.label}
                   </span>
-                  <span className="break-all">{reg.value}</span>
+                  <span className="break-all [overflow-wrap:anywhere]">
+                    {reg.value}
+                  </span>
                 </div>
               ))}
             </div>
