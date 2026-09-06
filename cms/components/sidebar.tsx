@@ -53,10 +53,16 @@ export function Sidebar() {
           </div>
           <div>
             <div className="flex items-center gap-1.5">
-              <p className="text-white font-bold text-sm tracking-tight">Videha Overseas</p>
-              <span className="bg-purple-500/20 text-purple-300 text-[10px] font-semibold px-1.5 py-0.5 rounded-full border border-purple-400/30">CMS</span>
+              <p className="text-white font-bold text-sm tracking-tight">
+                Videha Overseas
+              </p>
+              <span className="bg-purple-500/20 text-purple-300 text-[10px] font-semibold px-1.5 py-0.5 rounded-full border border-purple-400/30">
+                CMS
+              </span>
             </div>
-            <p className="text-slate-400 text-xs font-medium tracking-wide">SaaS Control Panel</p>
+            <p className="text-slate-400 text-xs font-medium tracking-wide">
+              SaaS Control Panel
+            </p>
           </div>
         </div>
       </div>
@@ -67,31 +73,49 @@ export function Sidebar() {
           {NAV.map((item, idx) => {
             if ("children" in item && item.children) {
               return (
-                <div key={item.label} className="mt-4 pt-4 border-t border-slate-800/80 space-y-1">
+                <div
+                  key={item.label}
+                  className="mt-4 pt-4 border-t border-slate-800/80 space-y-1"
+                >
                   <div className="flex items-center gap-2 px-3 py-1.5 mb-1 text-slate-400 text-[10px] font-bold uppercase tracking-widest">
                     <item.icon className="w-3.5 h-3.5 text-purple-400" />
                     {item.label}
                   </div>
                   {item.children.map((child) => {
-                    const active = pathname === child.href || pathname.startsWith(child.href + "/");
+                    const active =
+                      pathname === child.href ||
+                      pathname.startsWith(child.href + "/");
                     return (
                       <Link
                         key={child.href}
                         href={child.href}
                         className={cn(
                           "relative flex items-center gap-3 px-3.5 py-3 rounded-xl text-xs font-medium transition-colors group",
-                          active ? "text-white font-semibold" : "text-slate-400 hover:text-slate-200 hover:bg-white/5"
+                          active
+                            ? "text-white font-semibold"
+                            : "text-slate-400 hover:text-slate-200 hover:bg-white/5",
                         )}
                       >
                         {active && (
                           <motion.div
                             layoutId="active-sidebar-pill"
                             className="absolute inset-0 bg-purple-600 rounded-xl shadow-md shadow-purple-900/50"
-                            transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                            transition={{
+                              type: "spring",
+                              stiffness: 380,
+                              damping: 30,
+                            }}
                           />
                         )}
-                        <child.icon className={cn("w-4 h-4 shrink-0 relative z-10 transition-transform group-hover:scale-110", active ? "text-white" : "text-slate-400")} />
-                        <span className="relative z-10 flex-1">{child.label}</span>
+                        <child.icon
+                          className={cn(
+                            "w-4 h-4 shrink-0 relative z-10 transition-transform group-hover:scale-110",
+                            active ? "text-white" : "text-slate-400",
+                          )}
+                        />
+                        <span className="relative z-10 flex-1">
+                          {child.label}
+                        </span>
                       </Link>
                     );
                   })}
@@ -110,7 +134,9 @@ export function Sidebar() {
                 href={href}
                 className={cn(
                   "relative flex items-center gap-3 px-3.5 py-3 rounded-xl text-xs font-medium transition-colors group",
-                  active ? "text-white font-semibold" : "text-slate-400 hover:text-slate-200 hover:bg-white/5"
+                  active
+                    ? "text-white font-semibold"
+                    : "text-slate-400 hover:text-slate-200 hover:bg-white/5",
                 )}
               >
                 {active && (
@@ -120,7 +146,12 @@ export function Sidebar() {
                     transition={{ type: "spring", stiffness: 380, damping: 30 }}
                   />
                 )}
-                <item.icon className={cn("w-4 h-4 shrink-0 relative z-10 transition-transform group-hover:scale-110", active ? "text-white" : "text-slate-400")} />
+                <item.icon
+                  className={cn(
+                    "w-4 h-4 shrink-0 relative z-10 transition-transform group-hover:scale-110",
+                    active ? "text-white" : "text-slate-400",
+                  )}
+                />
                 <span className="relative z-10 flex-1">{item.label}</span>
               </Link>
             );
@@ -144,13 +175,12 @@ export function Sidebar() {
       {/* Footer link */}
       <div className="px-5 py-4 border-t border-slate-800/80 bg-slate-950/40">
         <a
-          href="http://localhost:3005"
+          href="https://www.videhaoverseas.com/"
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center justify-between p-2.5 rounded-xl bg-slate-900/80 border border-slate-800 text-slate-300 text-xs font-medium hover:border-purple-500/50 hover:text-white transition-all group"
         >
           <div className="flex items-center gap-2">
-            <Sparkles className="w-3.5 h-3.5 text-purple-400" />
             <span>Live Website</span>
           </div>
           <ChevronRight className="w-3.5 h-3.5 text-slate-500 group-hover:translate-x-0.5 transition-transform" />
