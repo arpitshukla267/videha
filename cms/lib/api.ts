@@ -1,3 +1,5 @@
+import type { UploadContext } from "./upload-context";
+
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
 async function req<T>(
@@ -180,17 +182,28 @@ export const siteSettingsApi = {
 };
 
 // ─── Upload ───────────────────────────────────────────────────────────────────
-export async function uploadFile(file: File): Promise<string> {
+
+export async function uploadFile(file: File, context: UploadContext): Promise<string> {
+  if (!context.identifier?.trim()) {
+    throw new Error("Save a slug or ID before uploading so the image is named correctly.");
+  }
+
   const form = new FormData();
   form.append("image", file);
+  form.append("section", context.section);
+  form.append("identifier", context.identifier.trim());
+  form.append("field", context.field || "main");
+
   const res = await fetch(`${API}/api/upload`, { method: "POST", body: form });
   const json = await res.json();
   if (!json.success) throw new Error(json.error || "Upload failed");
   return json.url as string;
 }
 
-/** @deprecated use uploadFile */
-export const uploadImage = uploadFile;
+/** @deprecated use uploadFile with UploadContext */
+export async function uploadImage(file: File, context?: UploadContext): Promise<string> {
+  return uploadFile(file, context || { section: "assets", identifier: "misc", field: "file" });
+}
 
 // ─── Health ───────────────────────────────────────────────────────────────────
 export async function checkHealth(): Promise<boolean> {

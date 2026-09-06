@@ -1,43 +1,43 @@
 "use client";
 import { useState, useRef } from "react";
 import { Upload, X, ImageIcon, Loader2 } from "lucide-react";
-import { uploadImage } from "@/lib/api";
+import { uploadFile } from "@/lib/api";
+import type { UploadContext } from "@/lib/upload-context";
+import { resolveMediaUrl } from "@/lib/media-url";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
 interface ImageUploadProps {
   value: string;
   onChange: (url: string) => void;
   label?: string;
   hint?: string;
+  uploadContext: UploadContext;
 }
 
-export function ImageUpload({ value, onChange, label, hint }: ImageUploadProps) {
+export function ImageUpload({ value, onChange, label, hint, uploadContext }: ImageUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [dragging, setDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Resolve display URL — backend uploads start with /uploads/, static images start with /images/
-  const displayUrl = value
-    ? value.startsWith("/uploads/")
-      ? `${API}${value}`
-      : value // static path — preview from public folder (won't load in CMS but shows the path)
-    : null;
+  const displayUrl = value ? resolveMediaUrl(value) : null;
 
   async function handleFile(file: File) {
     if (!file.type.startsWith("image/")) {
       toast.error("Please upload an image file");
       return;
     }
+    if (!uploadContext.identifier?.trim()) {
+      toast.error("Set slug / ID first so the image is saved under the correct name.");
+      return;
+    }
     setUploading(true);
     try {
-      const url = await uploadImage(file);
+      const url = await uploadFile(file, uploadContext);
       onChange(url);
-      toast.success("Image uploaded");
-    } catch (e: any) {
-      toast.error(e.message || "Upload failed");
+      toast.success("Image uploaded to Cloudinary");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Upload failed");
     } finally {
       setUploading(false);
     }
@@ -58,7 +58,10 @@ export function ImageUpload({ value, onChange, label, hint }: ImageUploadProps) 
           "cursor-pointer"
         )}
         onClick={() => inputRef.current?.click()}
-        onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragging(true);
+        }}
         onDragLeave={() => setDragging(false)}
         onDrop={(e) => {
           e.preventDefault();
@@ -84,7 +87,10 @@ export function ImageUpload({ value, onChange, label, hint }: ImageUploadProps) 
             />
             <button
               type="button"
-              onClick={(e) => { e.stopPropagation(); onChange(""); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onChange("");
+              }}
               className="absolute top-2 right-2 bg-white rounded-full p-1 shadow hover:bg-red-50 transition-colors"
             >
               <X className="w-3.5 h-3.5 text-red-500" />
@@ -98,14 +104,13 @@ export function ImageUpload({ value, onChange, label, hint }: ImageUploadProps) 
         )}
       </div>
 
-      {/* Manual URL input */}
       <div className="flex gap-2 items-center">
         <ImageIcon className="w-3.5 h-3.5 text-slate-400 shrink-0" />
         <input
           type="text"
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          placeholder="/images/product.webp or /uploads/..."
+          placeholder="Cloudinary URL or /images/... static path"
           className="flex-1 border border-slate-200 rounded px-2 py-1 text-xs text-slate-600 placeholder:text-slate-300 focus:outline-none focus:ring-1 focus:ring-accent"
           onClick={(e) => e.stopPropagation()}
         />
@@ -123,6 +128,9 @@ export function ImageUpload({ value, onChange, label, hint }: ImageUploadProps) 
         }}
       />
       {hint && <p className="text-xs text-slate-400">{hint}</p>}
+      <p className="text-[10px] text-slate-400 font-mono">
+        {uploadContext.section}/{uploadContext.identifier}/{uploadContext.field}
+      </p>
     </div>
   );
 }

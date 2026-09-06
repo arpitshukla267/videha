@@ -8,6 +8,15 @@ export default function ProcessStepsPage() {
     <ContentManager<ProcessStep>
       title="Process Steps"
       description="The 7-step export process shown in the Our Process section."
+      uploadSection="process-steps"
+      uploadIdentifier={(item) => {
+        const num = String(item.num || "00").padStart(2, "0");
+        const label = String(item.label || "step")
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/(^-|-$)/g, "");
+        return `${num}-${label || "step"}`;
+      }}
       api={processStepsApi}
       emptyDefaults={{ num: "", label: "", heading: "", copy: "", image: "", isActive: true, order: 0 }}
       fields={[

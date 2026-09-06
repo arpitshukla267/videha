@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Modal } from "@/components/ui/modal";
 import { Input, Textarea } from "@/components/ui/input";
 import { ImageUpload } from "@/components/image-upload";
+import { resolveMediaUrl } from "@/lib/media-url";
 import { PageHeader } from "@/components/page-header";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
@@ -128,9 +129,7 @@ export default function ProductsPage() {
                 <div className="w-14 h-14 rounded-lg overflow-hidden bg-slate-100 shrink-0">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={p.image.startsWith("/uploads/")
-                      ? `${process.env.NEXT_PUBLIC_API_URL}${p.image}`
-                      : `http://localhost:3005${p.image}`}
+                    src={resolveMediaUrl(p.image)}
                     alt={p.name}
                     className="w-full h-full object-cover"
                     onError={(e) => { (e.target as HTMLImageElement).src = ""; }}
@@ -205,7 +204,12 @@ export default function ProductsPage() {
             <ImageUpload
               value={editing.image || ""}
               onChange={(url) => setField("image", url)}
-              hint="Upload a new image or enter a path (e.g. /images/product.jpeg)"
+              hint="Uploaded to Cloudinary as products/{slug}/main"
+              uploadContext={{
+                section: "products",
+                identifier: editing.slug || slugify(editing.name || "") || "new-product",
+                field: "main",
+              }}
             />
           </section>
 

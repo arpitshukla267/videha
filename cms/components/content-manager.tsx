@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Modal } from "@/components/ui/modal";
 import { Input, Textarea } from "@/components/ui/input";
 import { ImageUpload } from "@/components/image-upload";
+import type { UploadContext, UploadSection } from "@/lib/upload-context";
 import { PageHeader } from "@/components/page-header";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
@@ -20,6 +21,8 @@ interface ContentManagerProps<T extends { _id: string; isActive?: boolean; order
   title: string;
   description?: string;
   fields: FieldDef[];
+  uploadSection?: UploadSection;
+  uploadIdentifier?: (item: Partial<T>) => string;
   api: {
     list: () => Promise<T[]>;
     create: (data: Partial<T>) => Promise<T>;
@@ -35,6 +38,8 @@ export function ContentManager<T extends { _id: string; isActive?: boolean; orde
   title,
   description,
   fields,
+  uploadSection,
+  uploadIdentifier,
   api,
   renderRow,
   emptyDefaults,
@@ -160,9 +165,22 @@ export function ContentManager<T extends { _id: string; isActive?: boolean; orde
             {fields.map((f) => {
               const val = (editing as any)[f.key] ?? "";
               if (f.type === "image") {
+                if (!uploadSection || !uploadIdentifier) {
+                  return null;
+                }
+                const uploadContext: UploadContext = {
+                  section: uploadSection,
+                  identifier: uploadIdentifier(editing),
+                  field: f.key,
+                };
                 return (
                   <div key={f.key} className="col-span-2">
-                    <ImageUpload label={f.label} value={val} onChange={(url) => setField(f.key, url)} />
+                    <ImageUpload
+                      label={f.label}
+                      value={val}
+                      onChange={(url) => setField(f.key, url)}
+                      uploadContext={uploadContext}
+                    />
                   </div>
                 );
               }

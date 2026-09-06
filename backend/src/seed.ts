@@ -11,6 +11,76 @@ import {
   IntroFact,
   SiteConfig,
 } from "./models/SiteContent";
+import { assertCloudinaryForSeed, uploadSeedMedia, uploadSeedPdf } from "./lib/seed-media";
+
+function processStepId(num: string, label: string): string {
+  const stepNum = String(num || "00").padStart(2, "0");
+  const slug = label
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+  return `${stepNum}-${slug || "step"}`;
+}
+
+async function hydrateSeedMedia() {
+  await assertCloudinaryForSeed();
+
+  console.log("Products");
+  const products = await Promise.all(
+    PRODUCTS_SEED.map(async (product) => ({
+      ...product,
+      image: await uploadSeedMedia("products", product.slug, "main", product.image),
+    })),
+  );
+
+  console.log("\nHero stories");
+  const heroStories = await Promise.all(
+    HERO_SEED.map(async (story) => ({
+      ...story,
+      image: await uploadSeedMedia("hero", story.id, "desktop", story.image),
+      mobileImage: story.mobileImage
+        ? await uploadSeedMedia("hero", story.id, "mobile", story.mobileImage)
+        : undefined,
+    })),
+  );
+
+  console.log("\nProcess steps");
+  const processSteps = await Promise.all(
+    PROCESS_STEPS_SEED.map(async (step) => ({
+      ...step,
+      image: await uploadSeedMedia(
+        "process-steps",
+        processStepId(step.num, step.label),
+        "image",
+        step.image,
+      ),
+    })),
+  );
+
+  console.log("\nBrochure");
+  const siteConfig = await Promise.all(
+    SITE_CONFIG_SEED.map(async (entry) => {
+      if (entry.key !== "brochure" || typeof entry.value !== "object" || !entry.value) {
+        return entry;
+      }
+      const brochure = entry.value as { url: string; fileName?: string; enabled?: boolean; label?: string };
+      return {
+        ...entry,
+        value: {
+          ...brochure,
+          url: await uploadSeedPdf("brochure", brochure.url),
+        },
+      };
+    }),
+  );
+
+  return {
+    products,
+    heroStories,
+    processSteps,
+    siteConfig,
+  };
+}
 
 // ─── Products seed data ───────────────────────────────────────────────────────
 const PRODUCTS_SEED = [
@@ -543,15 +613,17 @@ async function seed() {
   ]);
   console.log("Cleared existing data");
 
+  const media = await hydrateSeedMedia();
+
   // Insert all
-  await Product.insertMany(PRODUCTS_SEED);
-  console.log(`✓ Seeded ${PRODUCTS_SEED.length} products`);
+  await Product.insertMany(media.products);
+  console.log(`\n✓ Seeded ${media.products.length} products`);
 
-  await HeroStory.insertMany(HERO_SEED);
-  console.log(`✓ Seeded ${HERO_SEED.length} hero stories`);
+  await HeroStory.insertMany(media.heroStories);
+  console.log(`✓ Seeded ${media.heroStories.length} hero stories`);
 
-  await ProcessStep.insertMany(PROCESS_STEPS_SEED);
-  console.log(`✓ Seeded ${PROCESS_STEPS_SEED.length} process steps`);
+  await ProcessStep.insertMany(media.processSteps);
+  console.log(`✓ Seeded ${media.processSteps.length} process steps`);
 
   await QualityPoint.insertMany(QUALITY_POINTS_SEED);
   console.log(`✓ Seeded ${QUALITY_POINTS_SEED.length} quality points`);
@@ -568,8 +640,8 @@ async function seed() {
   await IntroFact.insertMany(INTRO_FACTS_SEED);
   console.log(`✓ Seeded ${INTRO_FACTS_SEED.length} intro facts`);
 
-  await SiteConfig.insertMany(SITE_CONFIG_SEED);
-  console.log(`✓ Seeded ${SITE_CONFIG_SEED.length} site config entries`);
+  await SiteConfig.insertMany(media.siteConfig);
+  console.log(`✓ Seeded ${media.siteConfig.length} site config entries`);
 
   console.log("\n✅ Seed complete!");
   process.exit(0);

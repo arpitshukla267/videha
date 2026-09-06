@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Modal } from "@/components/ui/modal";
 import { Input, Textarea } from "@/components/ui/input";
 import { ImageUpload } from "@/components/image-upload";
+import { resolveMediaUrl } from "@/lib/media-url";
 import { PageHeader } from "@/components/page-header";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
@@ -95,7 +96,7 @@ export default function HeroPage() {
     }
   }
 
-  const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+  const heroIdentifier = editing.id || editing.label || "new-story";
 
   return (
     <div>
@@ -117,7 +118,7 @@ export default function HeroPage() {
                 <div className="w-20 h-12 rounded-lg overflow-hidden bg-slate-100 shrink-0">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={s.image.startsWith("/uploads/") ? `${API}${s.image}` : `http://localhost:3005${s.image}`}
+                    src={resolveMediaUrl(s.image)}
                     alt={s.label}
                     className="w-full h-full object-cover"
                     onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
@@ -182,8 +183,18 @@ export default function HeroPage() {
           <Textarea label="Description" value={editing.description || ""} onChange={(e) => setField("description", e.target.value)} rows={3} />
           <Input label="Alt text" value={editing.alt || ""} onChange={(e) => setField("alt", e.target.value)} />
 
-          <ImageUpload label="Desktop Image" value={editing.image || ""} onChange={(url) => setField("image", url)} />
-          <ImageUpload label="Mobile Image (optional)" value={editing.mobileImage || ""} onChange={(url) => setField("mobileImage", url)} />
+          <ImageUpload
+            label="Desktop Image"
+            value={editing.image || ""}
+            onChange={(url) => setField("image", url)}
+            uploadContext={{ section: "hero", identifier: heroIdentifier, field: "desktop" }}
+          />
+          <ImageUpload
+            label="Mobile Image (optional)"
+            value={editing.mobileImage || ""}
+            onChange={(url) => setField("mobileImage", url)}
+            uploadContext={{ section: "hero", identifier: heroIdentifier, field: "mobile" }}
+          />
 
           <div className="grid grid-cols-2 gap-3">
             <Input label="CTA Label" value={editing.ctaLabel || ""} onChange={(e) => setField("ctaLabel", e.target.value)} placeholder="Enquire Now" />

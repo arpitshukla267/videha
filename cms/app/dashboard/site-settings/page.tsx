@@ -187,7 +187,11 @@ export default function SiteSettingsPage() {
   async function handleBrochureUpload(file: File) {
     setUploading(true);
     try {
-      const url = await uploadFile(file);
+      const url = await uploadFile(file, {
+        section: "assets",
+        identifier: "brochure",
+        field: "file",
+      });
       setBrochure((b) => ({
         ...b,
         url,
