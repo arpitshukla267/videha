@@ -1,5 +1,5 @@
 import { Types } from "mongoose";
-import { Task, TASK_STATUSES, type TaskStatus } from "../../models/Task";
+import { Task, TASK_STATUSES, TASK_TYPES, TASK_CHANNELS, type TaskStatus, type TaskType, type TaskChannel } from "../../models/Task";
 import { Lead } from "../../models/Lead";
 import { User } from "../../models/User";
 import type { Priority } from "../../models/Lead";
@@ -23,11 +23,31 @@ function normalizeTaskInput(body: Record<string, unknown>) {
   if (status && !TASK_STATUSES.includes(status as TaskStatus)) {
     throw new AppError(`Invalid task status: ${status}`, 400);
   }
+
+  const taskType = (body.taskType ?? body.category) as string | undefined;
+  if (taskType && !TASK_TYPES.includes(taskType as TaskType)) {
+    throw new AppError(`Invalid task type: ${taskType}`, 400);
+  }
+
+  const channel = body.channel as string | undefined;
+  if (channel && !TASK_CHANNELS.includes(channel as TaskChannel)) {
+    throw new AppError(`Invalid channel: ${channel}`, 400);
+  }
+
+  let pickedUp: boolean | null | undefined = undefined;
+  if (body.pickedUp === null || body.pickedUp === "") pickedUp = null;
+  else if (body.pickedUp !== undefined) pickedUp = Boolean(body.pickedUp);
+
   return {
     title,
     description: body.description as string | undefined,
     assignedToId: body.assignedToId as string | undefined,
     relatedLeadId: optionalObjectId((body.relatedLeadId ?? null) as string | null),
+    taskType: taskType as TaskType | undefined,
+    channel: channel as TaskChannel | undefined,
+    pickedUp,
+    outcome: body.outcome as string | undefined,
+    completionNotes: body.completionNotes as string | undefined,
     priority: body.priority as Priority | undefined,
     status: status as TaskStatus | undefined,
     dueDate: body.dueDate ? new Date(String(body.dueDate)) : undefined,
@@ -116,6 +136,11 @@ export async function createTask(body: Record<string, unknown>, actor: AuthUser)
     description: input.description || "",
     assignedToId: input.assignedToId,
     relatedLeadId: input.relatedLeadId,
+    taskType: input.taskType || "follow_up_call",
+    channel: input.channel || "phone",
+    pickedUp: input.pickedUp ?? null,
+    outcome: input.outcome || "",
+    completionNotes: input.completionNotes || "",
     priority: input.priority || "Medium",
     status,
     dueDate: input.dueDate,
@@ -160,8 +185,17 @@ export async function updateTask(id: string, body: Record<string, unknown>, acto
   if (input.priority !== undefined) task.priority = input.priority;
   if (input.dueDate !== undefined) task.dueDate = input.dueDate;
   if (body.relatedLeadId !== undefined) {
+    if (input.relatedLeadId) {
+      const lead = await Lead.findById(input.relatedLeadId);
+      if (!lead) throw new AppError("Related lead not found.", 400);
+    }
     task.relatedLeadId = input.relatedLeadId as Types.ObjectId | null;
   }
+  if (input.taskType !== undefined) task.taskType = input.taskType;
+  if (input.channel !== undefined) task.channel = input.channel;
+  if (body.pickedUp !== undefined) task.pickedUp = input.pickedUp ?? null;
+  if (input.outcome !== undefined) task.outcome = input.outcome;
+  if (input.completionNotes !== undefined) task.completionNotes = input.completionNotes;
   if (input.assignedToId !== undefined) {
     assertObjectId(input.assignedToId, "assignedToId");
     task.assignedToId = new Types.ObjectId(input.assignedToId);

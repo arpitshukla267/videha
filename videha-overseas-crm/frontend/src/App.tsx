@@ -6,6 +6,8 @@ import { DashboardPage } from './features/dashboard/DashboardPage';
 import { LeadsPage } from './features/leads/LeadsPage';
 import { TasksPage } from './features/tasks/TasksPage';
 import { OrdersPage } from './features/orders/OrdersPage';
+import { FinancePage } from './features/finance/FinancePage';
+import { BillsPage } from './features/bills/BillsPage';
 import { TeamPage } from './features/team/TeamPage';
 import { ReportsPage } from './features/reports/ReportsPage';
 import { SettingsPage } from './features/settings/SettingsPage';
@@ -44,6 +46,8 @@ const CrmApp: React.FC = () => {
       { tab: 'leads', perm: 'leads.view' },
       { tab: 'tasks', perm: 'tasks.view' },
       { tab: 'orders', perm: 'orders.view' },
+      { tab: 'finance', perm: 'finance.view' },
+      { tab: 'bills', perm: 'bills.view' },
       { tab: 'team', perm: 'users.view' },
       { tab: 'reports', perm: 'reports.view' },
       { tab: 'settings', perm: 'settings.manage' }
@@ -145,6 +149,24 @@ const CrmApp: React.FC = () => {
             onFocusConsumed={clearFocusEntity}
           />
         );
+      case 'finance':
+        if (!hasPermission('finance.view')) {
+          return (
+            <div className="p-8 text-center text-xs text-slate-500">
+              You do not have permission to view Finance.
+            </div>
+          );
+        }
+        return <FinancePage onNavigate={handleNavigate} />;
+      case 'bills':
+        if (!hasPermission('bills.view')) {
+          return (
+            <div className="p-8 text-center text-xs text-slate-500">
+              You do not have permission to view Bills.
+            </div>
+          );
+        }
+        return <BillsPage />;
       case 'team':
         if (!hasPermission('users.view')) {
           return (

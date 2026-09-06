@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --port 3010",
+    "prebuild": "npm install --prefix ../quotation-builder --omit=dev --legacy-peer-deps --no-save --no-package-lock html2canvas@1.4.1 jspdf@4.2.1",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"

@@ -13,7 +13,10 @@ import {
   FileSpreadsheet,
   MapPin,
   LayoutGrid,
-  List
+  List,
+  PhoneCall,
+  PhoneOff,
+  PhoneMissed
 } from 'lucide-react';
 import { api } from '../../api/client';
 import {
@@ -23,6 +26,11 @@ import {
   Priority,
   LeadActivity,
   LeadNote,
+  CallLog,
+  CallChannel,
+  CallDirection,
+  CallOutcome,
+  InterestLevel,
   Department
 } from '../../types/crm';
 import { StatusBadge } from '../../components/ui/StatusBadge';
@@ -59,6 +67,76 @@ const PRIORITY_OPTIONS: { value: Priority; label: string }[] = [
   { value: 'High', label: 'High' },
   { value: 'Urgent', label: 'Urgent' }
 ];
+
+const CALL_CHANNEL_OPTIONS: { value: CallChannel; label: string }[] = [
+  { value: 'phone', label: 'Phone Call' },
+  { value: 'whatsapp', label: 'WhatsApp Call / Chat' },
+  { value: 'email', label: 'Email' },
+  { value: 'video', label: 'Video Call (Zoom/Meet)' },
+  { value: 'in_person', label: 'In-person Meeting' }
+];
+
+const CALL_DIRECTION_OPTIONS: { value: CallDirection; label: string }[] = [
+  { value: 'outbound', label: 'Outbound (we called)' },
+  { value: 'inbound', label: 'Inbound (they called)' }
+];
+
+const CALL_OUTCOME_OPTIONS: { value: CallOutcome; label: string; pickedUp?: boolean }[] = [
+  { value: 'picked_up', label: 'Picked up / Connected', pickedUp: true },
+  { value: 'not_picked_up', label: 'Not picked up', pickedUp: false },
+  { value: 'busy', label: 'Line busy', pickedUp: false },
+  { value: 'voicemail', label: 'Voicemail left', pickedUp: false },
+  { value: 'wrong_number', label: 'Wrong number', pickedUp: false },
+  { value: 'switched_off', label: 'Switched off', pickedUp: false },
+  { value: 'callback_requested', label: 'Callback requested', pickedUp: false },
+  { value: 'no_answer', label: 'No answer', pickedUp: false }
+];
+
+const INTEREST_LEVEL_OPTIONS: { value: InterestLevel; label: string }[] = [
+  { value: 'hot', label: 'Hot — ready to buy' },
+  { value: 'warm', label: 'Warm — evaluating' },
+  { value: 'cold', label: 'Cold — early stage' },
+  { value: 'none', label: 'Not assessed' }
+];
+
+const OUTCOME_LABELS: Record<CallOutcome, string> = {
+  picked_up: 'Picked up',
+  not_picked_up: 'Not picked up',
+  busy: 'Busy',
+  voicemail: 'Voicemail',
+  wrong_number: 'Wrong number',
+  switched_off: 'Switched off',
+  callback_requested: 'Callback requested',
+  no_answer: 'No answer'
+};
+
+type CallLogForm = {
+  pickedUp: boolean | null;
+  channel: CallChannel;
+  direction: CallDirection;
+  outcome: CallOutcome;
+  durationMinutes: string;
+  spokeWith: string;
+  interestLevel: InterestLevel;
+  disposition: string;
+  notes: string;
+  nextFollowUp: string;
+  followUpRequired: boolean;
+};
+
+const emptyCallForm = (): CallLogForm => ({
+  pickedUp: null,
+  channel: 'phone',
+  direction: 'outbound',
+  outcome: 'picked_up',
+  durationMinutes: '',
+  spokeWith: '',
+  interestLevel: 'none',
+  disposition: '',
+  notes: '',
+  nextFollowUp: '',
+  followUpRequired: false
+});
 
 type LeadDraft = {
   leadStatus: LeadStatus;
@@ -164,6 +242,7 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
     lead: Lead;
     activities: LeadActivity[];
     notes: LeadNote[];
+    callLogs: CallLog[];
   } | null>(null);
   const [leadDraft, setLeadDraft] = useState<LeadDraft | null>(null);
   const [isSavingDetail, setIsSavingDetail] = useState(false);
@@ -171,6 +250,9 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
   const [newNoteContent, setNewNoteContent] = useState('');
   const [isSubmittingNote, setIsSubmittingNote] = useState(false);
+  const [callForm, setCallForm] = useState<CallLogForm>(emptyCallForm);
+  const [isSubmittingCall, setIsSubmittingCall] = useState(false);
+  const [quickCallLead, setQuickCallLead] = useState<Lead | null>(null);
 
   const countryOptions = CRM_COUNTRIES.map(c => ({ value: c, label: c }));
   const statusOptions = LEAD_STATUSES.map(s => ({ value: s, label: s }));
@@ -262,6 +344,7 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
     setLeadDraft(null);
     setDetailDirty(false);
     setNewNoteContent('');
+    setCallForm(emptyCallForm());
   };
 
   // Load Single Lead Details
@@ -271,9 +354,13 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
     try {
       const res = await api.leads.getLead(id);
       if (res.success) {
-        setLeadDetail(res.data);
+        setLeadDetail({
+          ...res.data,
+          callLogs: res.data.callLogs || []
+        });
         setLeadDraft(leadToDraft(res.data.lead));
         setDetailDirty(false);
+        setCallForm(emptyCallForm());
       }
     } catch (err) {
       console.error('Failed to load lead details:', err);
@@ -385,6 +472,70 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
     } finally {
       setIsSubmittingNote(false);
     }
+  };
+
+  const updateCallForm = <K extends keyof CallLogForm>(key: K, value: CallLogForm[K]) => {
+    setCallForm(prev => {
+      const next = { ...prev, [key]: value };
+      if (key === 'pickedUp' && value !== null) {
+        next.outcome = value ? 'picked_up' : 'not_picked_up';
+      }
+      if (key === 'outcome') {
+        const option = CALL_OUTCOME_OPTIONS.find(o => o.value === value);
+        if (option?.pickedUp !== undefined) next.pickedUp = option.pickedUp;
+      }
+      return next;
+    });
+  };
+
+  const submitCallLog = async (leadId: string, form: CallLogForm) => {
+    if (form.pickedUp === null) {
+      alert('Please select whether the call was picked up or not.');
+      return;
+    }
+
+    setIsSubmittingCall(true);
+    try {
+      const res = await api.leads.logCall(leadId, {
+        pickedUp: form.pickedUp,
+        channel: form.channel,
+        direction: form.direction,
+        outcome: form.outcome,
+        durationMinutes: form.durationMinutes ? Number(form.durationMinutes) : 0,
+        spokeWith: form.spokeWith.trim(),
+        interestLevel: form.interestLevel,
+        disposition: form.disposition.trim(),
+        notes: form.notes.trim(),
+        nextFollowUp: form.nextFollowUp || null,
+        followUpRequired: form.followUpRequired
+      });
+
+      if (res.success) {
+        setCallForm(emptyCallForm());
+        setQuickCallLead(null);
+        if (leadDetail?.lead.id === leadId) {
+          setLeadDetail({
+            lead: res.data.lead,
+            activities: res.data.activities,
+            notes: leadDetail.notes,
+            callLogs: res.data.callLogs
+          });
+          setLeadDraft(leadToDraft(res.data.lead));
+        }
+        fetchLeads(currentPage);
+        refreshNotifications();
+      }
+    } catch (err: any) {
+      alert(err.message || 'Failed to log call');
+    } finally {
+      setIsSubmittingCall(false);
+    }
+  };
+
+  const handleLogCall = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!leadDetail) return;
+    await submitCallLog(leadDetail.lead.id, callForm);
   };
 
   const handleDeleteLead = async (id: string, e?: React.MouseEvent) => {
@@ -724,13 +875,17 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
                       <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center gap-2">
                           {lead.phoneNumber && (
-                            <a
-                              href={`tel:${lead.phoneNumber}`}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setQuickCallLead(lead);
+                                setCallForm(emptyCallForm());
+                              }}
                               className="p-1.5 rounded-md text-slate-500 hover:text-sky-700 hover:bg-sky-50 transition-colors"
-                              title={`Call: ${lead.phoneNumber}`}
+                              title={`Log call: ${lead.phoneNumber}`}
                             >
                               <Phone className="w-3.5 h-3.5" />
-                            </a>
+                            </button>
                           )}
                           {whatsappClean && (
                             <a
@@ -754,15 +909,35 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
                           )}
                         </div>
 
-                        {/* Next follow-up badge */}
-                        {lead.nextFollowUp ? (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-medium text-sky-700 bg-sky-50 px-2 py-0.5 rounded border border-sky-100">
-                            <Clock className="w-3 h-3" />
-                            {new Date(lead.nextFollowUp).toLocaleDateString([], { month: 'short', day: 'numeric' })}
-                          </span>
-                        ) : (
-                          <span className="text-[10px] text-slate-400">No follow-up set</span>
-                        )}
+                        {/* Next follow-up / last call badges */}
+                        <div className="flex flex-col items-end gap-1">
+                          {lead.lastCallAt && (
+                            <span
+                              className={`inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded border ${
+                                lead.lastCallPickedUp
+                                  ? 'text-emerald-700 bg-emerald-50 border-emerald-100'
+                                  : 'text-amber-700 bg-amber-50 border-amber-100'
+                              }`}
+                            >
+                              {lead.lastCallPickedUp ? (
+                                <PhoneCall className="w-3 h-3" />
+                              ) : (
+                                <PhoneMissed className="w-3 h-3" />
+                              )}
+                              {lead.lastCallOutcome
+                                ? OUTCOME_LABELS[lead.lastCallOutcome as CallOutcome] || 'Logged'
+                                : 'Call logged'}
+                            </span>
+                          )}
+                          {lead.nextFollowUp ? (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-medium text-sky-700 bg-sky-50 px-2 py-0.5 rounded border border-sky-100">
+                              <Clock className="w-3 h-3" />
+                              {new Date(lead.nextFollowUp).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-slate-400">No follow-up set</span>
+                          )}
+                        </div>
                       </div>
                     </div>
 
@@ -1381,6 +1556,218 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
               </div>
             </div>
 
+            {/* Log Call / Interaction — assigned member workflow */}
+            {hasPermission('leads.edit') && (
+              <div className="border border-sky-100 rounded-xl p-4 bg-sky-50/40">
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                  <h4 className="text-xs font-semibold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                    <PhoneCall className="w-3.5 h-3.5 text-sky-600" />
+                    Log Call / Interaction
+                  </h4>
+                  {leadDetail.lead.lastCallAt && (
+                    <span
+                      className={`inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded border ${
+                        leadDetail.lead.lastCallPickedUp
+                          ? 'text-emerald-700 bg-emerald-50 border-emerald-100'
+                          : 'text-amber-700 bg-amber-50 border-amber-100'
+                      }`}
+                    >
+                      {leadDetail.lead.lastCallPickedUp ? (
+                        <PhoneCall className="w-3 h-3" />
+                      ) : (
+                        <PhoneMissed className="w-3 h-3" />
+                      )}
+                      Last: {leadDetail.lead.lastCallOutcome ? OUTCOME_LABELS[leadDetail.lead.lastCallOutcome as CallOutcome] || leadDetail.lead.lastCallOutcome : 'Logged'}{' '}
+                      · {leadDetail.lead.totalCallsCount || 0} total
+                    </span>
+                  )}
+                </div>
+
+                <form onSubmit={handleLogCall} className="space-y-3">
+                  <div>
+                    <label className="block font-medium text-slate-700 mb-1.5">
+                      Was the call picked up? *
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => updateCallForm('pickedUp', true)}
+                        className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border text-xs font-medium transition-colors ${
+                          callForm.pickedUp === true
+                            ? 'bg-emerald-600 text-white border-emerald-600'
+                            : 'bg-white text-slate-700 border-slate-200 hover:border-emerald-300'
+                        }`}
+                      >
+                        <PhoneCall className="w-3.5 h-3.5" />
+                        Picked up
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => updateCallForm('pickedUp', false)}
+                        className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border text-xs font-medium transition-colors ${
+                          callForm.pickedUp === false
+                            ? 'bg-amber-600 text-white border-amber-600'
+                            : 'bg-white text-slate-700 border-slate-200 hover:border-amber-300'
+                        }`}
+                      >
+                        <PhoneOff className="w-3.5 h-3.5" />
+                        Not picked up
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                    <div>
+                      <label className="block font-medium text-slate-700 mb-1">Channel</label>
+                      <SearchableSelect
+                        options={CALL_CHANNEL_OPTIONS}
+                        value={callForm.channel}
+                        onChange={v => updateCallForm('channel', v as CallChannel)}
+                        placeholder="Channel…"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-medium text-slate-700 mb-1">Direction</label>
+                      <SearchableSelect
+                        options={CALL_DIRECTION_OPTIONS}
+                        value={callForm.direction}
+                        onChange={v => updateCallForm('direction', v as CallDirection)}
+                        placeholder="Direction…"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-medium text-slate-700 mb-1">Outcome</label>
+                      <SearchableSelect
+                        options={CALL_OUTCOME_OPTIONS.map(o => ({ value: o.value, label: o.label }))}
+                        value={callForm.outcome}
+                        onChange={v => updateCallForm('outcome', v as CallOutcome)}
+                        placeholder="Outcome…"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-medium text-slate-700 mb-1">Duration (min)</label>
+                      <input
+                        type="number"
+                        min={0}
+                        value={callForm.durationMinutes}
+                        onChange={e => updateCallForm('durationMinutes', e.target.value)}
+                        placeholder="e.g. 5"
+                        className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-sky-600 text-slate-800"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-medium text-slate-700 mb-1">Spoke with</label>
+                      <input
+                        type="text"
+                        value={callForm.spokeWith}
+                        onChange={e => updateCallForm('spokeWith', e.target.value)}
+                        placeholder="Contact person name"
+                        className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-sky-600 text-slate-800"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-medium text-slate-700 mb-1">Interest level</label>
+                      <SearchableSelect
+                        options={INTEREST_LEVEL_OPTIONS}
+                        value={callForm.interestLevel}
+                        onChange={v => updateCallForm('interestLevel', v as InterestLevel)}
+                        placeholder="Interest…"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-medium text-slate-700 mb-1">Next follow-up</label>
+                      <DateTimePicker
+                        value={callForm.nextFollowUp}
+                        onChange={v => updateCallForm('nextFollowUp', v)}
+                        placeholder="Schedule follow-up"
+                      />
+                    </div>
+                    <div className="flex items-end">
+                      <label className="inline-flex items-center gap-2 text-xs text-slate-700 cursor-pointer pb-2">
+                        <input
+                          type="checkbox"
+                          checked={callForm.followUpRequired}
+                          onChange={e => updateCallForm('followUpRequired', e.target.checked)}
+                          className="rounded border-slate-300 text-sky-600 focus:ring-sky-600"
+                        />
+                        Follow-up required
+                      </label>
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className="block font-medium text-slate-700 mb-1">Disposition / summary</label>
+                      <input
+                        type="text"
+                        value={callForm.disposition}
+                        onChange={e => updateCallForm('disposition', e.target.value)}
+                        placeholder="e.g. Sent CIF quote, requested sample, price negotiation"
+                        className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-sky-600 text-slate-800"
+                      />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className="block font-medium text-slate-700 mb-1">Call notes</label>
+                      <textarea
+                        rows={2}
+                        value={callForm.notes}
+                        onChange={e => updateCallForm('notes', e.target.value)}
+                        placeholder="Detailed conversation notes, buyer objections, next steps…"
+                        className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-sky-600 text-slate-800"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end">
+                    <button
+                      type="submit"
+                      disabled={isSubmittingCall || callForm.pickedUp === null}
+                      className="px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-xs font-medium disabled:opacity-40 transition-colors"
+                    >
+                      {isSubmittingCall ? 'Saving call log…' : 'Save call log'}
+                    </button>
+                  </div>
+                </form>
+
+                {(leadDetail.callLogs?.length ?? 0) > 0 && (
+                  <div className="mt-4 pt-3 border-t border-sky-100">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-2">
+                      Recent call history
+                    </p>
+                    <div className="space-y-2 max-h-32 overflow-y-auto pr-1">
+                      {leadDetail.callLogs.slice(0, 8).map(log => (
+                        <div
+                          key={log.id}
+                          className="flex items-start justify-between gap-2 text-[11px] bg-white/80 border border-slate-100 rounded-lg px-2.5 py-2"
+                        >
+                          <div>
+                            <span
+                              className={`inline-flex items-center gap-1 font-medium ${
+                                log.pickedUp ? 'text-emerald-700' : 'text-amber-700'
+                              }`}
+                            >
+                              {log.pickedUp ? (
+                                <PhoneCall className="w-3 h-3" />
+                              ) : (
+                                <PhoneMissed className="w-3 h-3" />
+                              )}
+                              {OUTCOME_LABELS[log.outcome]}
+                            </span>
+                            <span className="text-slate-500 ml-1">
+                              · {log.channel} · {log.performedByName}
+                            </span>
+                            {log.notes && (
+                              <p className="text-slate-600 mt-0.5 line-clamp-2">{log.notes}</p>
+                            )}
+                          </div>
+                          <span className="text-[10px] text-slate-400 shrink-0">
+                            {new Date(log.createdAt).toLocaleString()}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Notes & Activity Timeline */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div className="border border-slate-200 rounded-xl p-4 bg-white flex flex-col h-80">
@@ -1433,11 +1820,21 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
                 <div className="flex-1 overflow-y-auto space-y-3 pr-1">
                   {leadDetail.activities.map(act => (
                     <div key={act.id} className="relative pl-4 border-l-2 border-slate-200">
-                      <div className="absolute -left-[5px] top-1 w-2 h-2 rounded-full bg-sky-600" />
+                      <div
+                        className={`absolute -left-[5px] top-1 w-2 h-2 rounded-full ${
+                          act.type === 'call_logged'
+                            ? act.title.includes('Connected')
+                              ? 'bg-emerald-500'
+                              : 'bg-amber-500'
+                            : act.type === 'followup_scheduled'
+                              ? 'bg-violet-500'
+                              : 'bg-sky-600'
+                        }`}
+                      />
                       <p className="text-xs font-medium text-slate-800">{act.title}</p>
                       <p className="text-[11px] text-slate-500 mt-0.5">{act.description}</p>
                       <span className="text-[10px] text-slate-400 mt-1 block">
-                        {new Date(act.createdAt).toLocaleString()}
+                        {act.performedByName} · {new Date(act.createdAt).toLocaleString()}
                       </span>
                     </div>
                   ))}
@@ -1463,6 +1860,122 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
               </button>
             </div>
           </div>
+        )}
+      </Modal>
+
+      {/* Quick call log from lead card */}
+      <Modal
+        isOpen={!!quickCallLead}
+        onClose={() => {
+          setQuickCallLead(null);
+          setCallForm(emptyCallForm());
+        }}
+        title={quickCallLead ? `Log call · ${quickCallLead.company}` : 'Log call'}
+        subtitle={
+          quickCallLead
+            ? `${quickCallLead.name} · ${quickCallLead.phoneNumber || 'No phone'}`
+            : ''
+        }
+        maxWidth="lg"
+      >
+        {quickCallLead && hasPermission('leads.edit') && (
+          <form
+            onSubmit={e => {
+              e.preventDefault();
+              submitCallLog(quickCallLead.id, callForm);
+            }}
+            className="space-y-4 text-xs"
+          >
+            {quickCallLead.phoneNumber && (
+              <a
+                href={`tel:${quickCallLead.phoneNumber}`}
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-sky-200 bg-sky-50 text-sky-800 font-medium hover:bg-sky-100"
+              >
+                <Phone className="w-4 h-4" />
+                Dial {quickCallLead.phoneNumber}
+              </a>
+            )}
+
+            <div>
+              <label className="block font-medium text-slate-700 mb-1.5">Was the call picked up? *</label>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => updateCallForm('pickedUp', true)}
+                  className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border text-xs font-medium ${
+                    callForm.pickedUp === true
+                      ? 'bg-emerald-600 text-white border-emerald-600'
+                      : 'bg-white text-slate-700 border-slate-200'
+                  }`}
+                >
+                  <PhoneCall className="w-3.5 h-3.5" />
+                  Picked up
+                </button>
+                <button
+                  type="button"
+                  onClick={() => updateCallForm('pickedUp', false)}
+                  className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border text-xs font-medium ${
+                    callForm.pickedUp === false
+                      ? 'bg-amber-600 text-white border-amber-600'
+                      : 'bg-white text-slate-700 border-slate-200'
+                  }`}
+                >
+                  <PhoneOff className="w-3.5 h-3.5" />
+                  Not picked up
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block font-medium text-slate-700 mb-1">Outcome</label>
+                <SearchableSelect
+                  options={CALL_OUTCOME_OPTIONS.map(o => ({ value: o.value, label: o.label }))}
+                  value={callForm.outcome}
+                  onChange={v => updateCallForm('outcome', v as CallOutcome)}
+                  placeholder="Outcome…"
+                />
+              </div>
+              <div>
+                <label className="block font-medium text-slate-700 mb-1">Next follow-up</label>
+                <DateTimePicker
+                  value={callForm.nextFollowUp}
+                  onChange={v => updateCallForm('nextFollowUp', v)}
+                  placeholder="Schedule follow-up"
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="block font-medium text-slate-700 mb-1">Notes</label>
+                <textarea
+                  rows={2}
+                  value={callForm.notes}
+                  onChange={e => updateCallForm('notes', e.target.value)}
+                  placeholder="Quick call notes…"
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-sky-600"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setQuickCallLead(null);
+                  setCallForm(emptyCallForm());
+                }}
+                className="px-4 py-2 rounded-lg border border-slate-200 text-slate-700"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmittingCall || callForm.pickedUp === null}
+                className="px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-700 text-white font-medium disabled:opacity-40"
+              >
+                {isSubmittingCall ? 'Saving…' : 'Save call log'}
+              </button>
+            </div>
+          </form>
         )}
       </Modal>
     </div>

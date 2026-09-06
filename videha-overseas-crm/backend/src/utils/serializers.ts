@@ -86,6 +86,11 @@ export function serializeLead(doc: Record<string, unknown>) {
     createdDate: iso(doc.createdAt) || new Date().toISOString(),
     nextFollowUp: iso(doc.nextFollowUp),
     notes: doc.notes || "",
+    lastCallAt: iso(doc.lastCallAt),
+    lastCallOutcome: doc.lastCallOutcome || null,
+    lastCallChannel: doc.lastCallChannel || null,
+    lastCallPickedUp: doc.lastCallPickedUp ?? null,
+    totalCallsCount: Number(doc.totalCallsCount ?? 0),
     createdById: refId(doc.createdById) || "",
     updatedAt: iso(doc.updatedAt) || new Date().toISOString(),
     archived: Boolean(doc.archived),
@@ -143,6 +148,12 @@ export function serializeTask(doc: Record<string, unknown>) {
     relatedLeadId,
     relatedLeadName,
     relatedOrderId: null,
+    taskType: doc.taskType || "follow_up_call",
+    category: doc.taskType || "follow_up_call",
+    channel: doc.channel || "phone",
+    pickedUp: doc.pickedUp ?? null,
+    outcome: doc.outcome || "",
+    completionNotes: doc.completionNotes || "",
     priority: doc.priority || "Medium",
     status,
     dueDate,
@@ -269,6 +280,27 @@ export function serializeLeadActivity(doc: Record<string, unknown>) {
   };
 }
 
+export function serializeCallLog(doc: Record<string, unknown>) {
+  return {
+    id: String(doc._id ?? doc.id),
+    leadId: refId(doc.leadId) || "",
+    performedById: refId(doc.performedById) || "",
+    performedByName: doc.performedByName,
+    channel: doc.channel || "phone",
+    direction: doc.direction || "outbound",
+    pickedUp: Boolean(doc.pickedUp),
+    outcome: doc.outcome,
+    durationMinutes: Number(doc.durationMinutes ?? 0),
+    spokeWith: doc.spokeWith || "",
+    interestLevel: doc.interestLevel || "none",
+    disposition: doc.disposition || "",
+    notes: doc.notes || "",
+    nextFollowUp: iso(doc.nextFollowUp),
+    followUpRequired: Boolean(doc.followUpRequired),
+    createdAt: iso(doc.createdAt) || new Date().toISOString(),
+  };
+}
+
 export function serializeOrderHistory(doc: Record<string, unknown>) {
   const timestamp = iso(doc.createdAt) || new Date().toISOString();
   return {
@@ -280,5 +312,41 @@ export function serializeOrderHistory(doc: Record<string, unknown>) {
     changedByName: doc.changedByName,
     notes: doc.notes || "",
     timestamp,
+  };
+}
+
+export function serializeBill(doc: Record<string, unknown>) {
+  return {
+    id: String(doc._id ?? doc.id),
+    billCode: doc.billCode,
+    orderId: refId(doc.orderId) || "",
+    orderCode: doc.orderCode,
+    customerName: doc.customerName,
+    company: doc.company,
+    phone: doc.phone || "",
+    email: doc.email || "",
+    country: doc.country,
+    products: doc.products,
+    quantity: doc.quantity || "",
+    lineItems: Array.isArray(doc.lineItems) ? doc.lineItems : [],
+    subtotal: Number(doc.subtotal) || 0,
+    taxRate: Number(doc.taxRate) || 0,
+    taxAmount: Number(doc.taxAmount) || 0,
+    totalAmount: Number(doc.totalAmount) || 0,
+    amountPaid: Number(doc.amountPaid) || 0,
+    amountDue: Number(doc.amountDue) || 0,
+    currency: doc.currency || "USD",
+    paymentTerms: doc.paymentTerms || "",
+    status: doc.status || "issued",
+    dueDate: iso(doc.dueDate) || "",
+    issuedAt: iso(doc.issuedAt) || "",
+    paidAt: iso(doc.paidAt) || "",
+    invoiceNotes: doc.invoiceNotes || "",
+    billingAddress: doc.billingAddress || "",
+    gstNumber: doc.gstNumber || "",
+    bankDetails: doc.bankDetails || "",
+    createdById: refId(doc.createdById) || "",
+    createdAt: iso(doc.createdAt) || new Date().toISOString(),
+    updatedAt: iso(doc.updatedAt) || new Date().toISOString(),
   };
 }

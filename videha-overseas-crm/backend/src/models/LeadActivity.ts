@@ -2,7 +2,14 @@ import mongoose, { Schema, Document, Types } from "mongoose";
 
 export interface ILeadActivity extends Document {
   leadId: Types.ObjectId;
-  type: "created" | "assigned" | "status_change" | "followup_scheduled" | "note_added" | "priority_changed";
+  type:
+    | "created"
+    | "assigned"
+    | "status_change"
+    | "followup_scheduled"
+    | "note_added"
+    | "priority_changed"
+    | "call_logged";
   title: string;
   description: string;
   performedById: Types.ObjectId;
@@ -16,7 +23,15 @@ const leadActivitySchema = new Schema<ILeadActivity>(
     leadId: { type: Schema.Types.ObjectId, ref: "Lead", required: true, index: true },
     type: {
       type: String,
-      enum: ["created", "assigned", "status_change", "followup_scheduled", "note_added", "priority_changed"],
+      enum: [
+        "created",
+        "assigned",
+        "status_change",
+        "followup_scheduled",
+        "note_added",
+        "priority_changed",
+        "call_logged",
+      ],
       required: true,
     },
     title: { type: String, required: true },

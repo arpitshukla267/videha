@@ -51,6 +51,11 @@ export const addNote = asyncHandler(async (req: Request, res: Response) => {
   res.status(201).json({ success: true, data });
 });
 
+export const logCall = asyncHandler(async (req: Request, res: Response) => {
+  const data = await service.logCall(req.params.id, req.body, req.user!);
+  res.status(201).json({ success: true, data });
+});
+
 export const remove = asyncHandler(async (req: Request, res: Response) => {
   await service.deleteLead(req.params.id, req.user!);
   res.json({ success: true, message: "Lead deleted successfully." });

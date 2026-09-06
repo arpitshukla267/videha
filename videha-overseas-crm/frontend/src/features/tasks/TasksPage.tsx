@@ -5,13 +5,23 @@ import {
   AlertCircle,
   Clock,
   Trash2,
-  UserCheck,
   LayoutGrid,
   List,
-  Check
+  Check,
+  Pencil,
+  PhoneCall,
+  PhoneOff
 } from 'lucide-react';
 import { api } from '../../api/client';
-import { Task, User as CrmUser, Priority, TaskStatus } from '../../types/crm';
+import {
+  Task,
+  User as CrmUser,
+  Priority,
+  TaskStatus,
+  TaskType,
+  TaskChannel,
+  Lead
+} from '../../types/crm';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { PriorityBadge } from '../../components/ui/PriorityBadge';
 import { DueBadge } from '../../components/ui/OverdueBadge';
@@ -26,6 +36,102 @@ type TasksPageProps = {
   onFocusConsumed?: () => void;
 };
 
+const TASK_TYPE_OPTIONS: { value: TaskType; label: string }[] = [
+  { value: 'follow_up_call', label: 'Follow-up Call' },
+  { value: 'email', label: 'Email Follow-up' },
+  { value: 'whatsapp', label: 'WhatsApp Follow-up' },
+  { value: 'meeting', label: 'Meeting / Video Call' },
+  { value: 'sample_dispatch', label: 'Sample Dispatch' },
+  { value: 'documentation', label: 'Export Documentation' },
+  { value: 'pricing_quote', label: 'Pricing / Quotation' },
+  { value: 'logistics', label: 'Logistics / Shipment' },
+  { value: 'internal', label: 'Internal Ops' },
+  { value: 'other', label: 'Other' }
+];
+
+const TASK_CHANNEL_OPTIONS: { value: TaskChannel; label: string }[] = [
+  { value: 'phone', label: 'Phone' },
+  { value: 'whatsapp', label: 'WhatsApp' },
+  { value: 'email', label: 'Email' },
+  { value: 'video', label: 'Video Call' },
+  { value: 'in_person', label: 'In Person' },
+  { value: 'none', label: 'Not applicable' }
+];
+
+const STATUS_OPTIONS: { value: TaskStatus; label: string }[] = [
+  { value: 'Pending', label: 'Pending' },
+  { value: 'In Progress', label: 'In Progress' },
+  { value: 'Completed', label: 'Completed' },
+  { value: 'Cancelled', label: 'Cancelled' }
+];
+
+const PRIORITY_OPTIONS: { value: Priority; label: string }[] = [
+  { value: 'Low', label: 'Low' },
+  { value: 'Medium', label: 'Medium' },
+  { value: 'High', label: 'High' },
+  { value: 'Urgent', label: 'Urgent' }
+];
+
+type TaskForm = {
+  taskTitle: string;
+  description: string;
+  assignedToId: string;
+  relatedLeadId: string;
+  taskType: TaskType;
+  channel: TaskChannel;
+  priority: Priority;
+  status: TaskStatus;
+  dueDate: string;
+  pickedUp: boolean | null;
+  outcome: string;
+  completionNotes: string;
+};
+
+const emptyTaskForm = (assigneeId = ''): TaskForm => ({
+  taskTitle: '',
+  description: '',
+  assignedToId: assigneeId,
+  relatedLeadId: '',
+  taskType: 'follow_up_call',
+  channel: 'phone',
+  priority: 'Medium',
+  status: 'Pending',
+  dueDate: new Date(Date.now() + 86400000 * 2).toISOString().slice(0, 16),
+  pickedUp: null,
+  outcome: '',
+  completionNotes: ''
+});
+
+function taskToForm(task: Task): TaskForm {
+  return {
+    taskTitle: task.taskTitle,
+    description: task.description || '',
+    assignedToId: task.assignedToId,
+    relatedLeadId: task.relatedLeadId || '',
+    taskType: (task.taskType || task.category || 'follow_up_call') as TaskType,
+    channel: (task.channel || 'phone') as TaskChannel,
+    priority: task.priority,
+    status: task.status,
+    dueDate: task.dueDate ? task.dueDate.slice(0, 16) : '',
+    pickedUp: task.pickedUp ?? null,
+    outcome: task.outcome || '',
+    completionNotes: task.completionNotes || ''
+  };
+}
+
+function taskTypeLabel(type?: TaskType | string) {
+  return TASK_TYPE_OPTIONS.find(o => o.value === type)?.label || 'Task';
+}
+
+function channelLabel(channel?: TaskChannel | string) {
+  return TASK_CHANNEL_OPTIONS.find(o => o.value === channel)?.label || null;
+}
+
+function formatOutcome(outcome?: string | null) {
+  if (!outcome) return null;
+  return outcome.replace(/_/g, ' ');
+}
+
 export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsumed }) => {
   const { user, hasPermission } = useAuth();
 
@@ -39,22 +145,17 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
   const [memberFilter, setMemberFilter] = useState('all');
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
   const [teamMembers, setTeamMembers] = useState<CrmUser[]>([]);
+  const [leadOptions, setLeadOptions] = useState<Lead[]>([]);
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [newTaskForm, setNewTaskForm] = useState({
-    taskTitle: '',
-    description: '',
-    assignedToId: '',
-    priority: 'Medium' as Priority,
-    status: 'Pending' as TaskStatus,
-    dueDate: new Date(Date.now() + 86400000 * 2).toISOString().slice(0, 16)
-  });
+  const [newTaskForm, setNewTaskForm] = useState<TaskForm>(emptyTaskForm());
   const [isSubmittingCreate, setIsSubmittingCreate] = useState(false);
 
-  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [editTaskId, setEditTaskId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<TaskForm | null>(null);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [viewingTask, setViewingTask] = useState<Task | null>(null);
   const [highlightedTaskId, setHighlightedTaskId] = useState<string | null>(null);
-  const [reassignMemberId, setReassignMemberId] = useState('');
 
   const memberOptions = useMemo(
     () =>
@@ -66,11 +167,29 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
     [teamMembers]
   );
 
+  const relatedLeadSelectOptions = useMemo(
+    () => [
+      { value: '', label: 'No linked lead' },
+      ...leadOptions.map(l => ({
+        value: l.id,
+        label: `${l.leadCode} · ${l.company}`,
+        description: l.name
+      }))
+    ],
+    [leadOptions]
+  );
+
   useEffect(() => {
     api.users
       .getUsers()
       .then(res => {
         if (res.success) setTeamMembers(res.data);
+      })
+      .catch(() => {});
+    api.leads
+      .getLeads({ limit: 200, page: 1 })
+      .then(res => {
+        if (res.success) setLeadOptions(res.items);
       })
       .catch(() => {});
   }, []);
@@ -127,19 +246,22 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
     setIsSubmittingCreate(true);
     try {
       const res = await api.tasks.createTask({
-        ...newTaskForm,
-        assignedToId: newTaskForm.assignedToId || user?.id
+        taskTitle: newTaskForm.taskTitle,
+        description: newTaskForm.description,
+        assignedToId: newTaskForm.assignedToId || user?.id,
+        relatedLeadId: newTaskForm.relatedLeadId || null,
+        taskType: newTaskForm.taskType,
+        channel: newTaskForm.channel,
+        priority: newTaskForm.priority,
+        status: newTaskForm.status,
+        dueDate: newTaskForm.dueDate,
+        pickedUp: newTaskForm.pickedUp,
+        outcome: newTaskForm.outcome,
+        completionNotes: newTaskForm.completionNotes
       });
       if (res.success) {
         setIsCreateOpen(false);
-        setNewTaskForm({
-          taskTitle: '',
-          description: '',
-          assignedToId: '',
-          priority: 'Medium',
-          status: 'Pending',
-          dueDate: new Date(Date.now() + 86400000 * 2).toISOString().slice(0, 16)
-        });
+        setNewTaskForm(emptyTaskForm(user?.id));
         fetchTasks();
         refreshNotifications();
       }
@@ -147,6 +269,46 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
       alert(err.message || 'Failed to create task');
     } finally {
       setIsSubmittingCreate(false);
+    }
+  };
+
+  const buildTaskPayload = (form: TaskForm) => ({
+    taskTitle: form.taskTitle,
+    description: form.description,
+    assignedToId: form.assignedToId,
+    relatedLeadId: form.relatedLeadId || null,
+    taskType: form.taskType,
+    channel: form.channel,
+    priority: form.priority,
+    status: form.status,
+    dueDate: form.dueDate,
+    pickedUp: form.pickedUp,
+    outcome: form.outcome,
+    completionNotes: form.completionNotes
+  });
+
+  const openEditTask = (task: Task) => {
+    setEditTaskId(task.id);
+    setEditForm(taskToForm(task));
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editTaskId || !editForm) return;
+    setIsSavingEdit(true);
+    try {
+      const res = await api.tasks.updateTask(editTaskId, buildTaskPayload(editForm));
+      if (res.success) {
+        setEditTaskId(null);
+        setEditForm(null);
+        fetchTasks();
+        refreshNotifications();
+        if (viewingTask?.id === editTaskId) setViewingTask(res.data);
+      }
+    } catch (err: any) {
+      alert(err.message || 'Failed to update task');
+    } finally {
+      setIsSavingEdit(false);
     }
   };
 
@@ -189,18 +351,6 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
     handleStatusChange(task.id, task.status === 'Completed' ? 'Pending' : 'Completed');
   };
 
-  const handleReassign = async () => {
-    if (!editingTask || !reassignMemberId) return;
-    try {
-      await api.tasks.assignTask(editingTask.id, reassignMemberId);
-      setEditingTask(null);
-      fetchTasks();
-      refreshNotifications();
-    } catch (err: any) {
-      alert(err.message || 'Failed to reassign task');
-    }
-  };
-
   const handleDeleteTask = async (taskId: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     if (!confirm('Delete this task?')) return;
@@ -220,6 +370,160 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
     { id: 'completed', label: 'Completed' },
     { id: 'overdue', label: 'Overdue', alert: true }
   ];
+
+  const renderTaskFormBody = (
+    form: TaskForm,
+    onChange: (patch: Partial<TaskForm>) => void
+  ) => (
+    <>
+      <div>
+        <label className="block font-medium text-slate-700 mb-1">Title *</label>
+        <input
+          type="text"
+          required
+          value={form.taskTitle}
+          onChange={e => onChange({ taskTitle: e.target.value })}
+          placeholder="e.g. Follow up with buyer on sample feedback"
+          className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-sky-600"
+        />
+      </div>
+      <div>
+        <label className="block font-medium text-slate-700 mb-1">Description</label>
+        <textarea
+          rows={3}
+          value={form.description}
+          onChange={e => onChange({ description: e.target.value })}
+          className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-sky-600"
+        />
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label className="block font-medium text-slate-700 mb-1">Task type</label>
+          <SearchableSelect
+            options={TASK_TYPE_OPTIONS}
+            value={form.taskType}
+            onChange={v => onChange({ taskType: v as TaskType })}
+            placeholder="Select type…"
+          />
+        </div>
+        <div>
+          <label className="block font-medium text-slate-700 mb-1">Channel</label>
+          <SearchableSelect
+            options={TASK_CHANNEL_OPTIONS}
+            value={form.channel}
+            onChange={v => onChange({ channel: v as TaskChannel })}
+            placeholder="Select channel…"
+          />
+        </div>
+        <div>
+          <label className="block font-medium text-slate-700 mb-1">Assignee *</label>
+          <SearchableSelect
+            options={memberOptions}
+            value={form.assignedToId}
+            onChange={v => onChange({ assignedToId: v })}
+            placeholder="Select member"
+            searchPlaceholder="Search members…"
+          />
+        </div>
+        <div>
+          <label className="block font-medium text-slate-700 mb-1">Linked lead</label>
+          <SearchableSelect
+            options={relatedLeadSelectOptions}
+            value={form.relatedLeadId}
+            onChange={v => onChange({ relatedLeadId: v })}
+            placeholder="No linked lead"
+            searchPlaceholder="Search leads…"
+            allowClear
+          />
+        </div>
+        <div>
+          <label className="block font-medium text-slate-700 mb-1">Due date *</label>
+          <DateTimePicker
+            includeTime
+            value={form.dueDate}
+            onChange={v => onChange({ dueDate: v })}
+            placeholder="Pick due date & time"
+          />
+        </div>
+        <div>
+          <label className="block font-medium text-slate-700 mb-1">Priority</label>
+          <SearchableSelect
+            options={PRIORITY_OPTIONS}
+            value={form.priority}
+            onChange={v => onChange({ priority: v as Priority })}
+          />
+        </div>
+        <div>
+          <label className="block font-medium text-slate-700 mb-1">Status</label>
+          <SearchableSelect
+            options={STATUS_OPTIONS}
+            value={form.status}
+            onChange={v => onChange({ status: v as TaskStatus })}
+          />
+        </div>
+        <div className="sm:col-span-2">
+          <label className="block font-medium text-slate-700 mb-1.5">Call picked up?</label>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => onChange({ pickedUp: true, outcome: 'picked_up' })}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium ${
+                form.pickedUp === true
+                  ? 'bg-emerald-600 text-white border-emerald-600'
+                  : 'bg-white text-slate-700 border-slate-200'
+              }`}
+            >
+              <PhoneCall className="w-3.5 h-3.5" />
+              Picked up
+            </button>
+            <button
+              type="button"
+              onClick={() => onChange({ pickedUp: false, outcome: 'not_picked_up' })}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium ${
+                form.pickedUp === false
+                  ? 'bg-amber-600 text-white border-amber-600'
+                  : 'bg-white text-slate-700 border-slate-200'
+              }`}
+            >
+              <PhoneOff className="w-3.5 h-3.5" />
+              Not picked up
+            </button>
+            <button
+              type="button"
+              onClick={() => onChange({ pickedUp: null })}
+              className={`px-3 py-1.5 rounded-lg border text-xs font-medium ${
+                form.pickedUp === null
+                  ? 'bg-slate-700 text-white border-slate-700'
+                  : 'bg-white text-slate-700 border-slate-200'
+              }`}
+            >
+              N/A
+            </button>
+          </div>
+        </div>
+        <div>
+          <label className="block font-medium text-slate-700 mb-1">Outcome / result</label>
+          <input
+            type="text"
+            value={form.outcome}
+            onChange={e => onChange({ outcome: e.target.value })}
+            placeholder="e.g. Sent quotation, requested sample"
+            className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-sky-600"
+          />
+        </div>
+        <div className="sm:col-span-2">
+          <label className="block font-medium text-slate-700 mb-1">Completion notes</label>
+          <textarea
+            rows={2}
+            value={form.completionNotes}
+            onChange={e => onChange({ completionNotes: e.target.value })}
+            placeholder="What was discussed, agreed next steps, blockers…"
+            className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-sky-600"
+          />
+        </div>
+      </div>
+    </>
+  );
 
   return (
     <div className="p-6 space-y-5 max-w-7xl mx-auto">
@@ -254,7 +558,10 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
           {hasPermission('tasks.create') && (
             <button
               type="button"
-              onClick={() => setIsCreateOpen(true)}
+              onClick={() => {
+                setNewTaskForm(emptyTaskForm(user?.id));
+                setIsCreateOpen(true);
+              }}
               className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-xs font-medium"
             >
               <Plus className="w-4 h-4" />
@@ -331,12 +638,18 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
               {tasks.map(task => {
-                const isDone = task.status === 'Completed';
+                const isDone = task.status === 'Completed' || task.status === 'Cancelled';
+                const channel = channelLabel(task.channel);
+                const outcomeText = formatOutcome(task.outcome);
                 return (
                   <div
                     id={`task-card-${task.id}`}
                     key={task.id}
-                    className={`group rounded-xl border bg-white p-4 transition-all ${
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setViewingTask(task)}
+                    onKeyDown={e => e.key === 'Enter' && setViewingTask(task)}
+                    className={`group rounded-xl border bg-white p-4 transition-all cursor-pointer ${
                       highlightedTaskId === task.id
                         ? 'border-sky-400 ring-2 ring-sky-200 shadow-sm'
                         : isDone
@@ -347,10 +660,13 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
                     <div className="flex items-start gap-3">
                       <button
                         type="button"
-                        onClick={() => toggleComplete(task)}
-                        title={isDone ? 'Mark pending' : 'Mark completed'}
+                        onClick={e => {
+                          e.stopPropagation();
+                          toggleComplete(task);
+                        }}
+                        title={task.status === 'Completed' ? 'Mark pending' : 'Mark completed'}
                         className={`mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
-                          isDone
+                          task.status === 'Completed'
                             ? 'bg-emerald-500 border-emerald-500 text-white'
                             : 'border-slate-300 hover:border-sky-500 text-transparent hover:text-sky-500'
                         }`}
@@ -362,6 +678,16 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0">
                             <p className="text-[10px] font-mono text-slate-400 mb-0.5">{task.taskCode}</p>
+                            <div className="flex flex-wrap items-center gap-1.5 mb-1">
+                              <span className="inline-flex text-[10px] font-medium uppercase tracking-wide text-sky-700 bg-sky-50 px-1.5 py-0.5 rounded border border-sky-100">
+                                {taskTypeLabel(task.taskType || task.category)}
+                              </span>
+                              {channel && (
+                                <span className="inline-flex text-[10px] font-medium text-slate-600 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100">
+                                  {channel}
+                                </span>
+                              )}
+                            </div>
                             <h4
                               className={`text-sm font-semibold leading-snug ${
                                 isDone ? 'line-through text-slate-400' : 'text-slate-800'
@@ -375,6 +701,47 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
 
                         {task.description ? (
                           <p className="text-xs text-slate-500 mt-1.5 line-clamp-2">{task.description}</p>
+                        ) : null}
+
+                        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                          {task.relatedLeadName && (
+                            <span
+                              className="inline-flex max-w-full text-[10px] text-slate-600 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100 truncate"
+                              title={task.relatedLeadName}
+                            >
+                              Lead: {task.relatedLeadName}
+                            </span>
+                          )}
+                          {task.pickedUp !== null && task.pickedUp !== undefined && (
+                            <span
+                              className={`inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded border ${
+                                task.pickedUp
+                                  ? 'text-emerald-700 bg-emerald-50 border-emerald-100'
+                                  : 'text-amber-700 bg-amber-50 border-amber-100'
+                              }`}
+                            >
+                              {task.pickedUp ? (
+                                <PhoneCall className="w-3 h-3" />
+                              ) : (
+                                <PhoneOff className="w-3 h-3" />
+                              )}
+                              {task.pickedUp ? 'Picked up' : 'Not picked up'}
+                            </span>
+                          )}
+                          {outcomeText && (
+                            <span
+                              className="inline-flex max-w-full text-[10px] text-violet-700 bg-violet-50 px-1.5 py-0.5 rounded border border-violet-100 truncate"
+                              title={outcomeText}
+                            >
+                              {outcomeText}
+                            </span>
+                          )}
+                        </div>
+
+                        {task.completionNotes ? (
+                          <p className="text-[11px] text-slate-500 mt-2 line-clamp-2 italic">
+                            {task.completionNotes}
+                          </p>
                         ) : null}
 
                         <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -397,7 +764,7 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
                                 {task.assignedToName || 'Unassigned'}
                               </p>
                               <p className="text-[10px] text-slate-400 flex items-center gap-1">
-                                <Clock className="w-3 h-3" />
+                                <Clock className="w-3 h-3 shrink-0" />
                                 {new Date(task.dueDate).toLocaleString([], {
                                   month: 'short',
                                   day: 'numeric',
@@ -408,32 +775,18 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
                             </div>
                           </div>
 
-                          <div className="flex items-center gap-0.5 opacity-70 group-hover:opacity-100">
-                            {!isDone && (
+                          <div
+                            className="flex items-center gap-0.5 opacity-70 group-hover:opacity-100"
+                            onClick={e => e.stopPropagation()}
+                          >
+                            {hasPermission('tasks.edit') && (
                               <button
                                 type="button"
-                                onClick={() =>
-                                  handleStatusChange(
-                                    task.id,
-                                    task.status === 'In Progress' ? 'Pending' : 'In Progress'
-                                  )
-                                }
-                                className="px-2 py-1 text-[10px] font-semibold rounded-md text-sky-700 hover:bg-sky-50"
-                              >
-                                {task.status === 'In Progress' ? 'Pause' : 'Start'}
-                              </button>
-                            )}
-                            {hasPermission('tasks.assign') && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setEditingTask(task);
-                                  setReassignMemberId(task.assignedToId);
-                                }}
+                                onClick={() => openEditTask(task)}
                                 className="p-1.5 rounded-lg text-slate-400 hover:text-sky-700 hover:bg-sky-50"
-                                title="Reassign"
+                                title="Edit task"
                               >
-                                <UserCheck className="w-3.5 h-3.5" />
+                                <Pencil className="w-3.5 h-3.5" />
                               </button>
                             )}
                             {hasPermission('tasks.edit') && (
@@ -525,18 +878,18 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
                         </div>
                       </td>
                       <td className="py-3 px-4 text-right">
-                        {hasPermission('tasks.assign') && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setEditingTask(task);
-                              setReassignMemberId(task.assignedToId);
-                            }}
-                            className="p-1 rounded text-slate-500 hover:text-sky-700"
-                          >
-                            <UserCheck className="w-4 h-4" />
-                          </button>
-                        )}
+                        <div className="inline-flex items-center gap-1">
+                          {hasPermission('tasks.edit') && (
+                            <button
+                              type="button"
+                              onClick={() => openEditTask(task)}
+                              className="p-1 rounded text-slate-500 hover:text-sky-700"
+                              title="Edit"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -554,73 +907,13 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
         subtitle="Assign a follow-up or operations action"
         maxWidth="lg"
       >
-        <form onSubmit={handleCreateTask} className="space-y-4 text-xs">
-          <div>
-            <label className="block font-medium text-slate-700 mb-1">Title *</label>
-            <input
-              type="text"
-              required
-              value={newTaskForm.taskTitle}
-              onChange={e => setNewTaskForm({ ...newTaskForm, taskTitle: e.target.value })}
-              placeholder="e.g. Follow up with buyer on sample feedback"
-              className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-sky-600"
-            />
-          </div>
-          <div>
-            <label className="block font-medium text-slate-700 mb-1">Description</label>
-            <textarea
-              rows={3}
-              value={newTaskForm.description}
-              onChange={e => setNewTaskForm({ ...newTaskForm, description: e.target.value })}
-              className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-sky-600"
-            />
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block font-medium text-slate-700 mb-1">Assignee *</label>
-              <SearchableSelect
-                options={memberOptions}
-                value={newTaskForm.assignedToId}
-                onChange={v => setNewTaskForm({ ...newTaskForm, assignedToId: v })}
-                placeholder="Select member"
-                searchPlaceholder="Search members…"
-              />
-            </div>
-            <div>
-              <label className="block font-medium text-slate-700 mb-1">Due date *</label>
-              <DateTimePicker
-                includeTime
-                value={newTaskForm.dueDate}
-                onChange={v => setNewTaskForm({ ...newTaskForm, dueDate: v })}
-                placeholder="Pick due date & time"
-              />
-            </div>
-            <div>
-              <label className="block font-medium text-slate-700 mb-1">Priority</label>
-              <SearchableSelect
-                options={[
-                  { value: 'Low', label: 'Low' },
-                  { value: 'Medium', label: 'Medium' },
-                  { value: 'High', label: 'High' },
-                  { value: 'Urgent', label: 'Urgent' }
-                ]}
-                value={newTaskForm.priority}
-                onChange={v => setNewTaskForm({ ...newTaskForm, priority: v as Priority })}
-              />
-            </div>
-            <div>
-              <label className="block font-medium text-slate-700 mb-1">Status</label>
-              <SearchableSelect
-                options={[
-                  { value: 'Pending', label: 'Pending' },
-                  { value: 'In Progress', label: 'In Progress' },
-                  { value: 'Completed', label: 'Completed' }
-                ]}
-                value={newTaskForm.status}
-                onChange={v => setNewTaskForm({ ...newTaskForm, status: v as TaskStatus })}
-              />
-            </div>
-          </div>
+        <form
+          onSubmit={handleCreateTask}
+          className="space-y-4 text-xs"
+        >
+          {renderTaskFormBody(newTaskForm, patch =>
+            setNewTaskForm(prev => ({ ...prev, ...patch }))
+          )}
           <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
             <button
               type="button"
@@ -641,38 +934,40 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
       </Modal>
 
       <Modal
-        isOpen={!!editingTask}
-        onClose={() => setEditingTask(null)}
-        title="Reassign Task"
-        maxWidth="sm"
+        isOpen={!!editTaskId && !!editForm}
+        onClose={() => {
+          setEditTaskId(null);
+          setEditForm(null);
+        }}
+        title="Edit Task"
+        subtitle={editForm?.taskTitle || ''}
+        maxWidth="lg"
       >
-        {editingTask && (
-          <div className="space-y-4 text-xs">
-            <p className="text-slate-600">{editingTask.taskTitle}</p>
-            <SearchableSelect
-              options={memberOptions}
-              value={reassignMemberId}
-              onChange={setReassignMemberId}
-              placeholder="Select member"
-              searchPlaceholder="Search members…"
-            />
-            <div className="flex justify-end gap-2">
+        {editForm && (
+          <form onSubmit={handleSaveEdit} className="space-y-4 text-xs">
+            {renderTaskFormBody(editForm, patch =>
+              setEditForm(prev => (prev ? { ...prev, ...patch } : prev))
+            )}
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
               <button
                 type="button"
-                onClick={() => setEditingTask(null)}
-                className="px-4 py-2 rounded-lg border border-slate-200"
+                onClick={() => {
+                  setEditTaskId(null);
+                  setEditForm(null);
+                }}
+                className="px-4 py-2 rounded-lg border border-slate-200 text-slate-600"
               >
                 Cancel
               </button>
               <button
-                type="button"
-                onClick={handleReassign}
-                className="px-4 py-2 rounded-lg bg-sky-600 text-white font-medium"
+                type="submit"
+                disabled={isSavingEdit || !editForm.assignedToId}
+                className="px-4 py-2 rounded-lg bg-sky-600 text-white font-medium disabled:opacity-50"
               >
-                Save
+                {isSavingEdit ? 'Saving…' : 'Save changes'}
               </button>
             </div>
-          </div>
+          </form>
         )}
       </Modal>
 
@@ -682,19 +977,16 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
           setViewingTask(null);
           setHighlightedTaskId(null);
         }}
-        title="Task Details"
-        subtitle={viewingTask?.taskCode}
-        maxWidth="md"
+        title={viewingTask ? `${viewingTask.taskCode} · ${viewingTask.taskTitle}` : 'Task Details'}
+        subtitle={viewingTask ? taskTypeLabel(viewingTask.taskType || viewingTask.category) : ''}
+        maxWidth="lg"
       >
         {viewingTask && (
           <div className="space-y-4 text-xs">
-            <div>
-              <h4 className="text-sm font-semibold text-slate-800">{viewingTask.taskTitle}</h4>
-              {viewingTask.description ? (
-                <p className="text-slate-600 mt-1.5 leading-relaxed">{viewingTask.description}</p>
-              ) : null}
-            </div>
-            <div className="grid grid-cols-2 gap-3">
+            {viewingTask.description ? (
+              <p className="text-slate-600 leading-relaxed">{viewingTask.description}</p>
+            ) : null}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               <div className="rounded-lg border border-slate-100 bg-slate-50/80 p-3">
                 <p className="text-[10px] uppercase tracking-wider text-slate-400">Status</p>
                 <div className="mt-1">
@@ -724,8 +1016,65 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
                   />
                 </div>
               </div>
+              <div className="rounded-lg border border-slate-100 bg-slate-50/80 p-3">
+                <p className="text-[10px] uppercase tracking-wider text-slate-400">Channel</p>
+                <p className="mt-1 font-medium text-slate-800 capitalize">
+                  {viewingTask.channel?.replace('_', ' ') || '—'}
+                </p>
+              </div>
+              <div className="rounded-lg border border-slate-100 bg-slate-50/80 p-3">
+                <p className="text-[10px] uppercase tracking-wider text-slate-400">Linked lead</p>
+                <p className="mt-1 font-medium text-slate-800 truncate">
+                  {viewingTask.relatedLeadName || 'None'}
+                </p>
+              </div>
             </div>
-            <div className="flex justify-end pt-1">
+            {(viewingTask.pickedUp !== null && viewingTask.pickedUp !== undefined) ||
+            viewingTask.outcome ||
+            viewingTask.completionNotes ? (
+              <div className="rounded-xl border border-sky-100 bg-sky-50/40 p-4 space-y-2">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                  Call / outcome details
+                </p>
+                {viewingTask.pickedUp !== null && viewingTask.pickedUp !== undefined && (
+                  <span
+                    className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded border ${
+                      viewingTask.pickedUp
+                        ? 'text-emerald-700 bg-emerald-50 border-emerald-100'
+                        : 'text-amber-700 bg-amber-50 border-amber-100'
+                    }`}
+                  >
+                    {viewingTask.pickedUp ? (
+                      <PhoneCall className="w-3.5 h-3.5" />
+                    ) : (
+                      <PhoneOff className="w-3.5 h-3.5" />
+                    )}
+                    {viewingTask.pickedUp ? 'Call picked up' : 'Call not picked up'}
+                  </span>
+                )}
+                {viewingTask.outcome ? (
+                  <p className="text-slate-700">
+                    <span className="font-medium">Outcome:</span> {viewingTask.outcome}
+                  </p>
+                ) : null}
+                {viewingTask.completionNotes ? (
+                  <p className="text-slate-600 leading-relaxed">{viewingTask.completionNotes}</p>
+                ) : null}
+              </div>
+            ) : null}
+            <div className="flex justify-end gap-2 pt-1">
+              {hasPermission('tasks.edit') && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    openEditTask(viewingTask);
+                    setViewingTask(null);
+                  }}
+                  className="px-4 py-2 rounded-lg border border-slate-200 text-slate-700 font-medium"
+                >
+                  Edit
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => {

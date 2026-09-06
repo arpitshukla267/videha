@@ -8,6 +8,7 @@ import { nextOrderCode } from "../../utils/codes";
 import { serializeOrder, serializeOrderHistory } from "../../utils/serializers";
 import { writeAudit } from "../../services/audit.service";
 import { createNotification } from "../../services/notification.service";
+import { createBillFromOrder } from "../bills/bills.service";
 import type { AuthUser } from "../../middleware/auth";
 
 const POPULATE = [{ path: "assignedToId", select: "name email" }];
@@ -224,6 +225,14 @@ export async function updateOrderStatus(
     entityId: id,
     details: `Transitioned status to ${status}. Notes: ${notes || "Standard progression"}`,
   });
+
+  if (order.status === "Delivered") {
+    try {
+      await createBillFromOrder(id, actor.id);
+    } catch {
+      // Bill may already exist — safe to ignore
+    }
+  }
 
   await order.populate(POPULATE);
   return {

@@ -6,9 +6,13 @@ import {
   Lead,
   LeadActivity,
   LeadNote,
+  CallLog,
   Task,
   Order,
   OrderStatusHistory,
+  Bill,
+  BillLineItem,
+  FinanceOverview,
   PublicOrderTrackingInfo,
   AuditLog,
   Notification,
@@ -71,6 +75,32 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
   }
 
   return data;
+}
+
+async function downloadBlob(endpoint: string, filename: string): Promise<void> {
+  const token = getStoredToken();
+  const headers: Record<string, string> = {};
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  const response = await fetch(endpoint, { headers });
+  if (!response.ok) {
+    let message = `Download failed with status ${response.status}`;
+    try {
+      const data = await response.json();
+      message = data?.message || message;
+    } catch {
+      // ignore
+    }
+    throw new Error(message);
+  }
+
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(url);
 }
 
 export const api = {
@@ -176,7 +206,7 @@ export const api = {
     getLead: (id: string) =>
       request<{
         success: boolean;
-        data: { lead: Lead; activities: LeadActivity[]; notes: LeadNote[] };
+        data: { lead: Lead; activities: LeadActivity[]; notes: LeadNote[]; callLogs: CallLog[] };
       }>(`/api/leads/${id}`),
     createLead: (data: Partial<Lead>) =>
       request<{ success: boolean; data: Lead }>('/api/leads', {
@@ -201,6 +231,34 @@ export const api = {
           body: JSON.stringify({ content })
         }
       ),
+    logCall: (
+      id: string,
+      data: {
+        pickedUp: boolean;
+        channel?: string;
+        direction?: string;
+        outcome?: string;
+        durationMinutes?: number;
+        spokeWith?: string;
+        interestLevel?: string;
+        disposition?: string;
+        notes?: string;
+        nextFollowUp?: string | null;
+        followUpRequired?: boolean;
+      }
+    ) =>
+      request<{
+        success: boolean;
+        data: {
+          callLog: CallLog;
+          lead: Lead;
+          activities: LeadActivity[];
+          callLogs: CallLog[];
+        };
+      }>(`/api/leads/${id}/calls`, {
+        method: 'POST',
+        body: JSON.stringify(data)
+      }),
     deleteLead: (id: string) =>
       request<{ success: boolean; message: string }>(`/api/leads/${id}`, {
         method: 'DELETE'
@@ -362,6 +420,41 @@ export const api = {
           };
         };
       }>('/api/reports')
+  },
+
+  // Finance
+  finance: {
+    getOverview: () =>
+      request<{ success: boolean; data: FinanceOverview }>('/api/finance/overview')
+  },
+
+  // Bills
+  bills: {
+    getBills: (params?: { search?: string; status?: string }) => {
+      const query = new URLSearchParams();
+      if (params?.search) query.set('search', params.search);
+      if (params?.status) query.set('status', params.status);
+      const qs = query.toString();
+      return request<{ success: boolean; data: Bill[] }>(`/api/bills${qs ? `?${qs}` : ''}`);
+    },
+    getBill: (id: string) =>
+      request<{ success: boolean; data: Bill }>(`/api/bills/${id}`),
+    updateBill: (id: string, data: Partial<Bill>) =>
+      request<{ success: boolean; data: Bill }>(`/api/bills/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data)
+      }),
+    recordPayment: (id: string, amount: number, notes?: string) =>
+      request<{ success: boolean; data: Bill }>(`/api/bills/${id}/payments`, {
+        method: 'POST',
+        body: JSON.stringify({ amount, notes })
+      }),
+    syncFromOrders: () =>
+      request<{ success: boolean; data: { created: number } }>('/api/bills/sync', {
+        method: 'POST'
+      }),
+    downloadPdf: (id: string, billCode: string) =>
+      downloadBlob(`/api/bills/${id}/pdf`, `${billCode}.pdf`)
   },
 
   // Audit

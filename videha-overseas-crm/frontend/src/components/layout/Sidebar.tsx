@@ -10,7 +10,9 @@ import {
   Compass,
   LogOut,
   Building2,
-  ExternalLink
+  ExternalLink,
+  IndianRupee,
+  Receipt
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -19,6 +21,8 @@ export type NavigationTab =
   | 'leads'
   | 'tasks'
   | 'orders'
+  | 'finance'
+  | 'bills'
   | 'team'
   | 'reports'
   | 'settings'
@@ -43,6 +47,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onSelectTab, unrea
     { id: 'leads', label: 'Leads', icon: Users, permission: 'leads.view' },
     { id: 'tasks', label: 'Tasks', icon: CheckSquare, permission: 'tasks.view' },
     { id: 'orders', label: 'Orders', icon: Package, permission: 'orders.view' },
+    { id: 'finance', label: 'Finance', icon: IndianRupee, permission: 'finance.view' },
+    { id: 'bills', label: 'Bills', icon: Receipt, permission: 'bills.view' },
     { id: 'team', label: 'Team', icon: UserCheck, permission: 'users.view' },
     { id: 'reports', label: 'Reports', icon: BarChart3, permission: 'reports.view' },
     { id: 'settings', label: 'Settings', icon: Settings, permission: 'settings.manage' }

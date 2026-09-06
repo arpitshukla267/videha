@@ -49,7 +49,7 @@ export interface Permission {
   id: string;
   code: string;
   name: string;
-  category: 'dashboard' | 'users' | 'leads' | 'tasks' | 'orders' | 'reports' | 'settings';
+  category: 'dashboard' | 'users' | 'leads' | 'tasks' | 'orders' | 'finance' | 'reports' | 'settings';
   description: string;
 }
 
@@ -94,12 +94,49 @@ export interface Lead {
   preferredContact?: string;
   companyWebsite?: string;
   secondaryPhone?: string;
+  lastCallAt?: string | null;
+  lastCallOutcome?: string | null;
+  lastCallChannel?: string | null;
+  lastCallPickedUp?: boolean | null;
+  totalCallsCount?: number;
+}
+
+export type CallChannel = 'phone' | 'whatsapp' | 'email' | 'video' | 'in_person';
+export type CallDirection = 'outbound' | 'inbound';
+export type CallOutcome =
+  | 'picked_up'
+  | 'not_picked_up'
+  | 'busy'
+  | 'voicemail'
+  | 'wrong_number'
+  | 'switched_off'
+  | 'callback_requested'
+  | 'no_answer';
+export type InterestLevel = 'hot' | 'warm' | 'cold' | 'none';
+
+export interface CallLog {
+  id: string;
+  leadId: string;
+  performedById: string;
+  performedByName: string;
+  channel: CallChannel;
+  direction: CallDirection;
+  pickedUp: boolean;
+  outcome: CallOutcome;
+  durationMinutes: number;
+  spokeWith: string;
+  interestLevel: InterestLevel;
+  disposition: string;
+  notes: string;
+  nextFollowUp: string | null;
+  followUpRequired: boolean;
+  createdAt: string;
 }
 
 export interface LeadActivity {
   id: string;
   leadId: string;
-  type: 'created' | 'assigned' | 'status_change' | 'followup_scheduled' | 'note_added' | 'priority_changed';
+  type: 'created' | 'assigned' | 'status_change' | 'followup_scheduled' | 'note_added' | 'priority_changed' | 'call_logged';
   title: string;
   description: string;
   performedById: string;
@@ -117,6 +154,18 @@ export interface LeadNote {
 }
 
 export type TaskStatus = 'Pending' | 'In Progress' | 'Completed' | 'Cancelled';
+export type TaskType =
+  | 'follow_up_call'
+  | 'email'
+  | 'whatsapp'
+  | 'meeting'
+  | 'sample_dispatch'
+  | 'documentation'
+  | 'pricing_quote'
+  | 'logistics'
+  | 'internal'
+  | 'other';
+export type TaskChannel = 'phone' | 'whatsapp' | 'email' | 'video' | 'in_person' | 'none';
 
 export interface Task {
   id: string;
@@ -131,6 +180,11 @@ export interface Task {
   relatedLeadName?: string;
   relatedOrderId: string | null;
   relatedOrderCode?: string;
+  taskType?: TaskType;
+  channel?: TaskChannel;
+  pickedUp?: boolean | null;
+  outcome?: string;
+  completionNotes?: string;
   priority: Priority;
   status: TaskStatus;
   dueDate: string;
@@ -230,4 +284,81 @@ export interface AuditLog {
   entityId: string;
   details: string;
   timestamp: string;
+}
+
+export type BillStatus = 'draft' | 'issued' | 'partially_paid' | 'paid' | 'overdue' | 'void';
+
+export interface BillLineItem {
+  description: string;
+  quantity: string;
+  unitPrice: number;
+  amount: number;
+}
+
+export interface Bill {
+  id: string;
+  billCode: string;
+  orderId: string;
+  orderCode: string;
+  customerName: string;
+  company: string;
+  phone: string;
+  email: string;
+  country: string;
+  products: string;
+  quantity: string;
+  lineItems: BillLineItem[];
+  subtotal: number;
+  taxRate: number;
+  taxAmount: number;
+  totalAmount: number;
+  amountPaid: number;
+  amountDue: number;
+  currency: string;
+  paymentTerms: string;
+  status: BillStatus;
+  dueDate: string;
+  issuedAt: string;
+  paidAt: string;
+  invoiceNotes: string;
+  billingAddress: string;
+  gstNumber: string;
+  bankDetails: string;
+  createdById: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface FinanceOverview {
+  totalRevenue: number;
+  totalDue: number;
+  overdueAmount: number;
+  revenueThisMonth: number;
+  paidBillsCount: number;
+  dueBillsCount: number;
+  overdueBillsCount: number;
+  totalBills: number;
+  revenueByCurrency: Record<string, number>;
+  dueByCurrency: Record<string, number>;
+  recentDue: Array<{
+    id: string;
+    billCode: string;
+    orderCode: string;
+    company: string;
+    amountDue: number;
+    totalAmount: number;
+    amountPaid: number;
+    currency: string;
+    dueDate: string;
+    status: BillStatus;
+  }>;
+  recentPaid: Array<{
+    id: string;
+    billCode: string;
+    orderCode: string;
+    company: string;
+    amountPaid: number;
+    currency: string;
+    paidAt: string;
+  }>;
 }

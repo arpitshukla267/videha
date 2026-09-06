@@ -12,4 +12,5 @@ leadsRoutes.post("/", requirePermission("leads.create"), ctrl.create);
 leadsRoutes.put("/:id", requirePermission("leads.edit"), ctrl.update);
 leadsRoutes.patch("/:id/assign", requirePermission("leads.assign"), ctrl.assign);
 leadsRoutes.post("/:id/notes", requirePermission("leads.edit"), ctrl.addNote);
+leadsRoutes.post("/:id/calls", requirePermission("leads.edit"), ctrl.logCall);
 leadsRoutes.delete("/:id", requirePermission("leads.delete"), ctrl.remove);

@@ -29,6 +29,11 @@ export interface ILead extends Document {
   departmentId: Types.ObjectId | null;
   nextFollowUp: Date | null;
   notes: string;
+  lastCallAt: Date | null;
+  lastCallOutcome: string | null;
+  lastCallChannel: string | null;
+  lastCallPickedUp: boolean | null;
+  totalCallsCount: number;
   createdById: Types.ObjectId;
   archived: boolean;
   createdAt: Date;
@@ -62,6 +67,11 @@ const leadSchema = new Schema<ILead>(
     departmentId: { type: Schema.Types.ObjectId, ref: "Department", default: null, index: true },
     nextFollowUp: { type: Date, default: null, index: true },
     notes: { type: String, default: "" },
+    lastCallAt: { type: Date, default: null, index: true },
+    lastCallOutcome: { type: String, default: null },
+    lastCallChannel: { type: String, default: null },
+    lastCallPickedUp: { type: Boolean, default: null },
+    totalCallsCount: { type: Number, default: 0 },
     createdById: { type: Schema.Types.ObjectId, ref: "User", required: true },
     archived: { type: Boolean, default: false, index: true },
   },

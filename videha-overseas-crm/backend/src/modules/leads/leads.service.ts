@@ -2,6 +2,17 @@ import { Types } from "mongoose";
 import { Lead, LEAD_STATUSES, type LeadStatus, type Priority } from "../../models/Lead";
 import { LeadNote } from "../../models/LeadNote";
 import { LeadActivity } from "../../models/LeadActivity";
+import {
+  CallLog,
+  CALL_CHANNELS,
+  CALL_DIRECTIONS,
+  CALL_OUTCOMES,
+  INTEREST_LEVELS,
+  type CallChannel,
+  type CallDirection,
+  type CallOutcome,
+  type InterestLevel,
+} from "../../models/CallLog";
 import { AppError } from "../../utils/AppError";
 import { assertObjectId, optionalObjectId } from "../../utils/objectId";
 import { nextLeadCode } from "../../utils/codes";
@@ -9,6 +20,7 @@ import {
   serializeLead,
   serializeLeadNote,
   serializeLeadActivity,
+  serializeCallLog,
 } from "../../utils/serializers";
 import { writeAudit } from "../../services/audit.service";
 import { createNotification } from "../../services/notification.service";
@@ -21,7 +33,64 @@ type ActivityType =
   | "status_change"
   | "followup_scheduled"
   | "note_added"
-  | "priority_changed";
+  | "priority_changed"
+  | "call_logged";
+
+const OUTCOME_LABELS: Record<CallOutcome, string> = {
+  picked_up: "Call picked up",
+  not_picked_up: "Call not picked up",
+  busy: "Line busy",
+  voicemail: "Voicemail left",
+  wrong_number: "Wrong number",
+  switched_off: "Phone switched off",
+  callback_requested: "Callback requested",
+  no_answer: "No answer",
+};
+
+function outcomeFromPickedUp(pickedUp: boolean, outcome?: string): CallOutcome {
+  if (outcome && CALL_OUTCOMES.includes(outcome as CallOutcome)) {
+    return outcome as CallOutcome;
+  }
+  return pickedUp ? "picked_up" : "not_picked_up";
+}
+
+function buildCallActivityDescription(input: {
+  channel: CallChannel;
+  direction: CallDirection;
+  outcome: CallOutcome;
+  durationMinutes: number;
+  spokeWith: string;
+  interestLevel: InterestLevel;
+  disposition: string;
+  notes: string;
+}) {
+  const parts = [
+    `${input.direction === "inbound" ? "Inbound" : "Outbound"} ${input.channel.replace("_", " ")} — ${OUTCOME_LABELS[input.outcome]}.`,
+  ];
+  if (input.spokeWith) parts.push(`Spoke with: ${input.spokeWith}.`);
+  if (input.durationMinutes > 0) parts.push(`Duration: ${input.durationMinutes} min.`);
+  if (input.interestLevel !== "none") {
+    parts.push(`Interest: ${input.interestLevel.charAt(0).toUpperCase()}${input.interestLevel.slice(1)}.`);
+  }
+  if (input.disposition) parts.push(`Disposition: ${input.disposition}.`);
+  if (input.notes) parts.push(`Notes: ${input.notes}`);
+  return parts.join(" ");
+}
+
+function suggestedStatusAfterCall(
+  currentStatus: LeadStatus,
+  pickedUp: boolean,
+  interestLevel: InterestLevel,
+): LeadStatus | null {
+  if (["Converted", "Lost", "Not Interested"].includes(currentStatus)) return null;
+  if (pickedUp) {
+    if (interestLevel === "hot") return "Interested";
+    if (currentStatus === "New") return "Contacted";
+    return null;
+  }
+  if (["New", "Contacted", "Interested"].includes(currentStatus)) return "Follow-up";
+  return null;
+}
 
 async function addActivity(
   leadId: string,
@@ -151,9 +220,10 @@ export async function getLead(id: string) {
   const lead = await Lead.findById(id).populate(POPULATE);
   if (!lead || lead.archived) throw new AppError("Lead not found.", 404);
 
-  const [activities, notes] = await Promise.all([
+  const [activities, notes, callLogs] = await Promise.all([
     LeadActivity.find({ leadId: id }).sort({ createdAt: -1 }),
     LeadNote.find({ leadId: id }).sort({ createdAt: -1 }),
+    CallLog.find({ leadId: id }).sort({ createdAt: -1 }).limit(50),
   ]);
 
   return {
@@ -162,6 +232,9 @@ export async function getLead(id: string) {
       serializeLeadActivity(a.toObject() as unknown as Record<string, unknown>),
     ),
     notes: notes.map((n) => serializeLeadNote(n.toObject() as unknown as Record<string, unknown>)),
+    callLogs: callLogs.map((c) =>
+      serializeCallLog(c.toObject() as unknown as Record<string, unknown>),
+    ),
   };
 }
 
@@ -382,6 +455,147 @@ export async function addNote(id: string, content: string, actor: AuthUser) {
     note: serializeLeadNote(note.toObject() as unknown as Record<string, unknown>),
     activities: activities.map((a) =>
       serializeLeadActivity(a.toObject() as unknown as Record<string, unknown>),
+    ),
+  };
+}
+
+export async function logCall(
+  id: string,
+  body: Record<string, unknown>,
+  actor: AuthUser,
+) {
+  assertObjectId(id, "lead id");
+  const lead = await Lead.findById(id);
+  if (!lead || lead.archived) throw new AppError("Lead not found.", 404);
+
+  const pickedUp = Boolean(body.pickedUp);
+  const channel = String(body.channel || "phone");
+  const direction = String(body.direction || "outbound");
+  const interestLevel = String(body.interestLevel || "none");
+
+  if (!CALL_CHANNELS.includes(channel as CallChannel)) {
+    throw new AppError(`Invalid channel: ${channel}`, 400);
+  }
+  if (!CALL_DIRECTIONS.includes(direction as CallDirection)) {
+    throw new AppError(`Invalid direction: ${direction}`, 400);
+  }
+  if (!INTEREST_LEVELS.includes(interestLevel as InterestLevel)) {
+    throw new AppError(`Invalid interest level: ${interestLevel}`, 400);
+  }
+
+  const outcome = outcomeFromPickedUp(pickedUp, body.outcome as string | undefined);
+  const durationMinutes = Math.max(0, Number(body.durationMinutes ?? 0) || 0);
+  const spokeWith = String(body.spokeWith || "").trim();
+  const disposition = String(body.disposition || "").trim();
+  const notes = String(body.notes || "").trim();
+  const followUpRequired = Boolean(body.followUpRequired);
+  const nextFollowUp =
+    body.nextFollowUp === null || body.nextFollowUp === ""
+      ? null
+      : body.nextFollowUp
+        ? new Date(String(body.nextFollowUp))
+        : null;
+
+  if (nextFollowUp && Number.isNaN(nextFollowUp.getTime())) {
+    throw new AppError("Invalid next follow-up date.", 400);
+  }
+
+  const callLog = await CallLog.create({
+    leadId: id,
+    performedById: actor.id,
+    performedByName: actor.name,
+    channel,
+    direction,
+    pickedUp,
+    outcome,
+    durationMinutes,
+    spokeWith,
+    interestLevel,
+    disposition,
+    notes,
+    nextFollowUp,
+    followUpRequired,
+  });
+
+  lead.lastCallAt = new Date();
+  lead.lastCallOutcome = outcome;
+  lead.lastCallChannel = channel;
+  lead.lastCallPickedUp = pickedUp;
+  lead.totalCallsCount = (lead.totalCallsCount || 0) + 1;
+
+  if (nextFollowUp) {
+    lead.nextFollowUp = nextFollowUp;
+  }
+
+  const autoStatus = suggestedStatusAfterCall(lead.status, pickedUp, interestLevel as InterestLevel);
+  if (autoStatus && autoStatus !== lead.status) {
+    const prevStatus = lead.status;
+    lead.status = autoStatus;
+    await addActivity(
+      id,
+      "status_change",
+      "Status Changed",
+      `Status auto-updated from ${prevStatus} to ${lead.status} after call log.`,
+      actor,
+    );
+  }
+
+  await lead.save();
+
+  const activityDescription = buildCallActivityDescription({
+    channel: channel as CallChannel,
+    direction: direction as CallDirection,
+    outcome,
+    durationMinutes,
+    spokeWith,
+    interestLevel: interestLevel as InterestLevel,
+    disposition,
+    notes,
+  });
+
+  await addActivity(
+    id,
+    "call_logged",
+    pickedUp ? "Call Connected" : "Call Attempt Logged",
+    activityDescription,
+    actor,
+  );
+
+  if (nextFollowUp) {
+    await addActivity(
+      id,
+      "followup_scheduled",
+      "Follow-up Scheduled",
+      `Next follow-up set to ${nextFollowUp.toLocaleString()}.`,
+      actor,
+    );
+  }
+
+  await writeAudit({
+    userId: actor.id,
+    userName: actor.name,
+    userRole: actor.roleName,
+    action: "Call Logged",
+    entity: "Lead",
+    entityId: id,
+    details: `${OUTCOME_LABELS[outcome]} on ${lead.leadCode} (${lead.company}).`,
+  });
+
+  const [activities, callLogs] = await Promise.all([
+    LeadActivity.find({ leadId: id }).sort({ createdAt: -1 }),
+    CallLog.find({ leadId: id }).sort({ createdAt: -1 }).limit(50),
+  ]);
+
+  await lead.populate(POPULATE);
+
+  return {
+    callLog: serializeCallLog(callLog.toObject() as unknown as Record<string, unknown>),
+    lead: serializeLead(lead.toObject() as unknown as Record<string, unknown>),
+    activities: activities.map((a) =>
+      serializeLeadActivity(a.toObject() as unknown as Record<string, unknown>),
+    ),
+    callLogs: callLogs.map((c) =>
+      serializeCallLog(c.toObject() as unknown as Record<string, unknown>),
     ),
   };
 }

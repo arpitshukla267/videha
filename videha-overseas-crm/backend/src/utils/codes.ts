@@ -1,6 +1,7 @@
 import { Lead } from "../models/Lead";
 import { Task } from "../models/Task";
 import { Order } from "../models/Order";
+import { Bill } from "../models/Bill";
 
 function extractTrailingNumber(code: string, prefix: string): number {
   if (!code.startsWith(prefix)) return 0;
@@ -29,4 +30,15 @@ export async function nextOrderCode(): Promise<string> {
     .lean();
   const current = last?.orderCode ? extractTrailingNumber(last.orderCode, prefix) : 180;
   return `${prefix}${String(Math.max(180, current) + 1).padStart(4, "0")}`;
+}
+
+export async function nextBillCode(): Promise<string> {
+  const year = new Date().getFullYear();
+  const prefix = `VO-INV-${year}-`;
+  const last = await Bill.findOne({ billCode: new RegExp(`^${prefix}`) })
+    .sort({ createdAt: -1 })
+    .select("billCode")
+    .lean();
+  const current = last?.billCode ? extractTrailingNumber(last.billCode, prefix) : 0;
+  return `${prefix}${String(Math.max(0, current) + 1).padStart(4, "0")}`;
 }

@@ -35,6 +35,24 @@ export const PERMISSIONS = [
   },
   { code: "reports.view", name: "View Reports", category: "reports", description: "View reports" },
   {
+    code: "finance.view",
+    name: "View Finance",
+    category: "finance",
+    description: "View revenue, due payments, and finance overview",
+  },
+  {
+    code: "bills.view",
+    name: "View Bills",
+    category: "finance",
+    description: "View invoices and bills from delivered orders",
+  },
+  {
+    code: "bills.edit",
+    name: "Edit Bills",
+    category: "finance",
+    description: "Edit invoices, record payments, and manage bill status",
+  },
+  {
     code: "settings.manage",
     name: "Manage Settings",
     category: "settings",
@@ -69,6 +87,9 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     "tasks.complete",
     "orders.view",
     "reports.view",
+    "finance.view",
+    "bills.view",
+    "bills.edit",
   ],
   SALES_MEMBER: [
     "leads.view",
@@ -101,9 +122,8 @@ export function resolveRolePermissions(
   }
   const permissions = stored ? [...stored] : [];
   const defaults = ROLE_PERMISSIONS[roleName] || [];
-  // Soft-add newly introduced codes that belong to this role by default
   for (const code of defaults) {
-    if (code === "dashboard.view" && !permissions.includes(code)) {
+    if (!permissions.includes(code)) {
       permissions.push(code);
     }
   }

@@ -108,6 +108,14 @@ export const Topbar: React.FC<TopbarProps> = ({ currentTab, onNavigate, onOpenPr
       title: 'Order & Shipment Fulfillment',
       subtitle: 'Manage overseas purchase orders, logistics stages, and delivery tracking'
     },
+    finance: {
+      title: 'Finance Overview',
+      subtitle: 'Revenue collected, due payments, and receivables from delivered orders'
+    },
+    bills: {
+      title: 'Bills & Invoices',
+      subtitle: 'Edit commercial invoices and download PDF documents for delivered orders'
+    },
     team: {
       title: 'Team & Member Directory',
       subtitle: 'Workload distribution, member roles, and departmental permissions'
