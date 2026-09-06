@@ -10,7 +10,9 @@ import { resolveMediaUrl } from "@/lib/media-url";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardBody } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, ToggleLeft, ToggleRight, Loader2, Image as ImageIcon, ExternalLink, Sparkles } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2, Image as ImageIcon } from "lucide-react";
+import { ActiveToggle } from "@/components/ui/active-toggle";
+import { optimisticToggle } from "@/lib/optimistic-toggle";
 
 const EMPTY: Partial<HeroStory> = {
   id: "", number: "", label: "",
@@ -26,6 +28,7 @@ export default function HeroPage() {
   const [editing, setEditing] = useState<Partial<HeroStory>>(EMPTY);
   const [saving, setSaving] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -76,12 +79,14 @@ export default function HeroPage() {
   }
 
   async function toggle(s: HeroStory) {
+    setTogglingId(s._id);
     try {
-      await heroApi.toggle(s._id);
-      toast.success(s.isActive ? "Story hidden" : "Story shown");
-      load();
-    } catch (e: any) {
-      toast.error(e.message);
+      await optimisticToggle(s, setStories, heroApi.toggle, {
+        on: "Story shown on homepage",
+        off: "Story hidden from homepage",
+      });
+    } finally {
+      setTogglingId(null);
     }
   }
 
@@ -174,17 +179,11 @@ export default function HeroPage() {
 
               {/* Action Bar Footer */}
               <div className="px-5 py-3.5 bg-slate-50/70 border-t border-slate-100 flex items-center justify-between">
-                <button
-                  onClick={() => toggle(s)}
-                  className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-purple-600 transition-colors"
-                >
-                  {s.isActive ? (
-                    <ToggleRight className="w-5 h-5 text-emerald-600" />
-                  ) : (
-                    <ToggleLeft className="w-5 h-5 text-slate-400" />
-                  )}
-                  <span className="text-[11px]">{s.isActive ? "Active" : "Hidden"}</span>
-                </button>
+                <ActiveToggle
+                  active={Boolean(s.isActive)}
+                  loading={togglingId === s._id}
+                  onToggle={() => toggle(s)}
+                />
 
                 <div className="flex items-center gap-2">
                   <Button variant="outline" size="sm" onClick={() => openEdit(s)}>
@@ -249,14 +248,10 @@ export default function HeroPage() {
             <Input label="Order" type="number" value={String(editing.order ?? 0)} onChange={(e) => setField("order", Number(e.target.value))} />
             <div className="flex flex-col gap-1.5 justify-end">
               <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Visibility Status</label>
-              <button
-                onClick={() => setField("isActive", !editing.isActive)}
-                className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border text-sm font-semibold transition-colors ${
-                  editing.isActive ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-slate-100 border-slate-200 text-slate-500"
-                }`}
-              >
-                {editing.isActive ? <><ToggleRight className="w-5 h-5 text-emerald-600" /> Active</> : <><ToggleLeft className="w-5 h-5 text-slate-400" /> Hidden</>}
-              </button>
+              <ActiveToggle
+                active={Boolean(editing.isActive)}
+                onToggle={() => setField("isActive", !editing.isActive)}
+              />
             </div>
           </div>
 

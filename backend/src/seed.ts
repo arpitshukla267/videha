@@ -515,12 +515,48 @@ const MARKETS_SEED = [
 
 // ─── Services ─────────────────────────────────────────────────────────────────
 const SERVICES_SEED = [
-  { num: "01", title: "Sourcing", copy: "Direct relationships with farming clusters in Bihar's makhana belt — traceable origin, seasonal planning and reliable raw material supply.", detail: "We work at the wetlands, not just the warehouse.", order: 1 },
-  { num: "02", title: "Quality & Grading", copy: "Size, colour and moisture grading applied at every stage. Export benchmarks maintained shipment after shipment.", detail: "Uniform lots, documented standards.", order: 2 },
-  { num: "03", title: "Processing", copy: "Controlled roasting and puffing with capacity for plain, flavoured and semi-processed formats.", detail: "From raw seed to finished puff.", order: 3 },
-  { num: "04", title: "Private Label", copy: "Custom specifications, blends and packaging developed for brands building their own makhana range.", detail: "Your brand, our production discipline.", order: 4 },
-  { num: "05", title: "Packaging", copy: "Retail-ready packs, bulk sacks and moisture-barrier formats designed for long-haul export integrity.", detail: "Formats built for the journey.", order: 5 },
-  { num: "06", title: "Export & Logistics", copy: "Documentation, compliance paperwork and end-to-end logistics coordination for international buyers.", detail: "From pallet to port to destination.", order: 6 },
+  {
+    num: "01",
+    title: "BULK EXPORT SUPPLY",
+    copy: "We support international buyers with bulk supply of premium agricultural and food products, with product specifications, quantities, packaging, and supply requirements aligned to individual buyer needs.",
+    detail: "Reliable Supply for International Buyers",
+    order: 1,
+  },
+  {
+    num: "02",
+    title: "PRIVATE LABEL",
+    copy: "We support private label requirements, especially for Makhana, with product selection, grade or flavour selection, packaging, branding, and export-ready supply based on buyer requirements.",
+    detail: "Your Brand. Our Product. Export Support.",
+    order: 2,
+  },
+  {
+    num: "03",
+    title: "PRODUCT SOURCING",
+    copy: "We focus on reliable Indian sourcing and quality-focused procurement across our agricultural and food product range, with attention to product specifications and buyer requirements.",
+    detail: "Quality-Focused Indian Sourcing",
+    order: 3,
+  },
+  {
+    num: "04",
+    title: "QUALITY & SPECIFICATIONS",
+    copy: "Product quality parameters, grades, specifications, and buyer requirements are considered throughout the sourcing and supply process. Final technical specifications are provided as applicable to each product.",
+    detail: "Focused on Consistent Product Requirements",
+    order: 4,
+  },
+  {
+    num: "05",
+    title: "EXPORT DOCUMENTATION",
+    copy: "Documentation can be arranged as applicable to the product, destination country, and buyer requirement, supporting a smoother international trade process.",
+    detail: "Documentation Based on Destination Requirements",
+    order: 5,
+  },
+  {
+    num: "06",
+    title: "LOGISTICS SUPPORT",
+    copy: "We coordinate the export process and logistics requirements according to the product, destination, and agreed buyer requirements.",
+    detail: "Supporting the Export Process",
+    order: 6,
+  },
 ];
 
 // ─── Buyer Expectations ───────────────────────────────────────────────────────

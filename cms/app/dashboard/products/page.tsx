@@ -10,7 +10,9 @@ import { resolveMediaUrl } from "@/lib/media-url";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardBody } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, ToggleLeft, ToggleRight, Loader2, GripVertical, Package, Tag, Eye } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2, GripVertical, Package } from "lucide-react";
+import { ActiveToggle } from "@/components/ui/active-toggle";
+import { optimisticToggle } from "@/lib/optimistic-toggle";
 
 const EMPTY: Partial<Product> = {
   index: "", slug: "", name: "", image: "", copy: "",
@@ -32,6 +34,7 @@ export default function ProductsPage() {
   const [editing, setEditing] = useState<Partial<Product>>(EMPTY);
   const [saving, setSaving] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -82,12 +85,14 @@ export default function ProductsPage() {
   }
 
   async function toggle(p: Product) {
+    setTogglingId(p._id);
     try {
-      await productsApi.toggle(p._id);
-      toast.success(p.isActive ? "Product hidden" : "Product shown");
-      load();
-    } catch (e: any) {
-      toast.error(e.message);
+      await optimisticToggle(p, setProducts, productsApi.toggle, {
+        on: "Product shown on site",
+        off: "Product hidden from site",
+      });
+    } finally {
+      setTogglingId(null);
     }
   }
 
@@ -187,18 +192,11 @@ export default function ProductsPage() {
 
               {/* Action Bar Footer */}
               <div className="px-5 py-3.5 bg-slate-50/70 border-t border-slate-100 flex items-center justify-between">
-                <button
-                  onClick={() => toggle(p)}
-                  className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-purple-600 transition-colors"
-                  title={p.isActive ? "Hide Product" : "Show Product"}
-                >
-                  {p.isActive ? (
-                    <ToggleRight className="w-5 h-5 text-emerald-600" />
-                  ) : (
-                    <ToggleLeft className="w-5 h-5 text-slate-400" />
-                  )}
-                  <span className="text-[11px]">{p.isActive ? "Active" : "Hidden"}</span>
-                </button>
+                <ActiveToggle
+                  active={Boolean(p.isActive)}
+                  loading={togglingId === p._id}
+                  onToggle={() => toggle(p)}
+                />
 
                 <div className="flex items-center gap-2">
                   <Button variant="outline" size="sm" onClick={() => openEdit(p)}>
@@ -391,16 +389,10 @@ export default function ProductsPage() {
               <Input label="Order" type="number" value={String(editing.order ?? 0)} onChange={(e) => setField("order", Number(e.target.value))} />
               <div className="flex flex-col gap-1.5 justify-end">
                 <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Visibility Status</label>
-                <button
-                  onClick={() => setField("isActive", !editing.isActive)}
-                  className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-semibold transition-colors ${
-                    editing.isActive ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-slate-100 border-slate-200 text-slate-500"
-                  }`}
-                >
-                  {editing.isActive
-                    ? <><ToggleRight className="w-5 h-5 text-emerald-600" /> Active (Visible on site)</>
-                    : <><ToggleLeft className="w-5 h-5 text-slate-400" /> Hidden from site</>}
-                </button>
+                <ActiveToggle
+                  active={Boolean(editing.isActive)}
+                  onToggle={() => setField("isActive", !editing.isActive)}
+                />
               </div>
             </div>
           </section>

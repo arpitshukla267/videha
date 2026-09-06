@@ -12,90 +12,16 @@ import {
 import {
   ArrowRight,
   CheckCircle2,
-  ShieldCheck,
-  Layers,
-  FileText,
   ChevronRight,
-  Check,
 } from "lucide-react";
 import { SectionLabel } from "@/components/section-label";
 import { Reveal } from "@/components/reveal";
 import { FeatureFilmstrip } from "@/components/ui/feature-filmstrip";
-
-const SERVICES_DATA = [
-  {
-    num: "01",
-    title: "BULK EXPORT SUPPLY",
-    tagline: "Reliable Supply for International Buyers",
-    copy: "We support international buyers with bulk supply of premium agricultural and food products, with product specifications, quantities, packaging, and supply requirements aligned to individual buyer needs.",
-    image: "/images/process-process.webp",
-    specs: [
-      "Bulk supply options",
-      "Buyer-specific product requirements",
-      "Flexible packaging solutions",
-    ],
-  },
-  {
-    num: "02",
-    title: "PRIVATE LABEL",
-    tagline: "Your Brand. Our Product. Export Support.",
-    copy: "We support private label requirements, especially for Makhana, with product selection, grade or flavour selection, packaging, branding, and export-ready supply based on buyer requirements.",
-    image: "/images/product-flavoured.webp",
-    specs: [
-      "Private label support",
-      "Retail and custom packaging",
-      "Product and branding requirements",
-    ],
-  },
-  {
-    num: "03",
-    title: "PRODUCT SOURCING",
-    tagline: "Quality-Focused Indian Sourcing",
-    copy: "We focus on reliable Indian sourcing and quality-focused procurement across our agricultural and food product range, with attention to product specifications and buyer requirements.",
-    image: "/images/process-source.webp",
-    specs: [
-      "Reliable Indian sourcing",
-      "Quality-focused procurement",
-      "Buyer-specific requirements",
-    ],
-  },
-  {
-    num: "04",
-    title: "QUALITY & SPECIFICATIONS",
-    tagline: "Focused on Consistent Product Requirements",
-    copy: "Product quality parameters, grades, specifications, and buyer requirements are considered throughout the sourcing and supply process. Final technical specifications are provided as applicable to each product.",
-    image: "/images/quality-macro.webp",
-    specs: [
-      "Product grade and size specifications",
-      "Quality parameters",
-      "Buyer-specific requirements",
-    ],
-  },
-  {
-    num: "05",
-    title: "EXPORT DOCUMENTATION",
-    tagline: "Documentation Based on Destination Requirements",
-    copy: "Documentation can be arranged as applicable to the product, destination country, and buyer requirement, supporting a smoother international trade process.",
-    image: "/images/process-export.webp",
-    specs: [
-      "Commercial Invoice",
-      "Packing List",
-      "Certificate of Origin and COA",
-    ],
-  },
-  {
-    num: "06",
-    title: "LOGISTICS SUPPORT",
-    tagline: "Supporting the Export Process",
-    copy: "We coordinate the export process and logistics requirements according to the product, destination, and agreed buyer requirements.",
-    image: "/images/process-pack.webp",
-    specs: [
-      "Export dispatch coordination",
-      "Destination-based requirements",
-      "Flexible Incoterm options",
-    ],
-  },
-];
+import {
+  getServicesPageContent,
+  STATIC_SERVICES_PAGE,
+  type ServicePageItem,
+} from "@/lib/services-page";
 
 const FLOW_STEPS = [
   {
@@ -113,28 +39,24 @@ const FLOW_STEPS = [
 ];
 
 export default function ServicesPage() {
-  const [services, setServices] = useState(SERVICES_DATA);
+  const [services, setServices] = useState<ServicePageItem[]>(STATIC_SERVICES_PAGE);
   const [activeIndex, setActiveIndex] = useState(0);
   const stickyContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const api = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
-    fetch(`${api}/api/content/services`, { cache: "no-store" })
-      .then((res) => res.json())
-      .then((json) => {
-        if (!json.success || !Array.isArray(json.data) || json.data.length === 0) return;
-        setServices(
-          json.data.map((item: { num: string; title: string; copy: string; detail: string }, i: number) => ({
-            num: item.num || SERVICES_DATA[i]?.num || String(i + 1).padStart(2, "0"),
-            title: item.title,
-            tagline: item.detail || SERVICES_DATA[i]?.tagline || "",
-            copy: item.copy,
-            image: SERVICES_DATA[i]?.image || "/images/process-process.webp",
-            specs: SERVICES_DATA[i]?.specs || [],
-          })),
-        );
+    let cancelled = false;
+
+    getServicesPageContent()
+      .then((items) => {
+        if (!cancelled && items.length > 0) setServices(items);
       })
-      .catch(() => {});
+      .catch(() => {
+        /* keep STATIC_SERVICES_PAGE */
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const { scrollYProgress } = useScroll({
@@ -160,7 +82,9 @@ export default function ServicesPage() {
     window.scrollTo({ top: targetY, behavior: "smooth" });
   };
 
-  const current = services[Math.min(activeIndex, Math.max(services.length - 1, 0))] ?? SERVICES_DATA[0];
+  const current =
+    services[Math.min(activeIndex, Math.max(services.length - 1, 0))] ??
+    STATIC_SERVICES_PAGE[0];
 
   return (
     <main className="overflow-x-clip bg-background">
@@ -240,7 +164,7 @@ export default function ServicesPage() {
                 </span>
                 {services.map((service, idx) => (
                   <button
-                    key={service.num}
+                    key={`${service.num}-${service.title}`}
                     onClick={() => scrollToItem(idx)}
                     className={`text-left border-b border-border/60 py-6 pr-4 flex items-start gap-4 transition-all duration-300 shrink-0 ${
                       activeIndex === idx
@@ -380,59 +304,12 @@ export default function ServicesPage() {
                       {step.desc}
                     </p>
                   </div>
-
-                  {/* <div className="mt-4 pt-3 border-t border-border/40 text-[9px] font-mono text-accent uppercase tracking-widest">
-                    Phase 0{idx + 1}
-                  </div> */}
                 </div>
               ))}
             </div>
           </div>
         </div>
       </section>
-
-      {/* B2B SERVICE GUARANTEES */}
-      {/* <section className="py-24 md:py-32 bg-background border-b border-border">
-        <div className="mx-auto max-w-[1400px] px-5 md:px-10">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="p-8 border border-border bg-background">
-              <ShieldCheck className="w-8 h-8 text-primary mb-4" />
-              <h3 className="text-lg font-bold text-foreground">
-                Moisture Content Guarantee
-              </h3>
-              <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
-                If the moisture content in popped shipments exceeds the
-                contracted 4.5% limit upon container departure, we offer
-                replacement lots immediately.
-              </p>
-            </div>
-
-            <div className="p-8 border border-border bg-background">
-              <Layers className="w-8 h-8 text-primary mb-4" />
-              <h3 className="text-lg font-bold text-foreground">
-                Custom Packaging Adaptability
-              </h3>
-              <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
-                We format retail prints, box sizing, nitrogen levels, and outer
-                export carton densities to match exact regulations of the target
-                port.
-              </p>
-            </div>
-
-            <div className="p-8 border border-border bg-background">
-              <FileText className="w-8 h-8 text-primary mb-4" />
-              <h3 className="text-lg font-bold text-foreground">
-                In-House Export Bureau
-              </h3>
-              <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
-                We handle land freight, customs inspections, and global sea
-                lines to deliver complete door-to-port or door-to-door transit
-                logistics.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section> */}
 
       {/* CTA SECTION */}
       <section className="py-20 md:py-28 bg-foreground text-background">
@@ -453,7 +330,7 @@ export default function ServicesPage() {
               </div>
 
               <Link
-                href={`/contact?service=${encodeURIComponent("Bulk Export Supply")}&additionalRequirement=${encodeURIComponent("Service Quotation Request for Videha Overseas Services")}`}
+                href={`/contact?service=${encodeURIComponent(services[0]?.title ?? "Bulk Export Supply")}&additionalRequirement=${encodeURIComponent("Service Quotation Request for Videha Overseas Services")}`}
                 className="group inline-flex items-center gap-3 border border-background/40 px-8 py-4 text-[12px] font-medium uppercase tracking-[0.18em] text-background hover:bg-background hover:text-foreground transition-colors whitespace-nowrap"
               >
                 Request Quotation

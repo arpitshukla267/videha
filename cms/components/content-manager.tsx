@@ -9,7 +9,9 @@ import type { UploadContext, UploadSection } from "@/lib/upload-context";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardBody } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, ToggleLeft, ToggleRight, Loader2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2 } from "lucide-react";
+import { ActiveToggle } from "@/components/ui/active-toggle";
+import { optimisticToggle } from "@/lib/optimistic-toggle";
 
 export type FieldDef =
   | { key: string; label: string; type: "text"; placeholder?: string; span?: "full" }
@@ -52,6 +54,7 @@ export function ContentManager<T extends { _id: string; isActive?: boolean; orde
   const [editing, setEditing] = useState<Partial<T>>(emptyDefaults);
   const [saving, setSaving] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -100,12 +103,14 @@ export function ContentManager<T extends { _id: string; isActive?: boolean; orde
   }
 
   async function toggle(item: T) {
+    setTogglingId(item._id);
     try {
-      await api.toggle(item._id);
-      toast.success((item as any).isActive ? "Hidden" : "Shown");
-      load();
-    } catch (e: any) {
-      toast.error(e.message);
+      await optimisticToggle(item, setItems, api.toggle, {
+        on: "Shown on site",
+        off: "Hidden from site",
+      });
+    } finally {
+      setTogglingId(null);
     }
   }
 
@@ -147,18 +152,11 @@ export function ContentManager<T extends { _id: string; isActive?: boolean; orde
               <div className="px-5 py-3.5 bg-slate-50/70 border-t border-slate-100 flex items-center justify-between mt-auto">
                 <div className="flex items-center gap-2">
                   {item.isActive !== undefined && (
-                    <button
-                      onClick={() => toggle(item)}
-                      className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-purple-600 transition-colors"
-                      title={item.isActive ? "Hide Item" : "Show Item"}
-                    >
-                      {item.isActive ? (
-                        <ToggleRight className="w-5 h-5 text-emerald-600" />
-                      ) : (
-                        <ToggleLeft className="w-5 h-5 text-slate-400" />
-                      )}
-                      <span className="text-[11px]">{item.isActive ? "Active" : "Hidden"}</span>
-                    </button>
+                    <ActiveToggle
+                      active={Boolean(item.isActive)}
+                      loading={togglingId === item._id}
+                      onToggle={() => toggle(item)}
+                    />
                   )}
                 </div>
 
@@ -227,16 +225,10 @@ export function ContentManager<T extends { _id: string; isActive?: boolean; orde
           {(editing as any).isActive !== undefined && (
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Visibility Status</label>
-              <button
-                onClick={() => setField("isActive", !(editing as any).isActive)}
-                className={`w-fit flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-semibold transition-colors ${
-                  (editing as any).isActive ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-slate-100 border-slate-200 text-slate-500"
-                }`}
-              >
-                {(editing as any).isActive
-                  ? <><ToggleRight className="w-5 h-5 text-emerald-600" /> Active (Visible on site)</>
-                  : <><ToggleLeft className="w-5 h-5 text-slate-400" /> Hidden</>}
-              </button>
+              <ActiveToggle
+                active={Boolean((editing as any).isActive)}
+                onToggle={() => setField("isActive", !(editing as any).isActive)}
+              />
             </div>
           )}
 

@@ -136,7 +136,7 @@ export type BulkContent = {
 
 // ─── Fetch helpers ────────────────────────────────────────────────────────────
 
-async function apiFetch<T>(path: string): Promise<T | null> {
+export async function apiFetch<T>(path: string): Promise<T | null> {
   try {
     const res = await fetch(`${API_URL}${path}`, {
       cache: "no-store",
