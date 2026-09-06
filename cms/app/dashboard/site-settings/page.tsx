@@ -52,7 +52,7 @@ const DEFAULT_DISCLAIMER =
 const TABS: { id: Tab; label: string }[] = [
   { id: "contact", label: "Contact Details" },
   { id: "registrations", label: "Registrations" },
-  { id: "brochure", label: "Brochure" },
+  // { id: "brochure", label: "Brochure" },
 ];
 
 function slugify(s: string) {
