@@ -14,7 +14,7 @@ const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3005";
 
 // ─── Middleware ──────────────────────────────────────────────────────────────
 app.use(cors({
-  origin: [FRONTEND_URL, "http://localhost:3000", "http://localhost:3005", "http://localhost:3010"],
+  origin: [FRONTEND_URL, "http://localhost:3000", "http://localhost:3005", "http://localhost:3010", "https://videha-cms.vercel.app"],
   credentials: true,
 }));
 app.use(express.json({ limit: "10mb" }));
