@@ -15,6 +15,7 @@ import {
   ChevronRight,
   Settings,
   FileText,
+  ExternalLink,
 } from "lucide-react";
 
 const NAV = [
@@ -22,7 +23,6 @@ const NAV = [
   { label: "Products", href: "/dashboard/products", icon: ShoppingBag },
   { label: "Hero Stories", href: "/dashboard/hero", icon: Clapperboard },
   { label: "Site Settings", href: "/dashboard/site-settings", icon: Settings },
-  { label: "Quotation Builder", href: "/dashboard/quotation-builder", icon: FileText },
   {
     label: "Site Content",
     icon: Globe,
@@ -38,6 +38,7 @@ const NAV = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const quotationBuilderUrl = process.env.NEXT_PUBLIC_QUOTATION_BUILDER_URL?.trim();
 
   return (
     <aside className="w-72 shrink-0 bg-[#0f172a] min-h-screen flex flex-col shadow-xl">
@@ -107,6 +108,19 @@ export function Sidebar() {
               </Link>
             );
           })}
+
+          {quotationBuilderUrl ? (
+            <a
+              href={quotationBuilderUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-3 px-4 py-3.5 rounded-lg text-sm transition-all mt-1 text-slate-300 hover:bg-white/5 hover:text-white"
+            >
+              <FileText className="w-4 h-4 shrink-0 opacity-80" />
+              <span className="flex-1">Quotation Builder</span>
+              <ExternalLink className="w-3.5 h-3.5 opacity-50" />
+            </a>
+          ) : null}
         </div>
       </nav>
 
