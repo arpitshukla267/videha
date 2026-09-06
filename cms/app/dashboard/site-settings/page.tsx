@@ -348,49 +348,7 @@ export default function SiteSettingsPage() {
         </Card>
       )}
 
-      {tab === "brochure" && (
-        <Card>
-          <CardBody className="space-y-5">
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={brochure.enabled}
-                onChange={(e) => setBrochure({ ...brochure, enabled: e.target.checked })}
-                className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-              />
-              <span className="text-sm font-medium text-slate-700">Show Download Brochure button in navigation</span>
-            </label>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Input label="Button Label" value={brochure.label} onChange={(e) => setBrochure({ ...brochure, label: e.target.value })} />
-              <Input label="Download Filename" value={brochure.fileName} onChange={(e) => setBrochure({ ...brochure, fileName: e.target.value })} />
-            </div>
-
-            <Input label="Brochure URL" value={brochure.url} onChange={(e) => setBrochure({ ...brochure, url: e.target.value })} hint="/brochure/VIDEHA-OVERSEAS.pdf or /uploads/..." />
-
-            <div className="border-2 border-dashed border-slate-200 rounded-xl p-8 text-center bg-slate-50/50">
-              <FileText className="w-10 h-10 text-blue-400 mx-auto mb-3" />
-              <p className="text-sm text-slate-600 mb-4">Upload a new PDF brochure</p>
-              <label className="inline-flex">
-                <input
-                  type="file"
-                  accept="application/pdf,.pdf"
-                  className="hidden"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    if (f) handleBrochureUpload(f);
-                    e.target.value = "";
-                  }}
-                />
-                <span className="inline-flex items-center gap-2 px-5 py-3 bg-blue-600 text-white text-sm font-medium rounded-lg cursor-pointer hover:bg-blue-700 transition-colors">
-                  {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                  {uploading ? "Uploading…" : "Choose PDF"}
-                </span>
-              </label>
-            </div>
-          </CardBody>
-        </Card>
-      )}
+      
     </div>
   );
 }
