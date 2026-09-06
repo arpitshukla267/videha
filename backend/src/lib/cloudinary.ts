@@ -1,9 +1,12 @@
-import { v2 as cloudinary } from "cloudinary";
+import { v2 as cloudinary, type UploadApiErrorResponse, type UploadApiResponse } from "cloudinary";
 import fs from "fs";
+import os from "os";
 import path from "path";
 
 const ROOT_FOLDER = process.env.CLOUDINARY_FOLDER || "videha-overseas";
 export const CLOUDINARY_MAX_BYTES = 10 * 1024 * 1024;
+const CHUNKED_UPLOAD_BYTES = 6 * 1024 * 1024;
+export const SEED_UPLOAD_BATCH_SIZE = 5;
 
 export const UPLOAD_SECTIONS = [
   "products",
@@ -54,7 +57,7 @@ export async function verifyCloudinaryCredentials(): Promise<void> {
     await new Promise<void>((resolve, reject) => {
       const stream = cloudinary.uploader.upload_stream(
         { public_id: testPublicId, overwrite: true },
-        (error) => {
+        (error: UploadApiErrorResponse | undefined) => {
           if (error) reject(error);
           else resolve();
         },
@@ -121,9 +124,9 @@ export async function uploadToCloudinary(
   const resourceType = resourceTypeForMime(options.mime);
   const size = typeof source === "string" ? fs.statSync(source).size : source.length;
 
-  if (size > CLOUDINARY_MAX_BYTES) {
+  if (resourceType === "raw" && size > CLOUDINARY_MAX_BYTES) {
     throw new Error(
-      `${options.originalName} is ${(size / (1024 * 1024)).toFixed(1)} MB — Cloudinary allows up to 10 MB per file on this plan.`,
+      `${options.originalName} is ${(size / (1024 * 1024)).toFixed(1)} MB — PDFs over 10 MB are not uploaded to Cloudinary.`,
     );
   }
 
@@ -139,26 +142,81 @@ export async function uploadToCloudinary(
     if (ext) uploadOptions.format = ext;
   }
 
-  const result = await new Promise<any>((resolve, reject) => {
-    if (typeof source === "string") {
-      cloudinary.uploader.upload(source, uploadOptions, (error, uploadResult) => {
-        if (error) reject(error);
-        else resolve(uploadResult);
-      });
+  let filePath = typeof source === "string" ? source : null;
+  let tempFile: string | null = null;
+
+  if (Buffer.isBuffer(source) && size > CLOUDINARY_MAX_BYTES) {
+    tempFile = path.join(
+      os.tmpdir(),
+      `cloudinary-${Date.now()}-${path.basename(options.originalName)}`,
+    );
+    fs.writeFileSync(tempFile, source);
+    filePath = tempFile;
+  }
+
+  try {
+    const useChunkedUpload =
+      resourceType === "image" && size > CLOUDINARY_MAX_BYTES && filePath !== null;
+
+    const result = useChunkedUpload
+      ? await uploadChunkedFile(filePath!, uploadOptions)
+      : await uploadDirect(source, filePath, uploadOptions);
+
+    return {
+      url: result.secure_url as string,
+      publicId: result.public_id as string,
+    };
+  } finally {
+    if (tempFile) fs.unlinkSync(tempFile);
+  }
+}
+
+function uploadDirect(
+  source: Buffer | string,
+  filePath: string | null,
+  uploadOptions: Record<string, unknown>,
+): Promise<UploadApiResponse> {
+  return new Promise((resolve, reject) => {
+    if (filePath !== null) {
+      cloudinary.uploader.upload(
+        filePath,
+        uploadOptions,
+        (error: UploadApiErrorResponse | undefined, uploadResult?: UploadApiResponse) => {
+          if (error) reject(error);
+          else resolve(uploadResult!);
+        },
+      );
       return;
     }
 
-    const stream = cloudinary.uploader.upload_stream(uploadOptions, (error, uploadResult) => {
-      if (error) reject(error);
-      else resolve(uploadResult);
-    });
-    stream.end(source);
+    const stream = cloudinary.uploader.upload_stream(
+      uploadOptions,
+      (error: UploadApiErrorResponse | undefined, uploadResult?: UploadApiResponse) => {
+        if (error) reject(error);
+        else resolve(uploadResult!);
+      },
+    );
+    stream.end(source as Buffer);
   });
+}
 
-  return {
-    url: result.secure_url as string,
-    publicId: result.public_id as string,
-  };
+function uploadChunkedFile(
+  filePath: string,
+  uploadOptions: Record<string, unknown>,
+): Promise<UploadApiResponse> {
+  return new Promise((resolve, reject) => {
+    cloudinary.uploader.upload_chunked(
+      filePath,
+      {
+        ...uploadOptions,
+        chunk_size: CHUNKED_UPLOAD_BYTES,
+      },
+      (error: UploadApiErrorResponse | undefined, uploadResult?: UploadApiResponse) => {
+        if (error) reject(error);
+        else resolve(uploadResult!);
+      },
+    );
+  });
 }
 
 export async function deleteFromCloudinary(publicId: string, resourceType: "image" | "raw" = "image") {
