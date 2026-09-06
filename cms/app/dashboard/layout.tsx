@@ -5,10 +5,10 @@ import { Sidebar } from "@/components/sidebar";
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
     <AuthGate>
-      <div className="flex min-h-screen bg-[#f0f4f8]">
+      <div className="flex h-screen overflow-hidden bg-[#f4f5fa] font-sans antialiased text-slate-900">
         <Sidebar />
-        <main className="flex-1 overflow-auto">
-          <div className="max-w-6xl mx-auto px-6 py-10 md:px-10 md:py-12">
+        <main className="flex-1 overflow-y-auto h-full">
+          <div className="max-w-[1440px] mx-auto px-6 py-8 md:px-10 md:py-10">
             {children}
           </div>
         </main>
@@ -16,3 +16,5 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     </AuthGate>
   );
 }
+
+

@@ -8,9 +8,9 @@ import { Input, Textarea } from "@/components/ui/input";
 import { ImageUpload } from "@/components/image-upload";
 import { resolveMediaUrl } from "@/lib/media-url";
 import { PageHeader } from "@/components/page-header";
-import { Card } from "@/components/ui/card";
+import { Card, CardBody } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, ToggleLeft, ToggleRight, Loader2, GripVertical } from "lucide-react";
+import { Plus, Pencil, Trash2, ToggleLeft, ToggleRight, Loader2, GripVertical, Package, Tag, Eye } from "lucide-react";
 
 const EMPTY: Partial<Product> = {
   index: "", slug: "", name: "", image: "", copy: "",
@@ -109,59 +109,98 @@ export default function ProductsPage() {
   return (
     <div>
       <PageHeader
-        title="Products"
-        description="Manage your product catalogue — all 10 makhana products and their details."
-        action={<Button onClick={openNew} size="lg"><Plus className="w-4 h-4" /> Add Product</Button>}
+        title="Products Catalogue"
+        description="Manage your product catalogue — makhana products, specifications, and commercial details."
+        action={
+          <Button onClick={openNew} size="lg" className="shadow-md shadow-purple-600/20">
+            <Plus className="w-4 h-4" /> Add Product
+          </Button>
+        }
       />
 
       {loading ? (
-        <div className="flex items-center justify-center h-40">
-          <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="w-7 h-7 animate-spin text-purple-600" />
         </div>
       ) : (
-        <div className="flex flex-col gap-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {products.map((p) => (
-            <Card key={p._id} className="overflow-hidden">
-              <div className="flex items-center gap-4 px-4 py-3">
-                <GripVertical className="w-4 h-4 text-slate-300 shrink-0" />
+            <Card key={p._id} className="overflow-hidden flex flex-col justify-between group hover:border-purple-300 hover:shadow-lg transition-all duration-200">
+              <div>
+                {/* Product Image Header Container */}
+                <div className="relative h-48 w-full bg-slate-100 overflow-hidden border-b border-slate-100">
+                  {p.image ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={resolveMediaUrl(p.image)}
+                      alt={p.name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-slate-300">
+                      <Package className="w-12 h-12" />
+                    </div>
+                  )}
 
-                {/* Image thumbnail */}
-                <div className="w-14 h-14 rounded-lg overflow-hidden bg-slate-100 shrink-0">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={resolveMediaUrl(p.image)}
-                    alt={p.name}
-                    className="w-full h-full object-cover"
-                    onError={(e) => { (e.target as HTMLImageElement).src = ""; }}
-                  />
-                </div>
+                  {/* Index badge top left */}
+                  <div className="absolute top-3 left-3 bg-slate-900/80 backdrop-blur-md text-white text-[11px] font-mono px-2.5 py-1 rounded-full font-semibold">
+                    #{p.index || "00"}
+                  </div>
 
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-xs font-mono text-slate-400">#{p.index}</span>
-                    <span className="font-semibold text-slate-900 text-sm">{p.name}</span>
+                  {/* Active / Hidden status top right */}
+                  <div className="absolute top-3 right-3">
                     <Badge variant={p.isActive ? "success" : "warning"}>
                       {p.isActive ? "Active" : "Hidden"}
                     </Badge>
                   </div>
-                  <p className="text-xs text-slate-500 mt-0.5 truncate">{p.copy}</p>
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {p.meta.slice(0, 3).map((m) => (
-                      <Badge key={m} variant="outline">{m}</Badge>
-                    ))}
-                  </div>
                 </div>
 
-                <div className="flex items-center gap-2 shrink-0">
-                  <button
-                    onClick={() => toggle(p)}
-                    className="text-slate-400 hover:text-accent transition-colors"
-                    title={p.isActive ? "Hide" : "Show"}
-                  >
-                    {p.isActive
-                      ? <ToggleRight className="w-5 h-5 text-green-500" />
-                      : <ToggleLeft className="w-5 h-5 text-slate-400" />}
-                  </button>
+                {/* Card Content Body */}
+                <CardBody className="p-5 space-y-3">
+                  <div>
+                    <h3 className="font-bold text-slate-900 text-base group-hover:text-purple-600 transition-colors line-clamp-1">
+                      {p.name}
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-1 line-clamp-2 leading-relaxed">
+                      {p.copy || p.tagline || "No description provided."}
+                    </p>
+                  </div>
+
+                  {/* Meta tags chips */}
+                  {p.meta && p.meta.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      {p.meta.slice(0, 3).map((m) => (
+                        <span key={m} className="px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 text-[10px] font-medium border border-purple-100">
+                          {m}
+                        </span>
+                      ))}
+                      {p.meta.length > 3 && (
+                        <span className="px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-500 text-[10px] font-medium">
+                          +{p.meta.length - 3}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </CardBody>
+              </div>
+
+              {/* Action Bar Footer */}
+              <div className="px-5 py-3.5 bg-slate-50/70 border-t border-slate-100 flex items-center justify-between">
+                <button
+                  onClick={() => toggle(p)}
+                  className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-purple-600 transition-colors"
+                  title={p.isActive ? "Hide Product" : "Show Product"}
+                >
+                  {p.isActive ? (
+                    <ToggleRight className="w-5 h-5 text-emerald-600" />
+                  ) : (
+                    <ToggleLeft className="w-5 h-5 text-slate-400" />
+                  )}
+                  <span className="text-[11px]">{p.isActive ? "Active" : "Hidden"}</span>
+                </button>
+
+                <div className="flex items-center gap-2">
                   <Button variant="outline" size="sm" onClick={() => openEdit(p)}>
                     <Pencil className="w-3.5 h-3.5" /> Edit
                   </Button>
@@ -177,10 +216,10 @@ export default function ProductsPage() {
 
       {/* Edit / Create Modal */}
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing._id ? "Edit Product" : "Add Product"} size="xl">
-        <div className="flex flex-col gap-5">
+        <div className="flex flex-col gap-6">
           {/* Basic */}
-          <section>
-            <h3 className="text-xs font-bold text-blue-600 uppercase tracking-widest mb-3">Basic Info</h3>
+          <section className="bg-slate-50/50 p-4 rounded-xl border border-slate-100 space-y-3">
+            <h3 className="text-xs font-bold text-purple-600 uppercase tracking-widest">Basic Information</h3>
             <div className="grid grid-cols-2 gap-3">
               <Input label="Index" value={editing.index || ""} onChange={(e) => setField("index", e.target.value)} placeholder="01" />
               <Input
@@ -199,8 +238,8 @@ export default function ProductsPage() {
           </section>
 
           {/* Image */}
-          <section>
-            <h3 className="text-xs font-bold text-blue-600 uppercase tracking-widest mb-3">Image</h3>
+          <section className="bg-slate-50/50 p-4 rounded-xl border border-slate-100 space-y-3">
+            <h3 className="text-xs font-bold text-purple-600 uppercase tracking-widest">Product Image</h3>
             <ImageUpload
               value={editing.image || ""}
               onChange={(url) => setField("image", url)}
@@ -214,8 +253,8 @@ export default function ProductsPage() {
           </section>
 
           {/* Listing Card Copy */}
-          <section>
-            <h3 className="text-xs font-bold text-blue-600 uppercase tracking-widest mb-3">Listing Card</h3>
+          <section className="bg-slate-50/50 p-4 rounded-xl border border-slate-100 space-y-3">
+            <h3 className="text-xs font-bold text-purple-600 uppercase tracking-widest">Listing Card Details</h3>
             <div className="flex flex-col gap-3">
               <Textarea label="Copy (card description)" value={editing.copy || ""} onChange={(e) => setField("copy", e.target.value)} rows={2} />
               <Input
@@ -234,8 +273,8 @@ export default function ProductsPage() {
           </section>
 
           {/* Detail Page */}
-          <section>
-            <h3 className="text-xs font-bold text-blue-600 uppercase tracking-widest mb-3">Detail Page</h3>
+          <section className="bg-slate-50/50 p-4 rounded-xl border border-slate-100 space-y-3">
+            <h3 className="text-xs font-bold text-purple-600 uppercase tracking-widest">Detail Page Specs</h3>
             <div className="flex flex-col gap-3">
               <Textarea label="Description" value={editing.description || ""} onChange={(e) => setField("description", e.target.value)} rows={4} />
               <div className="grid grid-cols-2 gap-3">
@@ -248,8 +287,8 @@ export default function ProductsPage() {
           </section>
 
           {/* Quality Parameters */}
-          <section>
-            <h3 className="text-xs font-bold text-blue-600 uppercase tracking-widest mb-3">Quality Parameters</h3>
+          <section className="bg-slate-50/50 p-4 rounded-xl border border-slate-100 space-y-3">
+            <h3 className="text-xs font-bold text-purple-600 uppercase tracking-widest">Quality Parameters</h3>
             <div className="flex flex-col gap-2">
               {(editing.qualityParameters || []).map((qp, i) => (
                 <div key={i} className="flex gap-2 items-center">
@@ -278,9 +317,9 @@ export default function ProductsPage() {
                       const updated = (editing.qualityParameters || []).filter((_, idx) => idx !== i);
                       setField("qualityParameters", updated);
                     }}
-                    className="text-red-400 hover:text-red-600 p-1"
+                    className="text-rose-400 hover:text-rose-600 p-2"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
+                    <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
               ))}
@@ -295,8 +334,8 @@ export default function ProductsPage() {
           </section>
 
           {/* Commercial */}
-          <section>
-            <h3 className="text-xs font-bold text-blue-600 uppercase tracking-widest mb-3">Commercial Details</h3>
+          <section className="bg-slate-50/50 p-4 rounded-xl border border-slate-100 space-y-3">
+            <h3 className="text-xs font-bold text-purple-600 uppercase tracking-widest">Commercial Details</h3>
             <div className="flex flex-col gap-3">
               <Textarea label="Packaging Options" value={editing.packagingOptions || ""} onChange={(e) => setField("packagingOptions", e.target.value)} rows={2} />
               <div className="grid grid-cols-2 gap-3">
@@ -311,8 +350,8 @@ export default function ProductsPage() {
           </section>
 
           {/* Processing Steps */}
-          <section>
-            <h3 className="text-xs font-bold text-blue-600 uppercase tracking-widest mb-3">Processing Steps</h3>
+          <section className="bg-slate-50/50 p-4 rounded-xl border border-slate-100 space-y-3">
+            <h3 className="text-xs font-bold text-purple-600 uppercase tracking-widest">Processing Steps</h3>
             <div className="flex flex-col gap-2">
               {(editing.processingSteps || []).map((step, i) => (
                 <div key={i} className="flex gap-2 items-center">
@@ -329,9 +368,9 @@ export default function ProductsPage() {
                   />
                   <button
                     onClick={() => setField("processingSteps", (editing.processingSteps || []).filter((_, idx) => idx !== i))}
-                    className="text-red-400 hover:text-red-600 p-1"
+                    className="text-rose-400 hover:text-rose-600 p-2"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
+                    <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
               ))}
@@ -346,28 +385,28 @@ export default function ProductsPage() {
           </section>
 
           {/* Settings */}
-          <section>
-            <h3 className="text-xs font-bold text-blue-600 uppercase tracking-widest mb-3">Settings</h3>
+          <section className="bg-slate-50/50 p-4 rounded-xl border border-slate-100 space-y-3">
+            <h3 className="text-xs font-bold text-purple-600 uppercase tracking-widest">Display Settings</h3>
             <div className="grid grid-cols-2 gap-3">
               <Input label="Order" type="number" value={String(editing.order ?? 0)} onChange={(e) => setField("order", Number(e.target.value))} />
-              <div className="flex flex-col gap-1 justify-end">
-                <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Visibility</label>
+              <div className="flex flex-col gap-1.5 justify-end">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Visibility Status</label>
                 <button
                   onClick={() => setField("isActive", !editing.isActive)}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-md border text-sm font-medium transition-colors ${
-                    editing.isActive ? "bg-green-50 border-green-200 text-green-700" : "bg-slate-50 border-slate-200 text-slate-500"
+                  className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-semibold transition-colors ${
+                    editing.isActive ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-slate-100 border-slate-200 text-slate-500"
                   }`}
                 >
                   {editing.isActive
-                    ? <><ToggleRight className="w-4 h-4" /> Active (visible)</>
-                    : <><ToggleLeft className="w-4 h-4" /> Hidden</>}
+                    ? <><ToggleRight className="w-5 h-5 text-emerald-600" /> Active (Visible on site)</>
+                    : <><ToggleLeft className="w-5 h-5 text-slate-400" /> Hidden from site</>}
                 </button>
               </div>
             </div>
           </section>
 
           {/* Actions */}
-          <div className="flex justify-end gap-3 pt-2 border-t border-slate-100">
+          <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
             <Button variant="outline" onClick={() => setModalOpen(false)}>Cancel</Button>
             <Button onClick={save} loading={saving}>
               {editing._id ? "Save Changes" : "Create Product"}
@@ -378,12 +417,13 @@ export default function ProductsPage() {
 
       {/* Delete Confirm */}
       <Modal open={!!deleteId} onClose={() => setDeleteId(null)} title="Delete Product?" size="sm">
-        <p className="text-sm text-slate-600 mb-6">This will permanently delete this product. This action cannot be undone.</p>
+        <p className="text-sm text-slate-600 mb-6">This action will permanently remove this product from the database.</p>
         <div className="flex justify-end gap-3">
           <Button variant="outline" onClick={() => setDeleteId(null)}>Cancel</Button>
-          <Button variant="destructive" onClick={() => deleteId && doDelete(deleteId)}>Delete</Button>
+          <Button variant="destructive" onClick={() => deleteId && doDelete(deleteId)}>Delete Product</Button>
         </div>
       </Modal>
     </div>
   );
 }
+

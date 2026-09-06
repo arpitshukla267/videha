@@ -7,9 +7,9 @@ import { Input, Textarea } from "@/components/ui/input";
 import { ImageUpload } from "@/components/image-upload";
 import type { UploadContext, UploadSection } from "@/lib/upload-context";
 import { PageHeader } from "@/components/page-header";
-import { Card } from "@/components/ui/card";
+import { Card, CardBody } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, ToggleLeft, ToggleRight, Loader2, GripVertical } from "lucide-react";
+import { Plus, Pencil, Trash2, ToggleLeft, ToggleRight, Loader2 } from "lucide-react";
 
 export type FieldDef =
   | { key: string; label: string; type: "text"; placeholder?: string; span?: "full" }
@@ -23,6 +23,7 @@ interface ContentManagerProps<T extends { _id: string; isActive?: boolean; order
   fields: FieldDef[];
   uploadSection?: UploadSection;
   uploadIdentifier?: (item: Partial<T>) => string;
+  gridCols?: string;
   api: {
     list: () => Promise<T[]>;
     create: (data: Partial<T>) => Promise<T>;
@@ -40,6 +41,7 @@ export function ContentManager<T extends { _id: string; isActive?: boolean; orde
   fields,
   uploadSection,
   uploadIdentifier,
+  gridCols = "grid-cols-1 md:grid-cols-2 gap-6",
   api,
   renderRow,
   emptyDefaults,
@@ -123,28 +125,44 @@ export function ContentManager<T extends { _id: string; isActive?: boolean; orde
       <PageHeader
         title={title}
         description={description}
-        action={<Button onClick={openNew} size="lg"><Plus className="w-4 h-4" /> Add</Button>}
+        action={
+          <Button onClick={openNew} size="lg" className="shadow-md shadow-purple-600/20">
+            <Plus className="w-4 h-4" /> Add Item
+          </Button>
+        }
       />
 
       {loading ? (
-        <div className="flex items-center justify-center h-40">
-          <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="w-7 h-7 animate-spin text-purple-600" />
         </div>
       ) : (
-        <div className="flex flex-col gap-2">
+        <div className={`grid ${gridCols}`}>
           {items.map((item) => (
-            <Card key={item._id} className="overflow-hidden">
-              <div className="flex items-center gap-4 px-4 py-3">
-                <GripVertical className="w-4 h-4 text-slate-300 shrink-0" />
-                <div className="flex-1 min-w-0">{renderRow(item)}</div>
-                <div className="flex items-center gap-2 shrink-0">
+            <Card key={item._id} className="overflow-hidden flex flex-col justify-between group hover:border-purple-300 hover:shadow-md transition-all duration-200">
+              <CardBody className="p-5">
+                {renderRow(item)}
+              </CardBody>
+
+              <div className="px-5 py-3.5 bg-slate-50/70 border-t border-slate-100 flex items-center justify-between mt-auto">
+                <div className="flex items-center gap-2">
                   {item.isActive !== undefined && (
-                    <button onClick={() => toggle(item)} className="text-slate-400 hover:text-accent transition-colors">
-                      {item.isActive
-                        ? <ToggleRight className="w-5 h-5 text-green-500" />
-                        : <ToggleLeft className="w-5 h-5 text-slate-400" />}
+                    <button
+                      onClick={() => toggle(item)}
+                      className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-purple-600 transition-colors"
+                      title={item.isActive ? "Hide Item" : "Show Item"}
+                    >
+                      {item.isActive ? (
+                        <ToggleRight className="w-5 h-5 text-emerald-600" />
+                      ) : (
+                        <ToggleLeft className="w-5 h-5 text-slate-400" />
+                      )}
+                      <span className="text-[11px]">{item.isActive ? "Active" : "Hidden"}</span>
                     </button>
                   )}
+                </div>
+
+                <div className="flex items-center gap-2">
                   <Button variant="outline" size="sm" onClick={() => openEdit(item)}>
                     <Pencil className="w-3.5 h-3.5" /> Edit
                   </Button>
@@ -207,36 +225,37 @@ export function ContentManager<T extends { _id: string; isActive?: boolean; orde
 
           {/* Visibility toggle */}
           {(editing as any).isActive !== undefined && (
-            <div className="flex flex-col gap-1">
-              <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Visibility</label>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Visibility Status</label>
               <button
                 onClick={() => setField("isActive", !(editing as any).isActive)}
-                className={`w-fit flex items-center gap-2 px-3 py-2 rounded-md border text-sm font-medium transition-colors ${
-                  (editing as any).isActive ? "bg-green-50 border-green-200 text-green-700" : "bg-slate-50 border-slate-200 text-slate-500"
+                className={`w-fit flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-semibold transition-colors ${
+                  (editing as any).isActive ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-slate-100 border-slate-200 text-slate-500"
                 }`}
               >
                 {(editing as any).isActive
-                  ? <><ToggleRight className="w-4 h-4" /> Active</>
-                  : <><ToggleLeft className="w-4 h-4" /> Hidden</>}
+                  ? <><ToggleRight className="w-5 h-5 text-emerald-600" /> Active (Visible on site)</>
+                  : <><ToggleLeft className="w-5 h-5 text-slate-400" /> Hidden</>}
               </button>
             </div>
           )}
 
-          <div className="flex justify-end gap-3 pt-2 border-t border-slate-100">
+          <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
             <Button variant="outline" onClick={() => setModalOpen(false)}>Cancel</Button>
-            <Button onClick={save} loading={saving}>{(editing as any)._id ? "Save Changes" : "Create"}</Button>
+            <Button onClick={save} loading={saving}>{(editing as any)._id ? "Save Changes" : "Create Item"}</Button>
           </div>
         </div>
       </Modal>
 
       {/* Delete Confirm */}
       <Modal open={!!deleteId} onClose={() => setDeleteId(null)} title={`Delete ${title}?`} size="sm">
-        <p className="text-sm text-slate-600 mb-6">This action cannot be undone.</p>
+        <p className="text-sm text-slate-600 mb-6">This action will permanently delete this item.</p>
         <div className="flex justify-end gap-3">
           <Button variant="outline" onClick={() => setDeleteId(null)}>Cancel</Button>
-          <Button variant="destructive" onClick={() => deleteId && doDelete(deleteId)}>Delete</Button>
+          <Button variant="destructive" onClick={() => deleteId && doDelete(deleteId)}>Delete Item</Button>
         </div>
       </Modal>
     </div>
   );
 }
+

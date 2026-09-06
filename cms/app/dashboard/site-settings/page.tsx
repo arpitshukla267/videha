@@ -2,12 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Plus, Trash2, Loader2, Save, FileText } from "lucide-react";
+import { Plus, Trash2, Loader2, Save, FileText, Phone, Building2, MapPin, ShieldCheck, Download, Share2 } from "lucide-react";
 import { siteSettingsApi, uploadFile } from "@/lib/api";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea } from "@/components/ui/input";
-import { Card, CardBody } from "@/components/ui/card";
+import { Card, CardBody, CardHeader } from "@/components/ui/card";
 
 type Tab = "contact" | "registrations" | "brochure";
 
@@ -49,10 +49,10 @@ const DEFAULT_REG_ITEMS: Omit<RegItem, "_key">[] = [
 const DEFAULT_DISCLAIMER =
   "We do not display product or system certifications (such as ISO, HACCP, Organic, Halal, Kosher, or US FDA registration) unless a valid, current certificate has been confirmed and supplied by Videha Overseas.";
 
-const TABS: { id: Tab; label: string }[] = [
-  { id: "contact", label: "Contact Details" },
-  { id: "registrations", label: "Registrations" },
-  // { id: "brochure", label: "Brochure" },
+const TABS: { id: Tab; label: string; icon: any }[] = [
+  { id: "contact", label: "Contact & Company Details", icon: Building2 },
+  { id: "registrations", label: "Business Registrations", icon: ShieldCheck },
+  // { id: "brochure", label: "Brochure & Media", icon: Download },
 ];
 
 function slugify(s: string) {
@@ -208,58 +208,89 @@ export default function SiteSettingsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-7 h-7 animate-spin text-blue-600" />
+        <Loader2 className="w-7 h-7 animate-spin text-purple-600" />
       </div>
     );
   }
 
   return (
-    <div>
+    <div className="space-y-8">
       <PageHeader
         title="Site Settings"
-        description="Contact details, business registrations, and brochure — synced to footer, nav, contact page, and more."
+        description="Configure contact details, export registrations, address, and brochure media."
         action={
-          <Button onClick={save} loading={saving} size="lg" className="px-6 py-3">
+          <Button onClick={save} loading={saving} size="lg" className="px-6 shadow-md shadow-purple-600/20">
             <Save className="w-4 h-4" /> Save Changes
           </Button>
         }
       />
 
-      <div className="flex flex-wrap gap-2 mb-8">
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            onClick={() => setTab(t.id)}
-            className={`px-5 py-3 rounded-lg text-sm font-medium transition-all ${
-              tab === t.id
-                ? "bg-blue-600 text-white shadow-md shadow-blue-600/20"
-                : "bg-white text-slate-600 border border-slate-200 hover:border-blue-300 hover:text-blue-700"
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
+      {/* Modern Rounded Segmented Control Tab Switcher */}
+      <div className="p-1.5 bg-slate-200/60 rounded-2xl inline-flex flex-wrap gap-1 max-w-full">
+        {TABS.map((t) => {
+          const active = tab === t.id;
+          return (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => setTab(t.id)}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                active
+                  ? "bg-white text-purple-700 shadow-sm"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-white/40"
+              }`}
+            >
+              <t.icon className={`w-4 h-4 ${active ? "text-purple-600" : "text-slate-400"}`} />
+              {t.label}
+            </button>
+          );
+        })}
       </div>
 
       {tab === "contact" && (
-        <Card>
-          <CardBody className="space-y-5">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Input label="Company Name" value={contact.companyName} onChange={(e) => setContact({ ...contact, companyName: e.target.value })} />
-              <Input label="Brand Name" value={contact.brandName} onChange={(e) => setContact({ ...contact, brandName: e.target.value })} />
-              <div className="md:col-span-2">
-                <Input label="Tagline" value={contact.tagline} onChange={(e) => setContact({ ...contact, tagline: e.target.value })} />
+        <div className="space-y-6">
+          {/* Card 1: Company Information */}
+          <Card>
+            <CardHeader className="flex items-center gap-2.5">
+              <Building2 className="w-4 h-4 text-purple-600" />
+              <h2 className="font-bold text-slate-900 text-sm">Company Information</h2>
+            </CardHeader>
+            <CardBody className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Input label="Company Name" value={contact.companyName} onChange={(e) => setContact({ ...contact, companyName: e.target.value })} placeholder="Videha Overseas" />
+                <Input label="Brand Name" value={contact.brandName} onChange={(e) => setContact({ ...contact, brandName: e.target.value })} placeholder="Videha" />
+                <div className="md:col-span-2">
+                  <Input label="Brand Tagline" value={contact.tagline} onChange={(e) => setContact({ ...contact, tagline: e.target.value })} placeholder="Exporting Premium Bihar Makhana Worldwide" />
+                </div>
               </div>
-              <Input label="Email" type="email" value={contact.email} onChange={(e) => setContact({ ...contact, email: e.target.value })} />
-              <Input label="Phone (tel link)" value={contact.phone} onChange={(e) => setContact({ ...contact, phone: e.target.value })} hint="+919373923799" />
-              <Input label="Phone Display" value={contact.phoneDisplay} onChange={(e) => setContact({ ...contact, phoneDisplay: e.target.value })} />
-              <Input label="Copyright Tagline" value={contact.copyrightTagline} onChange={(e) => setContact({ ...contact, copyrightTagline: e.target.value })} />
-            </div>
+            </CardBody>
+          </Card>
 
-            <div>
-              <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide block mb-2">Address Lines</label>
-              <div className="space-y-2">
+          {/* Card 2: Contact Details */}
+          <Card>
+            <CardHeader className="flex items-center gap-2.5">
+              <Phone className="w-4 h-4 text-purple-600" />
+              <h2 className="font-bold text-slate-900 text-sm">Contact Channels</h2>
+            </CardHeader>
+            <CardBody className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Input label="Email Address" type="email" value={contact.email} onChange={(e) => setContact({ ...contact, email: e.target.value })} placeholder="info@videhaoverseas.com" />
+                <Input label="Phone Number (tel: format)" value={contact.phone} onChange={(e) => setContact({ ...contact, phone: e.target.value })} hint="+919373923799" />
+                <Input label="Phone Display Text" value={contact.phoneDisplay} onChange={(e) => setContact({ ...contact, phoneDisplay: e.target.value })} placeholder="+91 93739 23799" />
+                <Input label="Copyright Tagline" value={contact.copyrightTagline} onChange={(e) => setContact({ ...contact, copyrightTagline: e.target.value })} placeholder="© 2026 Videha Overseas. All rights reserved." />
+              </div>
+            </CardBody>
+          </Card>
+
+          {/* Card 3: Address Details */}
+          <Card>
+            <CardHeader className="flex items-center gap-2.5">
+              <MapPin className="w-4 h-4 text-purple-600" />
+              <h2 className="font-bold text-slate-900 text-sm">Official Registered Address</h2>
+            </CardHeader>
+            <CardBody className="space-y-3">
+              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">Address Lines</label>
+              <div className="space-y-2.5">
                 {contact.addressLines.map((line, i) => (
                   <div key={i} className="flex gap-2">
                     <div className="flex-1">
@@ -267,110 +298,136 @@ export default function SiteSettingsPage() {
                         const lines = [...contact.addressLines];
                         lines[i] = e.target.value;
                         setContact({ ...contact, addressLines: lines });
-                      }} />
+                      }} placeholder={`Line ${i + 1}`} />
                     </div>
-                    <button type="button" onClick={() => setContact({ ...contact, addressLines: contact.addressLines.filter((_, idx) => idx !== i) })} className="text-red-400 p-2"><Trash2 className="w-4 h-4" /></button>
+                    <button type="button" onClick={() => setContact({ ...contact, addressLines: contact.addressLines.filter((_, idx) => idx !== i) })} className="text-rose-400 hover:text-rose-600 p-2">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 ))}
-                <Button variant="outline" size="sm" onClick={() => setContact({ ...contact, addressLines: [...contact.addressLines, ""] })}><Plus className="w-3 h-3" /> Add Line</Button>
+                <Button variant="outline" size="sm" onClick={() => setContact({ ...contact, addressLines: [...contact.addressLines, ""] })}>
+                  <Plus className="w-3.5 h-3.5" /> Add Address Line
+                </Button>
               </div>
-            </div>
+            </CardBody>
+          </Card>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-slate-100">
-              <Input label="Facebook URL" value={contact.social.facebook} onChange={(e) => setContact({ ...contact, social: { ...contact.social, facebook: e.target.value } })} />
-              <Input label="Instagram URL" value={contact.social.instagram} onChange={(e) => setContact({ ...contact, social: { ...contact.social, instagram: e.target.value } })} />
-              <Input label="LinkedIn URL" value={contact.social.linkedin} onChange={(e) => setContact({ ...contact, social: { ...contact.social, linkedin: e.target.value } })} />
-              <Input label="WhatsApp Number" value={contact.social.whatsapp} onChange={(e) => setContact({ ...contact, social: { ...contact.social, whatsapp: e.target.value } })} hint="Digits only, e.g. 919373923799" />
-            </div>
-          </CardBody>
-        </Card>
+          {/* Card 4: Social Links */}
+          <Card>
+            <CardHeader className="flex items-center gap-2.5">
+              <Share2 className="w-4 h-4 text-purple-600" />
+              <h2 className="font-bold text-slate-900 text-sm">Social Handles & WhatsApp</h2>
+            </CardHeader>
+            <CardBody>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Input label="Facebook URL" value={contact.social.facebook} onChange={(e) => setContact({ ...contact, social: { ...contact.social, facebook: e.target.value } })} />
+                <Input label="Instagram URL" value={contact.social.instagram} onChange={(e) => setContact({ ...contact, social: { ...contact.social, instagram: e.target.value } })} />
+                <Input label="LinkedIn URL" value={contact.social.linkedin} onChange={(e) => setContact({ ...contact, social: { ...contact.social, linkedin: e.target.value } })} />
+                <Input label="WhatsApp Number" value={contact.social.whatsapp} onChange={(e) => setContact({ ...contact, social: { ...contact.social, whatsapp: e.target.value } })} hint="Digits only (e.g. 919373923799)" />
+              </div>
+            </CardBody>
+          </Card>
+        </div>
       )}
 
       {tab === "registrations" && (
-        <Card>
-          <CardBody className="space-y-5">
-            <Textarea label="Disclaimer" value={regDisclaimer} onChange={(e) => setRegDisclaimer(e.target.value)} rows={4} />
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
-                  Registration Items ({regItems.length})
-                </label>
-                <p className="text-xs text-slate-400">Fill Short label + Value, then Save Changes</p>
+        <div className="space-y-6">
+          <Card>
+            <CardHeader className="flex items-center gap-2.5">
+              <ShieldCheck className="w-4 h-4 text-purple-600" />
+              <h2 className="font-bold text-slate-900 text-sm">Official Government & Trade Registrations</h2>
+            </CardHeader>
+            <CardBody className="space-y-6">
+              <Textarea label="Certifications & Compliance Disclaimer" value={regDisclaimer} onChange={(e) => setRegDisclaimer(e.target.value)} rows={3} />
+              
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                    Registration Items ({regItems.length})
+                  </h3>
+                  <p className="text-xs text-slate-400 font-medium">Update labels and registration numbers, then click Save Changes</p>
+                </div>
+
+                <div className="space-y-3">
+                  {regItems.map((item, i) => (
+                    <div
+                      key={item._key}
+                      className="grid grid-cols-1 md:grid-cols-12 gap-3 p-4 bg-slate-50/80 rounded-xl border border-slate-200/70 items-end"
+                    >
+                      <div className="md:col-span-3">
+                        <Input
+                          label="Short label"
+                          value={item.shortLabel}
+                          onChange={(e) => updateReg(i, { shortLabel: e.target.value })}
+                          placeholder="e.g. IEC"
+                        />
+                      </div>
+                      <div className="md:col-span-4">
+                        <Input
+                          label="Full Description label"
+                          value={item.label}
+                          onChange={(e) => updateReg(i, { label: e.target.value })}
+                          placeholder="e.g. IEC (Import Export Code)"
+                        />
+                      </div>
+                      <div className="md:col-span-4">
+                        <Input
+                          label="Registration Value / Code"
+                          value={item.value}
+                          onChange={(e) => updateReg(i, { value: e.target.value })}
+                          placeholder="AAMCV3205B"
+                        />
+                      </div>
+                      <div className="md:col-span-1 flex justify-end pb-1">
+                        <button
+                          type="button"
+                          onClick={() => setRegItems((prev) => prev.filter((_, idx) => idx !== i))}
+                          className="text-rose-400 hover:text-rose-600 p-2"
+                          aria-label="Remove registration"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  <Button variant="outline" size="sm" onClick={addRegistration}>
+                    <Plus className="w-3.5 h-3.5" /> Add Registration Item
+                  </Button>
+                </div>
               </div>
-              <div className="space-y-3">
-                {regItems.map((item, i) => (
-                  <div
-                    key={item._key}
-                    className="grid grid-cols-1 md:grid-cols-12 gap-3 p-4 bg-slate-50 rounded-lg border border-slate-100 items-end"
-                  >
-                    <div className="md:col-span-2">
-                      <Input
-                        label="Short label"
-                        value={item.shortLabel}
-                        onChange={(e) => updateReg(i, { shortLabel: e.target.value })}
-                        placeholder="e.g. CIN"
-                      />
-                    </div>
-                    <div className="md:col-span-4">
-                      <Input
-                        label="Full label"
-                        value={item.label}
-                        onChange={(e) => updateReg(i, { label: e.target.value })}
-                        placeholder="e.g. CIN (Corporate Identity Number)"
-                      />
-                    </div>
-                    <div className="md:col-span-5">
-                      <Input
-                        label="Value / Number"
-                        value={item.value}
-                        onChange={(e) => updateReg(i, { value: e.target.value })}
-                        placeholder="Registration number"
-                      />
-                    </div>
-                    <div className="md:col-span-1 flex justify-end pb-1">
-                      <button
-                        type="button"
-                        onClick={() => setRegItems((prev) => prev.filter((_, idx) => idx !== i))}
-                        className="text-red-400 hover:text-red-600 p-2"
-                        aria-label="Remove registration"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-                <Button variant="outline" size="sm" onClick={addRegistration}>
-                  <Plus className="w-3 h-3" /> Add Registration
-                </Button>
-              </div>
-            </div>
-          </CardBody>
-        </Card>
+            </CardBody>
+          </Card>
+        </div>
       )}
 
       {/* {tab === "brochure" && (
         <Card>
-          <CardBody className="space-y-5">
-            <label className="flex items-center gap-3 cursor-pointer">
+          <CardHeader className="flex items-center gap-2.5">
+            <Download className="w-4 h-4 text-purple-600" />
+            <h2 className="font-bold text-slate-900 text-sm">PDF Brochure & Downloads</h2>
+          </CardHeader>
+          <CardBody className="space-y-6">
+            <label className="flex items-center gap-3 cursor-pointer p-3.5 bg-purple-50/60 rounded-xl border border-purple-100">
               <input
                 type="checkbox"
                 checked={brochure.enabled}
                 onChange={(e) => setBrochure({ ...brochure, enabled: e.target.checked })}
-                className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                className="w-4 h-4 rounded border-slate-300 text-purple-600 focus:ring-purple-500"
               />
-              <span className="text-sm font-medium text-slate-700">Show Download Brochure button in navigation</span>
+              <span className="text-sm font-semibold text-purple-900">Enable "Download Brochure" button in navigation & site footer</span>
             </label>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Input label="Button Label" value={brochure.label} onChange={(e) => setBrochure({ ...brochure, label: e.target.value })} />
-              <Input label="Download Filename" value={brochure.fileName} onChange={(e) => setBrochure({ ...brochure, fileName: e.target.value })} />
+              <Input label="Button Display Label" value={brochure.label} onChange={(e) => setBrochure({ ...brochure, label: e.target.value })} placeholder="Download Brochure" />
+              <Input label="Target Filename" value={brochure.fileName} onChange={(e) => setBrochure({ ...brochure, fileName: e.target.value })} placeholder="VIDEHA-OVERSEAS-BROCHURE.pdf" />
             </div>
 
-            <Input label="Brochure URL" value={brochure.url} onChange={(e) => setBrochure({ ...brochure, url: e.target.value })} hint="/brochure/VIDEHA-OVERSEAS.pdf or /uploads/..." />
+            <Input label="Brochure Asset URL" value={brochure.url} onChange={(e) => setBrochure({ ...brochure, url: e.target.value })} hint="/brochure/VIDEHA-OVERSEAS.pdf or uploaded URL" />
 
-            <div className="border-2 border-dashed border-slate-200 rounded-xl p-8 text-center bg-slate-50/50">
-              <FileText className="w-10 h-10 text-blue-400 mx-auto mb-3" />
-              <p className="text-sm text-slate-600 mb-4">Upload a new PDF brochure</p>
+            <div className="border-2 border-dashed border-slate-200 rounded-2xl p-8 text-center bg-slate-50/50 hover:bg-white transition-colors">
+              <FileText className="w-10 h-10 text-purple-500 mx-auto mb-3" />
+              <p className="text-sm font-semibold text-slate-700 mb-1">Upload PDF Document</p>
+              <p className="text-xs text-slate-400 mb-4">Choose a PDF file to update company brochure on the live website</p>
               <label className="inline-flex">
                 <input
                   type="file"
@@ -382,9 +439,9 @@ export default function SiteSettingsPage() {
                     e.target.value = "";
                   }}
                 />
-                <span className="inline-flex items-center gap-2 px-5 py-3 bg-blue-600 text-white text-sm font-medium rounded-lg cursor-pointer hover:bg-blue-700 transition-colors">
+                <span className="inline-flex items-center gap-2 px-5 py-2.5 bg-purple-600 text-white text-xs font-semibold rounded-xl cursor-pointer hover:bg-purple-700 transition-colors shadow-sm shadow-purple-600/20">
                   {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                  {uploading ? "Uploading…" : "Choose PDF"}
+                  {uploading ? "Uploading PDF…" : "Select PDF Brochure"}
                 </span>
               </label>
             </div>
@@ -394,3 +451,4 @@ export default function SiteSettingsPage() {
     </div>
   );
 }
+

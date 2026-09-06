@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { motion } from "framer-motion";
 import {
   LayoutDashboard,
   ShoppingBag,
@@ -16,6 +17,7 @@ import {
   Settings,
   FileText,
   ExternalLink,
+  Sparkles,
 } from "lucide-react";
 
 const NAV = [
@@ -41,27 +43,33 @@ export function Sidebar() {
   const quotationBuilderUrl = process.env.NEXT_PUBLIC_QUOTATION_BUILDER_URL?.trim();
 
   return (
-    <aside className="w-72 shrink-0 bg-[#0f172a] min-h-screen flex flex-col shadow-xl">
-      <div className="px-6 py-6 border-b border-white/10">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-lg shadow-blue-600/30">
+    <aside className="w-72 shrink-0 bg-[#0e1626] h-full flex flex-col border-r border-slate-800/60 text-slate-300">
+      {/* Brand Header */}
+
+      <div className="px-6 py-6 border-b border-slate-800/70">
+        <div className="flex items-center gap-3.5">
+          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white font-bold text-base shadow-lg shadow-purple-500/25 ring-1 ring-white/20">
             V
           </div>
           <div>
-            <p className="text-white font-semibold text-sm leading-tight">Videha Overseas</p>
-            <p className="text-blue-300/60 text-[10px] font-medium tracking-wide">Content Management</p>
+            <div className="flex items-center gap-1.5">
+              <p className="text-white font-bold text-sm tracking-tight">Videha Overseas</p>
+              <span className="bg-purple-500/20 text-purple-300 text-[10px] font-semibold px-1.5 py-0.5 rounded-full border border-purple-400/30">CMS</span>
+            </div>
+            <p className="text-slate-400 text-xs font-medium tracking-wide">SaaS Control Panel</p>
           </div>
         </div>
       </div>
 
-      <nav className="flex-1 px-4 py-4 overflow-y-auto">
-        <div className="flex flex-col gap-1">
+      {/* Navigation */}
+      <nav className="flex-1 px-4 py-5 overflow-y-auto space-y-6">
+        <div className="flex flex-col gap-1.5">
           {NAV.map((item, idx) => {
             if ("children" in item && item.children) {
               return (
-                <div key={item.label} className={cn(idx > 0 && "mt-4 pt-4 border-t border-white/10")}>
-                  <div className="flex items-center gap-2 px-3 py-2 mb-1 text-white/40 text-[10px] font-semibold uppercase tracking-widest">
-                    <item.icon className="w-3.5 h-3.5" />
+                <div key={item.label} className="mt-4 pt-4 border-t border-slate-800/80 space-y-1">
+                  <div className="flex items-center gap-2 px-3 py-1.5 mb-1 text-slate-400 text-[10px] font-bold uppercase tracking-widest">
+                    <item.icon className="w-3.5 h-3.5 text-purple-400" />
                     {item.label}
                   </div>
                   {item.children.map((child) => {
@@ -71,14 +79,19 @@ export function Sidebar() {
                         key={child.href}
                         href={child.href}
                         className={cn(
-                          "flex items-center gap-3 px-4 py-3.5 rounded-lg text-sm transition-all mb-0.5",
-                          active
-                            ? "bg-blue-600 text-white font-medium shadow-md shadow-blue-900/40"
-                            : "text-slate-300 hover:bg-white/5 hover:text-white"
+                          "relative flex items-center gap-3 px-3.5 py-3 rounded-xl text-xs font-medium transition-colors group",
+                          active ? "text-white font-semibold" : "text-slate-400 hover:text-slate-200 hover:bg-white/5"
                         )}
                       >
-                        <child.icon className="w-4 h-4 shrink-0 opacity-80" />
-                        {child.label}
+                        {active && (
+                          <motion.div
+                            layoutId="active-sidebar-pill"
+                            className="absolute inset-0 bg-purple-600 rounded-xl shadow-md shadow-purple-900/50"
+                            transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                          />
+                        )}
+                        <child.icon className={cn("w-4 h-4 shrink-0 relative z-10 transition-transform group-hover:scale-110", active ? "text-white" : "text-slate-400")} />
+                        <span className="relative z-10 flex-1">{child.label}</span>
                       </Link>
                     );
                   })}
@@ -96,15 +109,19 @@ export function Sidebar() {
                 key={href}
                 href={href}
                 className={cn(
-                  "flex items-center gap-3 px-4 py-3.5 rounded-lg text-sm transition-all",
-                  idx > 0 && href === "/dashboard/site-settings" && "mt-1",
-                  active
-                    ? "bg-blue-600 text-white font-medium shadow-md shadow-blue-900/40"
-                    : "text-slate-300 hover:bg-white/5 hover:text-white"
+                  "relative flex items-center gap-3 px-3.5 py-3 rounded-xl text-xs font-medium transition-colors group",
+                  active ? "text-white font-semibold" : "text-slate-400 hover:text-slate-200 hover:bg-white/5"
                 )}
               >
-                <item.icon className="w-4 h-4 shrink-0 opacity-80" />
-                {item.label}
+                {active && (
+                  <motion.div
+                    layoutId="active-sidebar-pill"
+                    className="absolute inset-0 bg-purple-600 rounded-xl shadow-md shadow-purple-900/50"
+                    transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                  />
+                )}
+                <item.icon className={cn("w-4 h-4 shrink-0 relative z-10 transition-transform group-hover:scale-110", active ? "text-white" : "text-slate-400")} />
+                <span className="relative z-10 flex-1">{item.label}</span>
               </Link>
             );
           })}
@@ -114,9 +131,9 @@ export function Sidebar() {
               href={quotationBuilderUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-3 px-4 py-3.5 rounded-lg text-sm transition-all mt-1 text-slate-300 hover:bg-white/5 hover:text-white"
+              className="flex items-center gap-3 px-3.5 py-3 rounded-xl text-xs font-medium text-slate-400 hover:text-slate-200 hover:bg-white/5 transition-all mt-2"
             >
-              <FileText className="w-4 h-4 shrink-0 opacity-80" />
+              <FileText className="w-4 h-4 shrink-0 text-slate-400" />
               <span className="flex-1">Quotation Builder</span>
               <ExternalLink className="w-3.5 h-3.5 opacity-50" />
             </a>
@@ -124,17 +141,22 @@ export function Sidebar() {
         </div>
       </nav>
 
-      <div className="px-6 py-5 border-t border-white/10">
+      {/* Footer link */}
+      <div className="px-5 py-4 border-t border-slate-800/80 bg-slate-950/40">
         <a
           href="http://localhost:3005"
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-2 text-slate-400 text-xs hover:text-blue-300 transition-colors"
+          className="flex items-center justify-between p-2.5 rounded-xl bg-slate-900/80 border border-slate-800 text-slate-300 text-xs font-medium hover:border-purple-500/50 hover:text-white transition-all group"
         >
-          <ChevronRight className="w-3.5 h-3.5" />
-          View Website
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+            <span>Live Website</span>
+          </div>
+          <ChevronRight className="w-3.5 h-3.5 text-slate-500 group-hover:translate-x-0.5 transition-transform" />
         </a>
       </div>
     </aside>
   );
 }
+

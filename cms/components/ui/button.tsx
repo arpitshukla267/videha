@@ -4,7 +4,7 @@ import { Loader2 } from "lucide-react";
 import React from "react";
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: "default" | "outline" | "ghost" | "destructive" | "success";
+  variant?: "default" | "outline" | "ghost" | "destructive" | "success" | "purple";
   size?: "sm" | "md" | "lg";
   loading?: boolean;
 }
@@ -18,18 +18,19 @@ export function Button({
   disabled,
   ...props
 }: ButtonProps) {
-  const base = "inline-flex items-center justify-center gap-2 font-medium rounded-lg transition-all duration-150 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed";
+  const base = "inline-flex items-center justify-center gap-2 font-medium rounded-xl transition-all duration-150 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]";
   const variants = {
-    default: "bg-blue-600 text-white hover:bg-blue-700 shadow-sm shadow-blue-600/20",
-    outline: "border border-slate-200 text-slate-700 bg-white hover:bg-slate-50 hover:border-blue-200",
-    ghost: "text-slate-600 hover:bg-slate-100",
-    destructive: "bg-red-500 text-white hover:bg-red-600",
-    success: "bg-emerald-600 text-white hover:bg-emerald-700",
+    default: "bg-purple-600 text-white hover:bg-purple-700 shadow-sm shadow-purple-600/25",
+    purple: "bg-purple-600 text-white hover:bg-purple-700 shadow-sm shadow-purple-600/25",
+    outline: "border border-slate-200 text-slate-700 bg-white hover:bg-purple-50/50 hover:border-purple-200 hover:text-purple-700 shadow-xs",
+    ghost: "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
+    destructive: "bg-rose-500 text-white hover:bg-rose-600 shadow-sm shadow-rose-500/20",
+    success: "bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm shadow-emerald-600/20",
   };
   const sizes = {
-    sm: "px-3.5 py-2 text-xs",
-    md: "px-5 py-2.5 text-sm",
-    lg: "px-6 py-3.5 text-sm",
+    sm: "px-3 py-1.5 text-xs rounded-lg",
+    md: "px-4 py-2.5 text-sm",
+    lg: "px-5 py-3 text-sm font-semibold",
   };
   return (
     <button
@@ -42,3 +43,4 @@ export function Button({
     </button>
   );
 }
+
