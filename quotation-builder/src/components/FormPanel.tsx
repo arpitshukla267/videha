@@ -1,5 +1,3 @@
-"use client";
-
 import type { QuotationData, LineItem } from "../types";
 import { createEmptyLine, formatMoney } from "../lib/calculations";
 import type { QuotationTotals } from "../types";

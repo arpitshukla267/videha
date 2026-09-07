@@ -2,25 +2,26 @@
   "name": "@videha/quotation-builder",
   "version": "1.0.0",
   "private": true,
-  "description": "Standalone client-side Quotation Builder for Videha Overseas. Extract this folder to reuse in any React project.",
-  "main": "src/index.ts",
-  "peerDependencies": {
-    "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+  "description": "Standalone Quotation Builder web app for Videha Overseas.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "html2canvas": "^1.4.1",
-    "jspdf": "^4.2.1"
+    "jspdf": "^4.2.1",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
   },
-  "keywords": [
-    "quotation",
-    "pdf",
-    "videha",
-    "standalone"
-  ],
   "devDependencies": {
+    "@types/node": "^22.10.0",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
-    "typescript": "^7.0.2"
+    "@vitejs/plugin-react": "^5.1.4",
+    "typescript": "^5.7.3",
+    "vite": "^7.3.1"
   }
 }

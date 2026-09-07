@@ -1,5 +1,3 @@
-"use client";
-
 import { forwardRef } from "react";
 import { COMPANY } from "../config/company";
 import type { QuotationData, QuotationTotals } from "../types";
@@ -76,14 +74,14 @@ export const QuotationDocument = forwardRef<HTMLDivElement, Props>(
 
           <section className="qb-doc-client">
             <div className="qb-doc-label">Client details</div>
-            <h3>{data.client.companyName || "Client company name"}</h3>
+            <h3>Company Name: {data.client.companyName || ""}</h3>
             <p>
               {[
-                data.client.contactPerson,
-                data.client.email,
-                data.client.phone,
-                data.client.address,
-                data.client.country,
+                `Contact Person: ${data.client.contactPerson}`,
+                `Email: ${data.client.email}`,
+                `Phone: ${data.client.phone}`,
+                `Address: ${data.client.address}`,
+                `Country: ${data.client.country}`,
               ]
                 .filter(Boolean)
                 .join("\n") || "Client contact details"}
@@ -93,7 +91,7 @@ export const QuotationDocument = forwardRef<HTMLDivElement, Props>(
           <table className="qb-doc-table">
             <thead>
               <tr>
-                <th style={{ width: "28px" }}>#</th>
+                <th style={{ width: "58px" }}>S No.</th>
                 <th>Product / Description</th>
                 <th className="num">Qty</th>
                 <th className="center">Unit</th>

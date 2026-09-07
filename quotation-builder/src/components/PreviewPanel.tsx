@@ -1,5 +1,3 @@
-"use client";
-
 import type { QuotationData, QuotationTotals } from "../types";
 import { QuotationDocument } from "./QuotationDocument";
 

@@ -351,12 +351,12 @@
 }
 
 .qb-doc-logo {
-  width: 104px;
-  height: 104px;
-  object-fit: contain;
+  width: 200px;
+  height: 200px;
+  object-fit: cover;
   flex-shrink: 0;
   display: block;
-  margin: 0 0 2px;
+  margin: 0 -30px -40px;
 }
 
 .qb-doc-brand-text {
