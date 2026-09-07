@@ -153,6 +153,7 @@
   min-height: 72px;
   resize: vertical;
   line-height: 1.45;
+  white-space: pre-wrap;
 }
 
 .qb-line-card {
@@ -280,6 +281,80 @@
   align-items: center;
 }
 
+.qb-paginated-root {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  align-items: center;
+  width: 100%;
+}
+
+.qb-pagination-probe {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  visibility: hidden;
+  pointer-events: none;
+  width: 794px;
+}
+
+.qb-a4--probe,
+.qb-a4--probe.qb-a4 {
+  min-height: auto !important;
+  box-shadow: none !important;
+}
+
+.qb-a4--fixed-page {
+  height: 1123px;
+  min-height: 1123px;
+  max-height: 1123px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.qb-a4--fixed-page .qb-a4-inner {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.qb-a4--fixed-page .qb-a4-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.qb-a4--fixed-page .qb-doc-footer-blocks {
+  margin-top: 0;
+}
+
+.qb-a4--fixed-page .qb-a4-inner--from-top .qb-doc-footer-blocks {
+  padding-top: 0;
+  border-top: none;
+}
+
+.qb-a4--fixed-page .qb-doc-page-footer {
+  margin-top: auto;
+  flex-shrink: 0;
+}
+
+/* Row ends mid-page → keep soft divider; row ends at page break → no divider */
+.qb-doc-table tr.qb-doc-table-row--page-break td {
+  border-bottom: none;
+  padding-bottom: 24px;
+}
+
+.qb-doc-table.qb-doc-table--split-end {
+  border-bottom: none;
+  margin-bottom: 0;
+}
+
+.qb-doc-table.qb-doc-table--split-start {
+  border-top: none;
+}
+
 /* Off-screen host for PDF-only A4 sheet */
 .qb-export-host {
   position: fixed;
@@ -312,7 +387,7 @@
   color: #1f2421;
   font-family: "Poppins", "Segoe UI", system-ui, sans-serif;
   box-shadow: 0 12px 40px rgba(31, 36, 33, 0.12), 0 2px 8px rgba(31, 36, 33, 0.06);
-  padding: 40px 48px 48px;
+  padding: 28px 28px 32px;
   position: relative;
   display: flex;
   flex-direction: column;
@@ -351,12 +426,13 @@
 }
 
 .qb-doc-logo {
-  width: 200px;
-  height: 200px;
-  object-fit: cover;
+  width: 140px;
+  height: auto;
+  max-height: 140px;
+  object-fit: contain;
   flex-shrink: 0;
   display: block;
-  margin: 0 -30px -40px;
+  margin: -30px 0px 0px -10px;
 }
 
 .qb-doc-brand-text {
@@ -389,17 +465,33 @@
 }
 
 .qb-doc-meta-block {
-  justify-self: end;
-  align-self: end;
-  display: grid;
-  grid-template-columns: auto auto;
-  column-gap: 14px;
-  row-gap: 4px;
-  align-items: baseline;
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.qb-doc-meta-title {
+  width: 65%;
+  margin-bottom: 8px;
+  font-size: 1.18rem;
+  font-weight: 600;
+  color: #483226;
+  text-align: right;
+  border-bottom: 0px solid #665e52;
+  padding-bottom: 4px;
+}
+
+.qb-doc-meta-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .qb-doc-meta-row {
-  display: contents;
+  display: flex;
+  gap: 24px;
+  justify-content: space-between;
 }
 
 .qb-doc-meta-label {
@@ -414,7 +506,7 @@
   font-size: 0.74rem;
   line-height: 1.75;
   color: #1f2421;
-  text-align: left;
+  text-align: right;
   white-space: nowrap;
   font-weight: 500;
 }
@@ -465,8 +557,8 @@
   letter-spacing: 0.06em;
   text-transform: uppercase;
   font-size: 0.6rem;
-  color: #665e52;
-  background: #f7f4ef;
+  color: #ffffff;
+  background: #3B2A23;
   border-bottom: 1.5px solid #483226;
   padding: 10px 7px;
 }
@@ -496,6 +588,21 @@
   font-weight: 500;
   max-width: 220px;
   color: #483226;
+  white-space: normal;
+  line-height: 1.45;
+}
+
+.qb-desc-clip {
+  overflow: hidden;
+}
+
+.qb-desc-clip-inner {
+  white-space: pre-line;
+  line-height: 1.45;
+}
+
+.qb-doc-table-row--continued td {
+  vertical-align: top;
 }
 
 .qb-doc-totals {
@@ -556,6 +663,7 @@
   font-size: 0.76rem;
   font-style: italic;
   color: #483226;
+  text-align: center;
 }
 
 .qb-doc-contact-bar {
@@ -566,4 +674,53 @@
   color: #665e52;
   line-height: 1.5;
   text-align: center;
+}
+
+.qb-doc-page-footer {
+  margin-top: 18px;
+  padding-top: 0;
+}
+
+.qb-doc-page-footer-line {
+  border-top: 1px solid #665e52;
+  margin-bottom: 10px;
+}
+
+.qb-doc-page-footer-grid {
+  display: flex;
+  flex-direction: row-reverse;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: start;
+  font-size: 0.68rem;
+  line-height: 1.45;
+  color: #665e52;
+}
+
+.qb-doc-page-footer-left {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.qb-doc-page-footer-right {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  text-align: left;
+}
+
+.qb-doc-footer-logo {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  display: block;
+  margin: -10px 0px 0px -10px;
+}
+
+.qb-a4--export .qb-doc-page-footer {
+  visibility: hidden;
+  height: 0;
+  margin: 0;
+  overflow: hidden;
 }

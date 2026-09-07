@@ -4,7 +4,7 @@ import { calculateTotals, createDefaultQuotation } from "./lib/calculations";
 import { downloadQuotationPdf } from "./lib/pdf";
 import { FormPanel } from "./components/FormPanel";
 import { PreviewPanel } from "./components/PreviewPanel";
-import { QuotationDocument } from "./components/QuotationDocument";
+import { PaginatedQuotationView } from "./components/PaginatedQuotationView";
 import "./styles/quotation-builder.css";
 
 export type QuotationBuilderProps = {
@@ -76,7 +76,7 @@ export function QuotationBuilder({ initialData, logoSrc }: QuotationBuilderProps
 
       {/* Fixed-size export sheet — never clipped by the preview pane */}
       <div className="qb-export-host" aria-hidden="true">
-        <QuotationDocument
+        <PaginatedQuotationView
           ref={exportRef}
           data={data}
           totals={totals}

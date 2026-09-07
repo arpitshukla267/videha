@@ -1,5 +1,5 @@
 import type { QuotationData, QuotationTotals } from "../types";
-import { QuotationDocument } from "./QuotationDocument";
+import { PaginatedQuotationView } from "./PaginatedQuotationView";
 
 type Props = {
   data: QuotationData;
@@ -15,7 +15,7 @@ export function PreviewPanel({ data, totals, logoSrc }: Props) {
         <span>{data.meta.quotationNumber || "Draft"}</span>
       </div>
       <div className="qb-paper-stack">
-        <QuotationDocument data={data} totals={totals} logoSrc={logoSrc} />
+        <PaginatedQuotationView data={data} totals={totals} logoSrc={logoSrc} />
       </div>
     </div>
   );

@@ -189,7 +189,8 @@ export function FormPanel({ data, totals, onChange, onGeneratePdf, generating }:
             </div>
             <div className="qb-field">
               <label>Product / Description</label>
-              <input
+              <textarea
+                rows={5}
                 value={item.description}
                 onChange={(e) => updateItem(item.id, { description: e.target.value })}
                 placeholder="e.g. Premium Makhana — Export Grade"
