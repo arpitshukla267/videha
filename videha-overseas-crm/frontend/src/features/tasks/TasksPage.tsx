@@ -30,6 +30,9 @@ import { SearchableSelect } from '../../components/ui/SearchableSelect';
 import { DateTimePicker } from '../../components/ui/DateTimePicker';
 import { useAuth } from '../../context/AuthContext';
 import { refreshNotifications } from '../../lib/notifications';
+import { handleConflictWithReload, alertSaveError, isConflictError } from '../../lib/apiErrors';
+import { PaginationBar } from '../../components/ui/PaginationBar';
+import { createClientRequestId as generateClientRequestId } from '../../lib/clientRequestId';
 
 type TasksPageProps = {
   focusTaskId?: string | null;
@@ -137,6 +140,10 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalTasks, setTotalTasks] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [pageLimit] = useState(25);
   const [activeView, setActiveView] = useState<
     'my' | 'all' | 'pending' | 'in_progress' | 'completed' | 'overdue'
   >('all');
@@ -148,10 +155,12 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
   const [leadOptions, setLeadOptions] = useState<Lead[]>([]);
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [createRequestId, setCreateRequestId] = useState(generateClientRequestId);
   const [newTaskForm, setNewTaskForm] = useState<TaskForm>(emptyTaskForm());
   const [isSubmittingCreate, setIsSubmittingCreate] = useState(false);
 
   const [editTaskId, setEditTaskId] = useState<string | null>(null);
+  const [editRevision, setEditRevision] = useState<number | undefined>(undefined);
   const [editForm, setEditForm] = useState<TaskForm | null>(null);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [viewingTask, setViewingTask] = useState<Task | null>(null);
@@ -181,7 +190,7 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
 
   useEffect(() => {
     api.users
-      .getUsers()
+      .getUsers({ limit: 100, page: 1 })
       .then(res => {
         if (res.success) setTeamMembers(res.data);
       })
@@ -194,16 +203,23 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
       .catch(() => {});
   }, []);
 
-  const fetchTasks = async () => {
+  const fetchTasks = async (page = currentPage) => {
     setIsLoading(true);
     try {
       const res = await api.tasks.getTasks({
         view: activeView,
         search,
         priority: priorityFilter,
-        assignedToId: memberFilter
+        assignedToId: memberFilter,
+        page,
+        limit: pageLimit
       });
-      if (res.success) setTasks(res.data);
+      if (res.success) {
+        setTasks(res.data);
+        setTotalTasks(res.total);
+        setCurrentPage(res.page);
+        setTotalPages(res.totalPages);
+      }
     } catch (err) {
       console.error('Failed to fetch tasks:', err);
     } finally {
@@ -212,8 +228,12 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
   };
 
   useEffect(() => {
-    fetchTasks();
+    setCurrentPage(1);
   }, [activeView, search, priorityFilter, memberFilter]);
+
+  useEffect(() => {
+    fetchTasks(currentPage);
+  }, [activeView, search, priorityFilter, memberFilter, currentPage]);
 
   useEffect(() => {
     if (!focusTaskId) return;
@@ -257,12 +277,14 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
         dueDate: newTaskForm.dueDate,
         pickedUp: newTaskForm.pickedUp,
         outcome: newTaskForm.outcome,
-        completionNotes: newTaskForm.completionNotes
+        completionNotes: newTaskForm.completionNotes,
+        clientRequestId: createRequestId
       });
       if (res.success) {
         setIsCreateOpen(false);
         setNewTaskForm(emptyTaskForm(user?.id));
-        fetchTasks();
+        setCreateRequestId(generateClientRequestId());
+        fetchTasks(1);
         refreshNotifications();
       }
     } catch (err: any) {
@@ -272,7 +294,7 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
     }
   };
 
-  const buildTaskPayload = (form: TaskForm) => ({
+  const buildTaskPayload = (form: TaskForm, revision?: number) => ({
     taskTitle: form.taskTitle,
     description: form.description,
     assignedToId: form.assignedToId,
@@ -284,11 +306,13 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
     dueDate: form.dueDate,
     pickedUp: form.pickedUp,
     outcome: form.outcome,
-    completionNotes: form.completionNotes
+    completionNotes: form.completionNotes,
+    ...(revision !== undefined ? { revision } : {})
   });
 
   const openEditTask = (task: Task) => {
     setEditTaskId(task.id);
+    setEditRevision(task.revision);
     setEditForm(taskToForm(task));
   };
 
@@ -297,53 +321,58 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
     if (!editTaskId || !editForm) return;
     setIsSavingEdit(true);
     try {
-      const res = await api.tasks.updateTask(editTaskId, buildTaskPayload(editForm));
+      const res = await api.tasks.updateTask(editTaskId, buildTaskPayload(editForm, editRevision));
       if (res.success) {
         setEditTaskId(null);
         setEditForm(null);
-        fetchTasks();
+        setEditRevision(undefined);
+        fetchTasks(currentPage);
         refreshNotifications();
         if (viewingTask?.id === editTaskId) setViewingTask(res.data);
       }
-    } catch (err: any) {
-      alert(err.message || 'Failed to update task');
+    } catch (err: unknown) {
+      if (editTaskId) {
+        await handleConflictWithReload(
+          err,
+          async () => {
+            const refreshed = await api.tasks.getTask(editTaskId);
+            if (refreshed.success) {
+              openEditTask(refreshed.data);
+              if (viewingTask?.id === editTaskId) setViewingTask(refreshed.data);
+            }
+          },
+          'Failed to update task'
+        );
+      } else {
+        alertSaveError(err, 'Failed to update task');
+      }
     } finally {
       setIsSavingEdit(false);
     }
   };
 
   const handleStatusChange = async (taskId: string, newStatus: string) => {
+    const task = tasks.find(t => t.id === taskId);
     try {
-      await api.tasks.updateStatus(taskId, newStatus);
-      setTasks(prev => {
-        const next = prev.map(t =>
-          t.id === taskId
-            ? {
-                ...t,
-                status: newStatus as TaskStatus,
-                completedDate: newStatus === 'Completed' ? new Date().toISOString() : null,
-                isOverdue:
-                  newStatus === 'Completed' || newStatus === 'Cancelled' ? false : t.isOverdue
-              }
-            : t
-        );
-        if (activeView === 'completed') return next;
-        return [...next].sort((a, b) => {
-          const aDone = a.status === 'Completed' || a.status === 'Cancelled' ? 1 : 0;
-          const bDone = b.status === 'Completed' || b.status === 'Cancelled' ? 1 : 0;
-          return aDone - bDone;
-        });
-      });
+      const res = await api.tasks.updateStatus(taskId, newStatus, task?.revision);
+      setTasks(prev =>
+        prev.map(t => (t.id === taskId ? { ...res.data, isOverdue: res.data.isOverdue } : t))
+      );
+      if (viewingTask?.id === taskId) setViewingTask(res.data);
       if (
         activeView === 'completed' ||
         activeView === 'overdue' ||
         activeView === 'pending' ||
         activeView === 'in_progress'
       ) {
-        fetchTasks();
+        fetchTasks(currentPage);
       }
-    } catch (err: any) {
-      alert(err.message || 'Failed to update task status');
+    } catch (err: unknown) {
+      if (isConflictError(err)) {
+        await handleConflictWithReload(err, () => fetchTasks(currentPage), 'Failed to update task status');
+        return;
+      }
+      alertSaveError(err, 'Failed to update task status');
     }
   };
 
@@ -560,6 +589,7 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
               type="button"
               onClick={() => {
                 setNewTaskForm(emptyTaskForm(user?.id));
+                setCreateRequestId(generateClientRequestId());
                 setIsCreateOpen(true);
               }}
               className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-xs font-medium"
@@ -899,6 +929,15 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
           </div>
         </div>
       )}
+
+      <PaginationBar
+        page={currentPage}
+        totalPages={totalPages}
+        total={totalTasks}
+        isLoading={isLoading}
+        onPageChange={page => setCurrentPage(page)}
+        label="tasks"
+      />
 
       <Modal
         isOpen={isCreateOpen}

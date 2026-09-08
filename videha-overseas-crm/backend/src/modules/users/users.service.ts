@@ -8,40 +8,135 @@ import { Task } from "../../models/Task";
 import { AppError } from "../../utils/AppError";
 import { assertObjectId } from "../../utils/objectId";
 import { serializeUser } from "../../utils/serializers";
+import { parsePagination, paginatedResponse } from "../../utils/pagination";
+import { applyOptimisticUpdate, parseRevision } from "../../utils/concurrency";
 import { writeAudit } from "../../services/audit.service";
 import type { AuthUser } from "../../middleware/auth";
 import type { RoleName } from "../../models/Role";
 
-async function workload(userId: string) {
-  const tasks = await Task.find({ assignedToId: userId }).select("status dueDate").lean();
-  const now = Date.now();
-  let activeTasks = 0;
-  let overdueTasks = 0;
-  for (const t of tasks) {
-    if (t.status === "Completed" || t.status === "Cancelled") continue;
-    activeTasks++;
-    if (t.dueDate && new Date(t.dueDate).getTime() < now) overdueTasks++;
+type WorkloadStats = {
+  activeTasks: number;
+  overdueTasks: number;
+  leadsAssigned: number;
+};
+
+async function workloadForUserIds(userIds: Types.ObjectId[]): Promise<Map<string, WorkloadStats>> {
+  const map = new Map<string, WorkloadStats>();
+  if (userIds.length === 0) return map;
+
+  const now = new Date();
+  const [taskAgg, leadAgg] = await Promise.all([
+    Task.aggregate<{ _id: Types.ObjectId; activeTasks: number; overdueTasks: number }>([
+      { $match: { assignedToId: { $in: userIds } } },
+      {
+        $group: {
+          _id: "$assignedToId",
+          activeTasks: {
+            $sum: {
+              $cond: [{ $in: ["$status", ["Completed", "Cancelled"]] }, 0, 1],
+            },
+          },
+          overdueTasks: {
+            $sum: {
+              $cond: [
+                {
+                  $and: [
+                    { $not: { $in: ["$status", ["Completed", "Cancelled"]] } },
+                    { $lt: ["$dueDate", now] },
+                  ],
+                },
+                1,
+                0,
+              ],
+            },
+          },
+        },
+      },
+    ]),
+    Lead.aggregate<{ _id: Types.ObjectId; leadsAssigned: number }>([
+      {
+        $match: {
+          assignedToId: { $in: userIds },
+          archived: { $ne: true },
+        },
+      },
+      { $group: { _id: "$assignedToId", leadsAssigned: { $sum: 1 } } },
+    ]),
+  ]);
+
+  for (const id of userIds) {
+    map.set(String(id), { activeTasks: 0, overdueTasks: 0, leadsAssigned: 0 });
   }
-  const leadsAssigned = await Lead.countDocuments({
-    assignedToId: userId,
-    archived: { $ne: true },
+  for (const row of taskAgg) {
+    const key = String(row._id);
+    const existing = map.get(key) || { activeTasks: 0, overdueTasks: 0, leadsAssigned: 0 };
+    map.set(key, {
+      ...existing,
+      activeTasks: row.activeTasks,
+      overdueTasks: row.overdueTasks,
+    });
+  }
+  for (const row of leadAgg) {
+    const key = String(row._id);
+    const existing = map.get(key) || { activeTasks: 0, overdueTasks: 0, leadsAssigned: 0 };
+    map.set(key, { ...existing, leadsAssigned: row.leadsAssigned });
+  }
+
+  return map;
+}
+
+function serializeWithWorkload(
+  doc: Record<string, unknown>,
+  stats: WorkloadStats,
+) {
+  return { ...serializeUser(doc), ...stats };
+}
+
+export async function listUsers(filters: {
+  search?: string;
+  status?: string;
+  page?: unknown;
+  limit?: unknown;
+}) {
+  const { page, limit, skip } = parsePagination(filters);
+  const query: Record<string, unknown> = {};
+
+  if (filters.status && filters.status !== "all") {
+    query.status = filters.status;
+  }
+  if (filters.search?.trim()) {
+    const s = filters.search.trim();
+    query.$or = [
+      { name: new RegExp(s, "i") },
+      { email: new RegExp(s, "i") },
+      { phone: new RegExp(s, "i") },
+      { designation: new RegExp(s, "i") },
+    ];
+  }
+
+  const [total, users] = await Promise.all([
+    User.countDocuments(query),
+    User.find(query)
+      .populate("roleId")
+      .populate("departmentId")
+      .sort({ name: 1 })
+      .skip(skip)
+      .limit(limit),
+  ]);
+
+  const userIds = users.map((u) => u._id as Types.ObjectId);
+  const workloadMap = await workloadForUserIds(userIds);
+
+  const items = users.map((u) => {
+    const stats = workloadMap.get(String(u._id)) || {
+      activeTasks: 0,
+      overdueTasks: 0,
+      leadsAssigned: 0,
+    };
+    return serializeWithWorkload(u.toObject() as unknown as Record<string, unknown>, stats);
   });
-  return { activeTasks, overdueTasks, leadsAssigned };
-}
 
-async function serializeWithWorkload(doc: InstanceType<typeof User>) {
-  const base = serializeUser(doc.toObject() as unknown as Record<string, unknown>);
-  const stats = await workload(String(doc._id));
-  return { ...base, ...stats };
-}
-
-export async function listUsers() {
-  const users = await User.find()
-    .populate("roleId")
-    .populate("departmentId")
-    .sort({ name: 1 });
-
-  return Promise.all(users.map((u) => serializeWithWorkload(u)));
+  return paginatedResponse(items, total, page, limit);
 }
 
 async function resolveDepartmentId(
@@ -61,6 +156,16 @@ async function resolveDepartmentId(
     return dept ? String(dept._id) : null;
   }
   return null;
+}
+
+async function serializeSingleUser(user: InstanceType<typeof User>) {
+  const stats = await workloadForUserIds([user._id as Types.ObjectId]);
+  const workload = stats.get(String(user._id)) || {
+    activeTasks: 0,
+    overdueTasks: 0,
+    leadsAssigned: 0,
+  };
+  return serializeWithWorkload(user.toObject() as unknown as Record<string, unknown>, workload);
 }
 
 export async function createUser(
@@ -117,7 +222,7 @@ export async function createUser(
     details: `Created new member ${user.name} with role ${role.displayName}.`,
   });
 
-  return serializeWithWorkload(user);
+  return serializeSingleUser(user);
 }
 
 export async function updateUser(
@@ -130,6 +235,8 @@ export async function updateUser(
     department?: string | null;
     status?: "active" | "inactive";
     designation?: string;
+    revision?: number;
+    expectedRevision?: number;
   },
   actor: AuthUser,
 ) {
@@ -140,7 +247,6 @@ export async function updateUser(
   const isSelf = actor.id === id;
   const isAdmin = actor.roleName === "SUPER_ADMIN" || actor.roleName === "ADMIN";
 
-  // Never allow non-admin to change role; never allow user to change own role (unless SUPER_ADMIN)
   if (data.roleId && data.roleId !== String(user.roleId)) {
     if (!isAdmin) {
       throw new AppError("You cannot change user roles.", 403);
@@ -151,28 +257,43 @@ export async function updateUser(
     assertObjectId(data.roleId, "role id");
     const role = await Role.findById(data.roleId);
     if (!role) throw new AppError("Selected role does not exist.", 400);
-    user.roleId = role._id as Types.ObjectId;
-    user.roleName = role.name as RoleName;
   }
 
-  if (data.name !== undefined) user.name = data.name.trim() || user.name;
-  if (data.phone !== undefined) user.phone = data.phone;
-  if (data.designation !== undefined) user.designation = data.designation;
-  if (data.status !== undefined) user.status = data.status;
+  const expectedRevision = parseRevision(data as Record<string, unknown>);
+  const setFields: Record<string, unknown> = {};
+
+  if (data.roleId && data.roleId !== String(user.roleId)) {
+    const role = await Role.findById(data.roleId);
+    if (!role) throw new AppError("Selected role does not exist.", 400);
+    setFields.roleId = role._id;
+    setFields.roleName = role.name;
+  }
+  if (data.name !== undefined) setFields.name = data.name.trim() || user.name;
+  if (data.phone !== undefined) setFields.phone = data.phone;
+  if (data.designation !== undefined) setFields.designation = data.designation;
+  if (data.status !== undefined) setFields.status = data.status;
   if (data.departmentId !== undefined || data.department !== undefined) {
     const resolved = await resolveDepartmentId(
       data.departmentId === undefined ? null : data.departmentId,
       data.department,
     );
-    // If only free-text department was sent and no match, keep existing id
     if (data.departmentId !== undefined || resolved) {
-      user.departmentId = resolved ? (new Types.ObjectId(resolved) as Types.ObjectId) : null;
+      setFields.departmentId = resolved ? new Types.ObjectId(resolved) : null;
     }
   }
 
-  await user.save();
-  await user.populate("roleId");
-  await user.populate("departmentId");
+  if (Object.keys(setFields).length === 0) {
+    await user.populate("roleId");
+    await user.populate("departmentId");
+    return serializeSingleUser(user);
+  }
+
+  const updated = await applyOptimisticUpdate(User, id, expectedRevision, setFields, {
+    notFoundMessage: "Team member not found.",
+  });
+
+  await updated.populate("roleId");
+  await updated.populate("departmentId");
 
   await writeAudit({
     userId: actor.id,
@@ -181,13 +302,18 @@ export async function updateUser(
     action: "Member Updated",
     entity: "User",
     entityId: id,
-    details: `Updated details for member ${user.name}.`,
+    details: `Updated details for member ${updated.name}.`,
   });
 
-  return serializeWithWorkload(user);
+  return serializeSingleUser(updated);
 }
 
-export async function setUserStatus(id: string, status: "active" | "inactive", actor: AuthUser) {
+export async function setUserStatus(
+  id: string,
+  status: "active" | "inactive",
+  actor: AuthUser,
+  body: Record<string, unknown> = {},
+) {
   assertObjectId(id, "user id");
   if (actor.id === id) {
     throw new AppError("You cannot deactivate your own account.", 400);
@@ -196,11 +322,11 @@ export async function setUserStatus(id: string, status: "active" | "inactive", a
     throw new AppError("Invalid status value.", 400);
   }
 
-  const user = await User.findById(id);
-  if (!user) throw new AppError("User not found.", 404);
+  const expectedRevision = parseRevision(body);
+  const user = await applyOptimisticUpdate(User, id, expectedRevision, { status }, {
+    notFoundMessage: "User not found.",
+  });
 
-  user.status = status;
-  await user.save();
   await user.populate("roleId");
   await user.populate("departmentId");
 

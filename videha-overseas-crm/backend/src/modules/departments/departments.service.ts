@@ -4,6 +4,7 @@ import { Lead } from "../../models/Lead";
 import { AppError } from "../../utils/AppError";
 import { assertObjectId } from "../../utils/objectId";
 import { serializeDepartment } from "../../utils/serializers";
+import { applyOptimisticUpdate, parseRevision } from "../../utils/concurrency";
 import { writeAudit } from "../../services/audit.service";
 import type { AuthUser } from "../../middleware/auth";
 
@@ -49,12 +50,24 @@ export async function updateDepartment(
   actor: AuthUser,
 ) {
   assertObjectId(id, "department id");
-  const doc = await Department.findById(id);
-  if (!doc) throw new AppError("Department not found.", 404);
+  const expectedRevision = parseRevision(data as Record<string, unknown>);
+  const setFields: Record<string, unknown> = {};
 
-  if (data.name !== undefined) doc.name = data.name.trim() || doc.name;
-  if (data.description !== undefined) doc.description = data.description;
-  await doc.save();
+  const existing = await Department.findById(id).select("name");
+  if (!existing) throw new AppError("Department not found.", 404);
+
+  if (data.name !== undefined) setFields.name = data.name.trim() || existing.name;
+  if (data.description !== undefined) setFields.description = data.description;
+
+  if (Object.keys(setFields).length === 0) {
+    const doc = await Department.findById(id);
+    if (!doc) throw new AppError("Department not found.", 404);
+    return serializeDepartment(lean(doc));
+  }
+
+  const doc = await applyOptimisticUpdate(Department, id, expectedRevision, setFields, {
+    notFoundMessage: "Department not found.",
+  });
 
   await writeAudit({
     userId: actor.id,
@@ -73,17 +86,17 @@ export async function setDepartmentStatus(
   id: string,
   status: "active" | "inactive",
   actor: AuthUser,
+  body: Record<string, unknown> = {},
 ) {
   assertObjectId(id, "department id");
   if (status !== "active" && status !== "inactive") {
     throw new AppError("Invalid status value.", 400);
   }
 
-  const doc = await Department.findById(id);
-  if (!doc) throw new AppError("Department not found.", 404);
-
-  doc.status = status;
-  await doc.save();
+  const expectedRevision = parseRevision(body);
+  const doc = await applyOptimisticUpdate(Department, id, expectedRevision, { status }, {
+    notFoundMessage: "Department not found.",
+  });
 
   await writeAudit({
     userId: actor.id,

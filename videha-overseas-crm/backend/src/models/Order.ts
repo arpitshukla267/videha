@@ -32,7 +32,11 @@ export interface IOrder extends Document {
   shippingCarrier: string;
   trackingNumber: string;
   relatedLeadId: Types.ObjectId | null;
+  companyId: Types.ObjectId | null;
+  customerId: Types.ObjectId | null;
   createdById: Types.ObjectId;
+  revision: number;
+  clientRequestId?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -56,10 +60,18 @@ const orderSchema = new Schema<IOrder>(
     destinationPort: { type: String, default: "" },
     shippingCarrier: { type: String, default: "" },
     trackingNumber: { type: String, default: "" },
-    relatedLeadId: { type: Schema.Types.ObjectId, ref: "Lead", default: null },
+    relatedLeadId: { type: Schema.Types.ObjectId, ref: "Lead", default: null, index: true },
+    companyId: { type: Schema.Types.ObjectId, ref: "Company", default: null, index: true },
+    customerId: { type: Schema.Types.ObjectId, ref: "Customer", default: null, index: true },
     createdById: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    revision: { type: Number, default: 0, min: 0 },
+    clientRequestId: { type: String, default: null, sparse: true, unique: true, index: true },
   },
   { timestamps: true },
 );
+
+orderSchema.index({ status: 1, createdAt: -1 });
+orderSchema.index({ assignedToId: 1, status: 1, createdAt: -1 });
+orderSchema.index({ companyId: 1, customerId: 1, createdAt: -1 });
 
 export const Order = mongoose.model<IOrder>("Order", orderSchema);

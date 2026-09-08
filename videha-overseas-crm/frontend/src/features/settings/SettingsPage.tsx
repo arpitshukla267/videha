@@ -15,6 +15,8 @@ import {
 import { api } from '../../api/client';
 import { Role, Permission, AuditLog, Department } from '../../types/crm';
 import { Modal } from '../../components/ui/Modal';
+import { handleConflictWithReload, alertSaveError } from '../../lib/apiErrors';
+import { PaginationBar } from '../../components/ui/PaginationBar';
 
 export const SettingsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'rbac' | 'audit' | 'departments'>('rbac');
@@ -30,6 +32,10 @@ export const SettingsPage: React.FC = () => {
   // Audit Logs State
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [isLoadingLogs, setIsLoadingLogs] = useState(false);
+  const [auditPage, setAuditPage] = useState(1);
+  const [auditTotal, setAuditTotal] = useState(0);
+  const [auditTotalPages, setAuditTotalPages] = useState(1);
+  const [auditLimit] = useState(25);
 
   // Departments State
   const [departments, setDepartments] = useState<Department[]>([]);
@@ -55,12 +61,15 @@ export const SettingsPage: React.FC = () => {
     }
   };
 
-  const fetchLogs = async () => {
+  const fetchLogs = async (page = auditPage) => {
     setIsLoadingLogs(true);
     try {
-      const res = await api.audit.getLogs(60);
+      const res = await api.audit.getLogs({ page, limit: auditLimit });
       if (res.success) {
         setLogs(res.data);
+        setAuditTotal(res.total);
+        setAuditPage(res.page);
+        setAuditTotalPages(res.totalPages);
       }
     } catch (err) {
       console.error('Failed to load audit logs:', err);
@@ -89,12 +98,12 @@ export const SettingsPage: React.FC = () => {
 
   useEffect(() => {
     if (activeTab === 'audit') {
-      fetchLogs();
+      fetchLogs(auditPage);
     }
     if (activeTab === 'departments') {
       fetchDepartments();
     }
-  }, [activeTab]);
+  }, [activeTab, auditPage]);
 
   const handleSelectRole = (r: Role) => {
     setSelectedRole(r);
@@ -149,7 +158,8 @@ export const SettingsPage: React.FC = () => {
       if (editingDept) {
         const res = await api.departments.updateDepartment(editingDept.id, {
           name: deptForm.name,
-          description: deptForm.description || undefined
+          description: deptForm.description || undefined,
+          revision: editingDept.revision
         });
         if (res.success) {
           setIsDeptModalOpen(false);
@@ -165,8 +175,12 @@ export const SettingsPage: React.FC = () => {
           fetchDepartments();
         }
       }
-    } catch (err: any) {
-      alert(err.message || 'Failed to save department');
+    } catch (err: unknown) {
+      if (editingDept) {
+        await handleConflictWithReload(err, fetchDepartments, 'Failed to save department');
+      } else {
+        alertSaveError(err, 'Failed to save department');
+      }
     } finally {
       setIsSubmittingDept(false);
     }
@@ -175,19 +189,25 @@ export const SettingsPage: React.FC = () => {
   const handleDeactivateDept = async (dept: Department) => {
     if (!confirm(`Deactivate department "${dept.name}"?`)) return;
     try {
-      await api.departments.updateDepartment(dept.id, { status: 'inactive' });
+      await api.departments.updateDepartment(dept.id, {
+        status: 'inactive',
+        revision: dept.revision
+      });
       fetchDepartments();
-    } catch (err: any) {
-      alert(err.message || 'Failed to deactivate department');
+    } catch (err: unknown) {
+      await handleConflictWithReload(err, fetchDepartments, 'Failed to deactivate department');
     }
   };
 
   const handleActivateDept = async (dept: Department) => {
     try {
-      await api.departments.updateDepartment(dept.id, { status: 'active' });
+      await api.departments.updateDepartment(dept.id, {
+        status: 'active',
+        revision: dept.revision
+      });
       fetchDepartments();
-    } catch (err: any) {
-      alert(err.message || 'Failed to activate department');
+    } catch (err: unknown) {
+      await handleConflictWithReload(err, fetchDepartments, 'Failed to activate department');
     }
   };
 
@@ -384,7 +404,7 @@ export const SettingsPage: React.FC = () => {
               </p>
             </div>
             <button
-              onClick={fetchLogs}
+              onClick={() => fetchLogs(auditPage)}
               className="text-xs font-medium text-slate-600 hover:text-slate-900 px-3 py-1 border border-slate-200 rounded-lg hover:bg-slate-50"
             >
               Refresh Logs
@@ -444,6 +464,16 @@ export const SettingsPage: React.FC = () => {
                 )}
               </tbody>
             </table>
+          </div>
+          <div className="px-4 pb-4">
+            <PaginationBar
+              page={auditPage}
+              totalPages={auditTotalPages}
+              total={auditTotal}
+              isLoading={isLoadingLogs}
+              onPageChange={page => setAuditPage(page)}
+              label="audit entries"
+            />
           </div>
         </div>
       )}

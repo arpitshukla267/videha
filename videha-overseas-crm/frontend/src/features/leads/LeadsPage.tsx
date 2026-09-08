@@ -31,7 +31,8 @@ import {
   CallDirection,
   CallOutcome,
   InterestLevel,
-  Department
+  Department,
+  LeadPipelineMeta
 } from '../../types/crm';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { PriorityBadge } from '../../components/ui/PriorityBadge';
@@ -41,16 +42,8 @@ import { DateTimePicker } from '../../components/ui/DateTimePicker';
 import { useAuth } from '../../context/AuthContext';
 import { CRM_COUNTRIES } from '../../constants/countries';
 import { refreshNotifications } from '../../lib/notifications';
-
-const LEAD_STATUSES: LeadStatus[] = [
-  'New',
-  'Contacted',
-  'Interested',
-  'Follow-up',
-  'Not Interested',
-  'Converted',
-  'Lost'
-];
+import { handleConflictWithReload, alertSaveError } from '../../lib/apiErrors';
+import { createClientRequestId as generateClientRequestId } from '../../lib/clientRequestId';
 
 const LEAD_SOURCES = [
   { value: 'Website', label: 'Website Form' },
@@ -142,7 +135,8 @@ type LeadDraft = {
   leadStatus: LeadStatus;
   priority: Priority;
   assignedMemberId: string;
-  nextFollowUp: string; // YYYY-MM-DD or ''
+  nextFollowUp: string;
+  lostReason: string;
   name: string;
   company: string;
   phoneNumber: string;
@@ -181,6 +175,7 @@ function leadToDraft(lead: Lead): LeadDraft {
     priority: lead.priority,
     assignedMemberId: lead.assignedMemberId || '',
     nextFollowUp: followUp,
+    lostReason: lead.lostReason || '',
     name: lead.name || '',
     company: lead.company || '',
     phoneNumber: lead.phoneNumber || '',
@@ -222,6 +217,8 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
   // Team Members & Departments
   const [teamMembers, setTeamMembers] = useState<CrmUser[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
+  const [pipelineMeta, setPipelineMeta] = useState<LeadPipelineMeta | null>(null);
+  const [isConverting, setIsConverting] = useState(false);
 
   // Export Modal State
   const [isExportOpen, setIsExportOpen] = useState(false);
@@ -233,6 +230,7 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
 
   // Create Lead Modal State
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [createRequestId, setCreateRequestId] = useState(generateClientRequestId);
   const [newLeadForm, setNewLeadForm] = useState(emptyLeadForm);
   const [isSubmittingCreate, setIsSubmittingCreate] = useState(false);
 
@@ -255,7 +253,10 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
   const [quickCallLead, setQuickCallLead] = useState<Lead | null>(null);
 
   const countryOptions = CRM_COUNTRIES.map(c => ({ value: c, label: c }));
-  const statusOptions = LEAD_STATUSES.map(s => ({ value: s, label: s }));
+  const manualStatuses = (pipelineMeta?.allStatuses || ['New', 'Contacted', 'Qualified', 'Lost']).filter(
+    s => s !== 'Won'
+  );
+  const statusOptions = manualStatuses.map(s => ({ value: s, label: s }));
   const memberOptions = teamMembers.map(m => ({
     value: m.id,
     label: m.name,
@@ -289,7 +290,7 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
   // Load team members & departments
   useEffect(() => {
     api.users
-      .getUsers()
+      .getUsers({ limit: 100, page: 1 })
       .then(res => {
         if (res.success) {
           setTeamMembers(res.data);
@@ -304,6 +305,13 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
       .getDepartments('active')
       .then(res => {
         if (res.success) setDepartments(res.data);
+      })
+      .catch(() => {});
+
+    api.meta
+      .getLeadPipeline()
+      .then(res => {
+        if (res.success) setPipelineMeta(res.data);
       })
       .catch(() => {});
   }, []);
@@ -384,7 +392,6 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
     if (!leadDetail || !leadDraft || !detailDirty) return;
     setIsSavingDetail(true);
     try {
-      const originalAssignee = leadDetail.lead.assignedMemberId || '';
       await api.leads.updateLead(leadDetail.lead.id, {
         name: leadDraft.name,
         company: leadDraft.company,
@@ -395,24 +402,53 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
         productInterest: leadDraft.productInterest,
         leadSource: leadDraft.leadSource,
         leadStatus: leadDraft.leadStatus,
+        lostReason: leadDraft.leadStatus === 'Lost' ? leadDraft.lostReason : '',
         priority: leadDraft.priority,
+        assignedMemberId: leadDraft.assignedMemberId || null,
         departmentId: leadDraft.departmentId || null,
         nextFollowUp: leadDraft.nextFollowUp || null,
-        notes: leadDraft.notes
+        notes: leadDraft.notes,
+        revision: leadDetail.lead.revision
       });
-      if (leadDraft.assignedMemberId !== originalAssignee) {
-        await api.leads.assignLead(
-          leadDetail.lead.id,
-          leadDraft.assignedMemberId || null
-        );
-      }
       await handleOpenDetail(leadDetail.lead.id);
       fetchLeads(currentPage);
       refreshNotifications();
-    } catch (err: any) {
-      alert(err.message || 'Failed to save changes');
+    } catch (err: unknown) {
+      const reloaded = await handleConflictWithReload(
+        err,
+        () => handleOpenDetail(leadDetail.lead.id),
+        'Failed to save changes'
+      );
+      if (reloaded) fetchLeads(currentPage);
     } finally {
       setIsSavingDetail(false);
+    }
+  };
+
+  const handleConvertLead = async () => {
+    if (!leadDetail) return;
+    if (!window.confirm('Convert this lead to a customer account? Status will be set to Won.')) return;
+    setIsConverting(true);
+    try {
+      const res = await api.leads.convertLead(leadDetail.lead.id, leadDetail.lead.revision);
+      if (res.success) {
+        await handleOpenDetail(leadDetail.lead.id);
+        fetchLeads(currentPage);
+        refreshNotifications();
+        alert(
+          res.data.alreadyConverted
+            ? 'Lead was already converted.'
+            : `Converted to customer ${res.data.customer.customerCode}.`
+        );
+      }
+    } catch (err: unknown) {
+      await handleConflictWithReload(
+        err,
+        () => handleOpenDetail(leadDetail.lead.id),
+        'Failed to convert lead'
+      );
+    } finally {
+      setIsConverting(false);
     }
   };
 
@@ -434,11 +470,13 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
         assignedMemberId: newLeadForm.assignedMemberId || null,
         departmentId: newLeadForm.departmentId || null,
         nextFollowUp: newLeadForm.nextFollowUp || null,
-        notes: newLeadForm.notes
+        notes: newLeadForm.notes,
+        clientRequestId: createRequestId
       });
       if (res.success) {
         setIsCreateOpen(false);
         setNewLeadForm(emptyLeadForm);
+        setCreateRequestId(generateClientRequestId());
         fetchLeads(1);
         refreshNotifications();
       }
@@ -507,7 +545,8 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
         disposition: form.disposition.trim(),
         notes: form.notes.trim(),
         nextFollowUp: form.nextFollowUp || null,
-        followUpRequired: form.followUpRequired
+        followUpRequired: form.followUpRequired,
+        revision: leadDetail?.lead.id === leadId ? leadDetail.lead.revision : undefined
       });
 
       if (res.success) {
@@ -525,8 +564,16 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
         fetchLeads(currentPage);
         refreshNotifications();
       }
-    } catch (err: any) {
-      alert(err.message || 'Failed to log call');
+    } catch (err: unknown) {
+      if (leadDetail?.lead.id === leadId) {
+        await handleConflictWithReload(
+          err,
+          () => handleOpenDetail(leadId),
+          'Failed to log call'
+        );
+      } else {
+        alertSaveError(err, 'Failed to log call');
+      }
     } finally {
       setIsSubmittingCall(false);
     }
@@ -720,7 +767,10 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
           {/* Add New Lead Button */}
           {hasPermission('leads.create') && (
             <button
-              onClick={() => setIsCreateOpen(true)}
+              onClick={() => {
+                setCreateRequestId(generateClientRequestId());
+                setIsCreateOpen(true);
+              }}
               className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-xs font-medium transition-colors shadow-xs"
             >
               <Plus className="w-4 h-4" />
@@ -1507,6 +1557,42 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
                   placeholder="Select status…"
                 />
               </div>
+              {leadDraft.leadStatus === 'Lost' && (
+                <div className="sm:col-span-2">
+                  <label className="block font-medium text-slate-700 mb-1">Lost Reason *</label>
+                  <input
+                    type="text"
+                    value={leadDraft.lostReason}
+                    onChange={e => updateDraft('lostReason', e.target.value)}
+                    placeholder="Why was this lead lost?"
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-sky-600 text-slate-800"
+                  />
+                </div>
+              )}
+              {(leadDetail.lead.customerId || leadDetail.lead.convertedAt) && (
+                <div className="sm:col-span-2 p-3 bg-emerald-50 border border-emerald-100 rounded-lg text-xs text-emerald-800">
+                  Converted
+                  {leadDetail.lead.convertedAt
+                    ? ` on ${new Date(leadDetail.lead.convertedAt).toLocaleDateString()}`
+                    : ''}
+                  {leadDetail.lead.customerId ? ` · Customer linked` : ''}
+                </div>
+              )}
+              {hasPermission('leads.convert') &&
+                !leadDetail.lead.customerId &&
+                !['Won', 'Converted'].includes(leadDetail.lead.leadStatus) && (
+                  <div className="sm:col-span-2">
+                    <button
+                      type="button"
+                      onClick={handleConvertLead}
+                      disabled={isConverting}
+                      className="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-600 text-white text-xs font-medium rounded-lg hover:bg-emerald-700 disabled:opacity-50"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      {isConverting ? 'Converting…' : 'Convert to Customer'}
+                    </button>
+                  </div>
+                )}
               <div>
                 <label className="block font-medium text-slate-700 mb-1">Priority</label>
                 <SearchableSelect

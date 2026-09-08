@@ -3,16 +3,27 @@ import { asyncHandler } from "../../utils/asyncHandler";
 import * as service from "./tasks.service";
 
 export const list = asyncHandler(async (req: Request, res: Response) => {
-  const data = await service.listTasks(
+  const result = await service.listTasks(
     {
       view: req.query.view as string | undefined,
       search: req.query.search as string | undefined,
       assignedToId: req.query.assignedToId as string | undefined,
       priority: req.query.priority as string | undefined,
+      page: req.query.page,
+      limit: req.query.limit,
+      sortBy: req.query.sortBy as string | undefined,
+      sortOrder: req.query.sortOrder as "asc" | "desc" | undefined,
     },
     req.user!.id,
   );
-  res.json({ success: true, data });
+  res.json({
+    success: true,
+    data: result.items,
+    total: result.total,
+    page: result.page,
+    limit: result.limit,
+    totalPages: result.totalPages,
+  });
 });
 
 export const getOne = asyncHandler(async (req: Request, res: Response) => {
@@ -32,7 +43,12 @@ export const update = asyncHandler(async (req: Request, res: Response) => {
 
 export const patchStatus = asyncHandler(async (req: Request, res: Response) => {
   const { status } = req.body as { status?: string };
-  const data = await service.updateTaskStatus(req.params.id, status || "", req.user!);
+  const data = await service.updateTaskStatus(
+    req.params.id,
+    status || "",
+    req.user!,
+    req.body as Record<string, unknown>,
+  );
   res.json({ success: true, data });
 });
 

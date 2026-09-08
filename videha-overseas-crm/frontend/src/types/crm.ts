@@ -5,6 +5,7 @@ export interface Department {
   name: string;
   description?: string;
   status: 'active' | 'inactive';
+  revision?: number;
   createdAt: string;
   updatedAt: string;
   memberCount?: number;
@@ -35,6 +36,7 @@ export interface User {
   emergencyContact?: string;
   skills?: string[];
   joiningDate?: string;
+  revision?: number;
 }
 
 export interface Role {
@@ -56,12 +58,128 @@ export interface Permission {
 export type LeadStatus =
   | 'New'
   | 'Contacted'
+  | 'Qualified'
+  | 'Sample Requested'
+  | 'Sample Sent'
+  | 'Negotiation'
+  | 'Quotation Sent'
+  | 'Won'
+  | 'Lost'
   | 'Interested'
   | 'Follow-up'
   | 'Not Interested'
-  | 'Converted'
-  | 'Lost';
+  | 'Converted';
 export type Priority = 'Low' | 'Medium' | 'High' | 'Urgent';
+
+export interface LeadPipelineMeta {
+  allStatuses: LeadStatus[];
+  pipelineStatuses: LeadStatus[];
+  legacyStatuses: LeadStatus[];
+}
+
+export type FollowUpType = 'Call' | 'Email' | 'WhatsApp' | 'Meeting';
+export type FollowUpStatus = 'Pending' | 'Completed' | 'Skipped' | 'Cancelled';
+
+export interface FollowUp {
+  id: string;
+  leadId: string;
+  leadCode?: string;
+  leadCompany?: string;
+  assignedToId: string;
+  assignedToName?: string;
+  dueAt: string;
+  type: FollowUpType;
+  status: FollowUpStatus;
+  outcome: string;
+  notes: string;
+  completedAt: string | null;
+  createdById: string;
+  createdAt: string;
+  updatedAt: string;
+  revision?: number;
+}
+
+export interface Company {
+  id: string;
+  companyCode: string;
+  name: string;
+  legalName?: string;
+  country: string;
+  city?: string;
+  address?: string;
+  website?: string;
+  industry?: string;
+  status: string;
+  assignedToId?: string | null;
+  assignedToName?: string;
+  revision?: number;
+}
+
+export interface Customer {
+  id: string;
+  customerCode: string;
+  companyId: string;
+  companyName?: string;
+  name: string;
+  email: string;
+  phone: string;
+  whatsAppNumber?: string;
+  designation?: string;
+  isPrimaryContact?: boolean;
+  relatedLeadId?: string | null;
+  status: string;
+  revision?: number;
+}
+
+export type QuotationStatus =
+  | 'Draft'
+  | 'Sent'
+  | 'Negotiation'
+  | 'Accepted'
+  | 'Rejected'
+  | 'Expired'
+  | 'Cancelled';
+
+export interface QuotationLineItem {
+  description: string;
+  quantity: string;
+  unitPrice: number;
+  discountPercent: number;
+  amount: number;
+}
+
+export interface Quotation {
+  id: string;
+  quotationCode: string;
+  title: string;
+  currency: string;
+  lineItems: QuotationLineItem[];
+  subtotal: number;
+  discountAmount: number;
+  taxRate: number;
+  taxAmount: number;
+  totalAmount: number;
+  validityDate: string | null;
+  paymentTerms: string;
+  notes: string;
+  status: QuotationStatus;
+  leadId: string | null;
+  leadCode?: string;
+  companyId: string | null;
+  companyName?: string;
+  customerId: string | null;
+  customerName?: string;
+  orderId: string | null;
+  orderCode?: string;
+  assignedToId: string | null;
+  assignedToName?: string;
+  sentAt: string | null;
+  acceptedAt: string | null;
+  createdById: string;
+  createdAt: string;
+  updatedAt: string;
+  revision?: number;
+}
 
 export interface Lead {
   id: string;
@@ -99,6 +217,11 @@ export interface Lead {
   lastCallChannel?: string | null;
   lastCallPickedUp?: boolean | null;
   totalCallsCount?: number;
+  lostReason?: string;
+  companyId?: string | null;
+  customerId?: string | null;
+  convertedAt?: string | null;
+  revision?: number;
 }
 
 export type CallChannel = 'phone' | 'whatsapp' | 'email' | 'video' | 'in_person';
@@ -198,6 +321,7 @@ export interface Task {
   deliverables?: string[];
   tags?: string[];
   reminderAlert?: string;
+  revision?: number;
 }
 
 export type OrderStatus =
@@ -243,6 +367,7 @@ export interface Order {
   shippingCarrier?: string;
   trackingNumber?: string;
   updatedAt: string;
+  revision?: number;
 }
 
 export interface PublicOrderTrackingInfo {

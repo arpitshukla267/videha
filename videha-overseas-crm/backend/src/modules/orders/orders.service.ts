@@ -6,12 +6,18 @@ import { AppError } from "../../utils/AppError";
 import { assertObjectId, optionalObjectId } from "../../utils/objectId";
 import { nextOrderCode } from "../../utils/codes";
 import { serializeOrder, serializeOrderHistory } from "../../utils/serializers";
+import { parsePagination, paginatedResponse } from "../../utils/pagination";
+import { applyOptimisticUpdate, parseClientRequestId, parseRevision } from "../../utils/concurrency";
+import { withTransaction } from "../../utils/transactions";
 import { writeAudit } from "../../services/audit.service";
 import { createNotification } from "../../services/notification.service";
 import { createBillFromOrder } from "../bills/bills.service";
 import type { AuthUser } from "../../middleware/auth";
 
 const POPULATE = [{ path: "assignedToId", select: "name email" }];
+
+const LIST_SELECT =
+  "orderCode customerName company phone email country products quantity orderValue currency assignedToId status expectedDelivery notes destinationPort shippingCarrier trackingNumber relatedLeadId createdById revision createdAt updatedAt";
 
 async function historyFor(orderId: string) {
   const docs = await OrderStatusHistory.find({ orderId }).sort({ createdAt: 1 });
@@ -23,7 +29,12 @@ export async function listOrders(filters: {
   status?: string;
   country?: string;
   assignedMemberId?: string;
+  page?: unknown;
+  limit?: unknown;
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
 }) {
+  const { page, limit, skip } = parsePagination(filters);
   const query: Record<string, unknown> = {};
 
   if (filters.status && filters.status !== "all") {
@@ -45,8 +56,22 @@ export async function listOrders(filters: {
     ];
   }
 
-  const docs = await Order.find(query).populate(POPULATE).sort({ createdAt: -1 });
-  return docs.map((d) => serializeOrder(d.toObject() as unknown as Record<string, unknown>));
+  const sortField = filters.sortBy === "expectedDelivery" ? "expectedDelivery" : "createdAt";
+  const sortDir = filters.sortOrder === "asc" ? 1 : -1;
+
+  const [total, docs] = await Promise.all([
+    Order.countDocuments(query),
+    Order.find(query)
+      .select(LIST_SELECT)
+      .populate(POPULATE)
+      .sort({ [sortField]: sortDir })
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+  ]);
+
+  const items = docs.map((d) => serializeOrder(d as unknown as Record<string, unknown>));
+  return paginatedResponse(items, total, page, limit);
 }
 
 export async function getOrder(id: string) {
@@ -60,6 +85,14 @@ export async function getOrder(id: string) {
 }
 
 export async function createOrder(body: Record<string, unknown>, actor: AuthUser) {
+  const clientRequestId = parseClientRequestId(body);
+  if (clientRequestId) {
+    const existing = await Order.findOne({ clientRequestId }).populate(POPULATE);
+    if (existing) {
+      return serializeOrder(existing.toObject() as unknown as Record<string, unknown>);
+    }
+  }
+
   const customerName = body.customerName as string | undefined;
   const company = body.company as string | undefined;
   const products = body.products as string | undefined;
@@ -104,7 +137,10 @@ export async function createOrder(body: Record<string, unknown>, actor: AuthUser
     shippingCarrier: (body.shippingCarrier as string) || "",
     trackingNumber: (body.trackingNumber as string) || "",
     relatedLeadId: optionalObjectId((body.relatedLeadId as string) || null),
+    companyId: optionalObjectId((body.companyId as string) || null),
+    customerId: optionalObjectId((body.customerId as string) || null),
     createdById: actor.id,
+    clientRequestId: clientRequestId ?? null,
   });
 
   await OrderStatusHistory.create({
@@ -132,25 +168,31 @@ export async function createOrder(body: Record<string, unknown>, actor: AuthUser
 
 export async function updateOrder(id: string, body: Record<string, unknown>, actor: AuthUser) {
   assertObjectId(id, "order id");
-  const order = await Order.findById(id);
-  if (!order) throw new AppError("Order not found.", 404);
+  const expectedRevision = parseRevision(body);
+  const setFields: Record<string, unknown> = {};
 
-  if (body.customerName !== undefined) order.customerName = String(body.customerName);
-  if (body.company !== undefined) order.company = String(body.company);
-  if (body.phone !== undefined) order.phone = String(body.phone);
-  if (body.email !== undefined) order.email = String(body.email);
-  if (body.country !== undefined) order.country = String(body.country);
-  if (body.products !== undefined) order.products = String(body.products);
-  if (body.quantity !== undefined) order.quantity = String(body.quantity);
-  if (body.orderValue !== undefined) order.orderValue = Number(body.orderValue) || 0;
-  if (body.currency !== undefined) order.currency = String(body.currency);
+  if (body.customerName !== undefined) setFields.customerName = String(body.customerName);
+  if (body.company !== undefined) setFields.company = String(body.company);
+  if (body.phone !== undefined) setFields.phone = String(body.phone);
+  if (body.email !== undefined) setFields.email = String(body.email);
+  if (body.country !== undefined) setFields.country = String(body.country);
+  if (body.products !== undefined) setFields.products = String(body.products);
+  if (body.quantity !== undefined) setFields.quantity = String(body.quantity);
+  if (body.orderValue !== undefined) setFields.orderValue = Number(body.orderValue) || 0;
+  if (body.currency !== undefined) setFields.currency = String(body.currency);
   if (body.expectedDelivery !== undefined) {
-    order.expectedDelivery = new Date(String(body.expectedDelivery));
+    setFields.expectedDelivery = new Date(String(body.expectedDelivery));
   }
-  if (body.notes !== undefined) order.notes = String(body.notes);
-  if (body.destinationPort !== undefined) order.destinationPort = String(body.destinationPort);
-  if (body.shippingCarrier !== undefined) order.shippingCarrier = String(body.shippingCarrier);
-  if (body.trackingNumber !== undefined) order.trackingNumber = String(body.trackingNumber);
+  if (body.notes !== undefined) setFields.notes = String(body.notes);
+  if (body.destinationPort !== undefined) setFields.destinationPort = String(body.destinationPort);
+  if (body.shippingCarrier !== undefined) setFields.shippingCarrier = String(body.shippingCarrier);
+  if (body.trackingNumber !== undefined) setFields.trackingNumber = String(body.trackingNumber);
+  if (body.companyId !== undefined) {
+    setFields.companyId = optionalObjectId((body.companyId as string) || null);
+  }
+  if (body.customerId !== undefined) {
+    setFields.customerId = optionalObjectId((body.customerId as string) || null);
+  }
 
   const assigneeId = body.assignedMemberId ?? body.assignedToId;
   if (assigneeId !== undefined) {
@@ -158,11 +200,19 @@ export async function updateOrder(id: string, body: Record<string, unknown>, act
     if (idStr) {
       const assignee = await User.findById(idStr);
       if (!assignee) throw new AppError("Assigned member not found.", 400);
-      order.assignedToId = new Types.ObjectId(idStr);
+      setFields.assignedToId = new Types.ObjectId(idStr);
     }
   }
 
-  await order.save();
+  if (Object.keys(setFields).length === 0) {
+    const order = await Order.findById(id).populate(POPULATE);
+    if (!order) throw new AppError("Order not found.", 404);
+    return serializeOrder(order.toObject() as unknown as Record<string, unknown>);
+  }
+
+  const order = await applyOptimisticUpdate(Order, id, expectedRevision, setFields, {
+    notFoundMessage: "Order not found.",
+  });
 
   await writeAudit({
     userId: actor.id,
@@ -183,6 +233,7 @@ export async function updateOrderStatus(
   status: string,
   notes: string | undefined,
   actor: AuthUser,
+  body: Record<string, unknown> = {},
 ) {
   assertObjectId(id, "order id");
   if (!status) throw new AppError("New status is required.", 400);
@@ -190,31 +241,50 @@ export async function updateOrderStatus(
     throw new AppError(`Invalid order status: ${status}`, 400);
   }
 
-  const order = await Order.findById(id);
-  if (!order) throw new AppError("Order not found.", 404);
+  const expectedRevision = parseRevision(body);
+  const existing = await Order.findById(id).select("status orderCode assignedToId");
+  if (!existing) throw new AppError("Order not found.", 404);
 
-  const previousStatus = order.status;
-  order.status = status as OrderStatus;
-  await order.save();
+  const previousStatus = existing.status;
 
-  await OrderStatusHistory.create({
-    orderId: order._id,
-    previousStatus,
-    newStatus: order.status,
-    changedById: actor.id,
-    changedByName: actor.name,
-    notes: notes || "",
+  const result = await withTransaction(async (session) => {
+    const order = await applyOptimisticUpdate(
+      Order,
+      id,
+      expectedRevision,
+      { status: status as OrderStatus },
+      { session, notFoundMessage: "Order not found." },
+    );
+
+    await OrderStatusHistory.create(
+      [
+        {
+          orderId: order._id,
+          previousStatus,
+          newStatus: order.status,
+          changedById: actor.id,
+          changedByName: actor.name,
+          notes: notes || "",
+        },
+      ],
+      { session },
+    );
+
+    if (order.assignedToId && String(order.assignedToId) !== actor.id) {
+      await createNotification(
+        {
+          userId: String(order.assignedToId),
+          title: "Order Status Updated",
+          message: `Order ${order.orderCode} moved to ${order.status}.`,
+          type: "order_status",
+          linkUrl: `/orders/${order._id}`,
+        },
+        session,
+      );
+    }
+
+    return order;
   });
-
-  if (order.assignedToId && String(order.assignedToId) !== actor.id) {
-    await createNotification({
-      userId: String(order.assignedToId),
-      title: "Order Status Updated",
-      message: `Order ${order.orderCode} moved to ${order.status}.`,
-      type: "order_status",
-      linkUrl: `/orders/${order._id}`,
-    });
-  }
 
   await writeAudit({
     userId: actor.id,
@@ -226,7 +296,7 @@ export async function updateOrderStatus(
     details: `Transitioned status to ${status}. Notes: ${notes || "Standard progression"}`,
   });
 
-  if (order.status === "Delivered") {
+  if (result.status === "Delivered") {
     try {
       await createBillFromOrder(id, actor.id);
     } catch {
@@ -234,9 +304,9 @@ export async function updateOrderStatus(
     }
   }
 
-  await order.populate(POPULATE);
+  await result.populate(POPULATE);
   return {
-    order: serializeOrder(order.toObject() as unknown as Record<string, unknown>),
+    order: serializeOrder(result.toObject() as unknown as Record<string, unknown>),
     history: await historyFor(id),
   };
 }

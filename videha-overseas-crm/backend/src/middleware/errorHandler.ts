@@ -14,6 +14,16 @@ export function errorHandler(err: unknown, _req: Request, res: Response, _next: 
     return;
   }
 
+  const rateLimitErr = err as { status?: number; statusCode?: number; message?: string };
+  if (rateLimitErr?.status === 429 || rateLimitErr?.statusCode === 429) {
+    res.status(429).json({
+      success: false,
+      message: rateLimitErr.message || "Too many requests. Please try again later.",
+      code: "RATE_LIMIT",
+    });
+    return;
+  }
+
   if (err instanceof ZodError) {
     res.status(400).json({
       success: false,

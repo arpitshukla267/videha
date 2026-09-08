@@ -37,6 +37,8 @@ export interface ITask extends Document {
   dueDate: Date;
   createdById: Types.ObjectId;
   completedAt: Date | null;
+  revision: number;
+  clientRequestId?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -77,8 +79,13 @@ const taskSchema = new Schema<ITask>(
     dueDate: { type: Date, required: true, index: true },
     createdById: { type: Schema.Types.ObjectId, ref: "User", required: true },
     completedAt: { type: Date, default: null },
+    revision: { type: Number, default: 0, min: 0 },
+    clientRequestId: { type: String, default: null, sparse: true, unique: true, index: true },
   },
   { timestamps: true },
 );
+
+taskSchema.index({ status: 1, dueDate: 1, assignedToId: 1 });
+taskSchema.index({ assignedToId: 1, status: 1, dueDate: 1 });
 
 export const Task = mongoose.model<ITask>("Task", taskSchema);

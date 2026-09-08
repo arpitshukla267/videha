@@ -1,4 +1,4 @@
-import { Types } from "mongoose";
+import { Types, type ClientSession } from "mongoose";
 import { Notification } from "../models/Notification";
 import { AppError } from "../utils/AppError";
 
@@ -10,17 +10,26 @@ export interface CreateNotificationInput {
   linkUrl?: string;
 }
 
-export async function createNotification(input: CreateNotificationInput) {
+export async function createNotification(
+  input: CreateNotificationInput,
+  session?: ClientSession,
+) {
   if (!Types.ObjectId.isValid(input.userId)) {
     throw new AppError("Invalid notification recipient", 400);
   }
 
-  return Notification.create({
-    userId: input.userId,
-    title: input.title,
-    message: input.message,
-    type: input.type,
-    linkUrl: input.linkUrl,
-    isRead: false,
-  });
+  const docs = await Notification.create(
+    [
+      {
+        userId: input.userId,
+        title: input.title,
+        message: input.message,
+        type: input.type,
+        linkUrl: input.linkUrl,
+        isRead: false,
+      },
+    ],
+    session ? { session } : undefined,
+  );
+  return docs[0];
 }

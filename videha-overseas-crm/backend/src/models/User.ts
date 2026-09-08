@@ -11,6 +11,7 @@ export interface IUser extends Document {
   status: "active" | "inactive";
   phone?: string;
   designation?: string;
+  revision: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -31,6 +32,7 @@ const userSchema = new Schema<IUser>(
     status: { type: String, enum: ["active", "inactive"], default: "active", index: true },
     phone: { type: String, default: "" },
     designation: { type: String, default: "" },
+    revision: { type: Number, default: 0, min: 0 },
   },
   { timestamps: true },
 );

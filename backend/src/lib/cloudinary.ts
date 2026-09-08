@@ -3,7 +3,11 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 
-const ROOT_FOLDER = process.env.CLOUDINARY_FOLDER || "videha-overseas";
+const WEBSITE_ROOT = process.env.CLOUDINARY_WEBSITE_FOLDER || "website";
+const CRM_ROOT = process.env.CLOUDINARY_CRM_FOLDER || "crm";
+
+export const CLOUDINARY_WEBSITE_FOLDER = WEBSITE_ROOT;
+export const CLOUDINARY_CRM_FOLDER = CRM_ROOT;
 export const CLOUDINARY_MAX_BYTES = 10 * 1024 * 1024;
 const CHUNKED_UPLOAD_BYTES = 6 * 1024 * 1024;
 export const SEED_UPLOAD_BATCH_SIZE = 5;
@@ -43,7 +47,7 @@ export async function verifyCloudinaryCredentials(): Promise<void> {
 
   const cloud = process.env.CLOUDINARY_CLOUD_NAME?.trim();
   const key = process.env.CLOUDINARY_API_KEY?.trim();
-  const testPublicId = `${ROOT_FOLDER}/_credential_test`;
+  const testPublicId = `${WEBSITE_ROOT}/_credential_test`;
 
   // 1×1 PNG — ping alone can pass with read-only API keys.
   const testImage = Buffer.from(
@@ -99,7 +103,28 @@ export function buildPublicId(section: string, identifier: string, field: string
   const safeSection = slugifySegment(section);
   const safeIdentifier = slugifySegment(identifier);
   const safeField = slugifySegment(field);
-  return `${ROOT_FOLDER}/${safeSection}/${safeIdentifier}/${safeField}`;
+  return `${WEBSITE_ROOT}/${safeSection}/${safeIdentifier}/${safeField}`;
+}
+
+/** Media Library folder path (dynamic folder mode — separate from public_id delivery path). */
+export function buildAssetFolder(section: string, identifier: string): string {
+  const safeSection = slugifySegment(section);
+  const safeIdentifier = slugifySegment(identifier);
+  return `${WEBSITE_ROOT}/${safeSection}/${safeIdentifier}`;
+}
+
+export function assetFolderFromPublicId(publicId: string): string {
+  const parts = publicId.split("/").filter(Boolean);
+  if (parts.length <= 1) return WEBSITE_ROOT;
+  return parts.slice(0, -1).join("/");
+}
+
+/** Future CRM uploads — not used until Phase 2 Documents. */
+export function buildCrmPublicId(section: string, identifier: string, field: string): string {
+  const safeSection = slugifySegment(section);
+  const safeIdentifier = slugifySegment(identifier);
+  const safeField = slugifySegment(field);
+  return `${CRM_ROOT}/${safeSection}/${safeIdentifier}/${safeField}`;
 }
 
 export function resourceTypeForMime(mime: string): "image" | "raw" | "auto" {
@@ -132,6 +157,7 @@ export async function uploadToCloudinary(
 
   const uploadOptions: Record<string, unknown> = {
     public_id: publicId,
+    asset_folder: buildAssetFolder(options.section, options.identifier),
     overwrite: true,
     invalidate: true,
     resource_type: resourceType,

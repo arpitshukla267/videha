@@ -131,7 +131,7 @@ export const PublicOrderTrackingPage: React.FC<PublicOrderTrackingPageProps> = (
     }
 
     api.orders
-      .getOrders({})
+      .getOrders({ limit: 50, page: 1 })
       .then(res => {
         if (!res.success || !res.data.length) {
           setOrderList(DEMO_ORDER_LIST);

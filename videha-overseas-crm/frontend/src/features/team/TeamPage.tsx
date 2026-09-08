@@ -15,6 +15,8 @@ import { User, Role, Department } from '../../types/crm';
 import { Modal } from '../../components/ui/Modal';
 import { SearchableSelect } from '../../components/ui/SearchableSelect';
 import { useAuth } from '../../context/AuthContext';
+import { handleConflictWithReload, alertSaveError } from '../../lib/apiErrors';
+import { PaginationBar } from '../../components/ui/PaginationBar';
 
 const emptyMemberForm = {
   name: '',
@@ -33,6 +35,10 @@ export const TeamPage: React.FC = () => {
   const [roles, setRoles] = useState<Role[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalMembers, setTotalMembers] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [pageLimit] = useState(25);
 
   // View Mode: Cards (default) or Table
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
@@ -53,15 +59,20 @@ export const TeamPage: React.FC = () => {
   });
   const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
 
-  const fetchData = async () => {
+  const fetchData = async (page = currentPage) => {
     setIsLoading(true);
     try {
       const [uRes, rRes, dRes] = await Promise.all([
-        api.users.getUsers(),
+        api.users.getUsers({ page, limit: pageLimit }),
         api.roles.getRolesAndPermissions(),
         api.departments.getDepartments('active')
       ]);
-      if (uRes.success) setMembers(uRes.data);
+      if (uRes.success) {
+        setMembers(uRes.data);
+        setTotalMembers(uRes.total);
+        setCurrentPage(uRes.page);
+        setTotalPages(uRes.totalPages);
+      }
       if (rRes.success) setRoles(rRes.data.roles);
       if (dRes.success) setDepartments(dRes.data);
     } catch (err) {
@@ -72,8 +83,8 @@ export const TeamPage: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    fetchData(currentPage);
+  }, [currentPage]);
 
   const handleCreateMember = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -96,10 +107,10 @@ export const TeamPage: React.FC = () => {
       if (res.success) {
         setIsCreateOpen(false);
         setNewMemberForm(emptyMemberForm);
-        fetchData();
+        fetchData(1);
       }
-    } catch (err: any) {
-      alert(err.message || 'Failed to add team member');
+    } catch (err: unknown) {
+      alertSaveError(err, 'Failed to add team member');
     } finally {
       setIsSubmittingCreate(false);
     }
@@ -126,14 +137,19 @@ export const TeamPage: React.FC = () => {
         roleId: editForm.roleId,
         phone: editForm.phone || undefined,
         departmentId: editForm.departmentId || null,
-        designation: editForm.designation || undefined
+        designation: editForm.designation || undefined,
+        revision: editingMember.revision
       });
       if (res.success) {
         setEditingMember(null);
-        fetchData();
+        fetchData(currentPage);
       }
-    } catch (err: any) {
-      alert(err.message || 'Failed to update member');
+    } catch (err: unknown) {
+      if (editingMember) {
+        await handleConflictWithReload(err, () => fetchData(currentPage), 'Failed to update member');
+      } else {
+        alertSaveError(err, 'Failed to update member');
+      }
     } finally {
       setIsSubmittingEdit(false);
     }
@@ -147,10 +163,10 @@ export const TeamPage: React.FC = () => {
     if (!confirm(confirmMsg)) return;
 
     try {
-      await api.users.toggleStatus(member.id, newStatus);
-      fetchData();
-    } catch (err: any) {
-      alert(err.message || 'Failed to update member status');
+      await api.users.toggleStatus(member.id, newStatus, member.revision);
+      fetchData(currentPage);
+    } catch (err: unknown) {
+      await handleConflictWithReload(err, () => fetchData(currentPage), 'Failed to update member status');
     }
   };
 
@@ -533,6 +549,15 @@ export const TeamPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      <PaginationBar
+        page={currentPage}
+        totalPages={totalPages}
+        total={totalMembers}
+        isLoading={isLoading}
+        onPageChange={page => setCurrentPage(page)}
+        label="members"
+      />
 
       {/* ADD TEAM MEMBER MODAL */}
       <Modal

@@ -28,6 +28,9 @@ import { DateTimePicker } from '../../components/ui/DateTimePicker';
 import { useAuth } from '../../context/AuthContext';
 import { NavigationTab } from '../../components/layout/Sidebar';
 import { CRM_COUNTRIES } from '../../constants/countries';
+import { handleConflictWithReload, alertSaveError } from '../../lib/apiErrors';
+import { PaginationBar } from '../../components/ui/PaginationBar';
+import { createClientRequestId as generateClientRequestId } from '../../lib/clientRequestId';
 
 interface OrdersPageProps {
   onNavigate: (tab: NavigationTab, entityId?: string) => void;
@@ -46,6 +49,10 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({
 
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalOrders, setTotalOrders] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [pageLimit] = useState(25);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [countryFilter, setCountryFilter] = useState('all');
@@ -57,6 +64,7 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({
 
   // Create Order Modal
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [createRequestId, setCreateRequestId] = useState(generateClientRequestId);
   const [newOrderForm, setNewOrderForm] = useState({
     customerName: '',
     company: '',
@@ -92,23 +100,28 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({
 
   useEffect(() => {
     api.users
-      .getUsers()
+      .getUsers({ limit: 100, page: 1 })
       .then(res => {
         if (res.success) setTeamMembers(res.data);
       })
       .catch(() => {});
   }, []);
 
-  const fetchOrders = async () => {
+  const fetchOrders = async (page = currentPage) => {
     setIsLoading(true);
     try {
       const res = await api.orders.getOrders({
         search,
         status: statusFilter,
-        country: countryFilter
+        country: countryFilter,
+        page,
+        limit: pageLimit
       });
       if (res.success) {
         setOrders(res.data);
+        setTotalOrders(res.total);
+        setCurrentPage(res.page);
+        setTotalPages(res.totalPages);
       }
     } catch (err) {
       console.error('Failed to fetch orders:', err);
@@ -118,8 +131,12 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({
   };
 
   useEffect(() => {
-    fetchOrders();
+    setCurrentPage(1);
   }, [search, statusFilter, countryFilter]);
+
+  useEffect(() => {
+    fetchOrders(currentPage);
+  }, [search, statusFilter, countryFilter, currentPage]);
 
   const handleOpenDetail = async (id: string) => {
     setSelectedOrderId(id);
@@ -149,10 +166,12 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({
     try {
       const res = await api.orders.createOrder({
         ...newOrderForm,
-        assignedMemberId: newOrderForm.assignedMemberId || user?.id
+        assignedMemberId: newOrderForm.assignedMemberId || user?.id,
+        clientRequestId: createRequestId
       });
       if (res.success) {
         setIsCreateOpen(false);
+        setCreateRequestId(generateClientRequestId());
         setNewOrderForm({
           customerName: '',
           company: '',
@@ -171,10 +190,10 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({
           trackingNumber: '',
           notes: ''
         });
-        fetchOrders();
+        fetchOrders(1);
       }
-    } catch (err: any) {
-      alert(err.message || 'Failed to create order');
+    } catch (err: unknown) {
+      alertSaveError(err, 'Failed to create order');
     } finally {
       setIsSubmittingCreate(false);
     }
@@ -185,14 +204,23 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({
     if (!orderDetail) return;
     setIsUpdatingStatus(true);
     try {
-      const res = await api.orders.updateStatus(orderDetail.order.id, nextStatus, statusNotes);
+      const res = await api.orders.updateStatus(
+        orderDetail.order.id,
+        nextStatus,
+        statusNotes,
+        orderDetail.order.revision
+      );
       if (res.success) {
         setOrderDetail(res.data);
         setStatusNotes('');
-        fetchOrders();
+        fetchOrders(currentPage);
       }
-    } catch (err: any) {
-      alert(err.message || 'Failed to update order status');
+    } catch (err: unknown) {
+      await handleConflictWithReload(
+        err,
+        () => handleOpenDetail(orderDetail.order.id),
+        'Failed to update order status'
+      );
     } finally {
       setIsUpdatingStatus(false);
     }
@@ -258,7 +286,10 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({
 
           {hasPermission('orders.create') && (
             <button
-              onClick={() => setIsCreateOpen(true)}
+              onClick={() => {
+                setCreateRequestId(generateClientRequestId());
+                setIsCreateOpen(true);
+              }}
               className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-xs font-medium transition-colors shadow-2xs"
             >
               <Plus className="w-4 h-4" />
@@ -528,6 +559,15 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({
           </div>
         </div>
       )}
+
+      <PaginationBar
+        page={currentPage}
+        totalPages={totalPages}
+        total={totalOrders}
+        isLoading={isLoading}
+        onPageChange={page => setCurrentPage(page)}
+        label="orders"
+      />
 
       {/* CREATE ORDER MODAL */}
       <Modal

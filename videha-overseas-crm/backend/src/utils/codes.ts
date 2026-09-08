@@ -2,6 +2,9 @@ import { Lead } from "../models/Lead";
 import { Task } from "../models/Task";
 import { Order } from "../models/Order";
 import { Bill } from "../models/Bill";
+import { Company } from "../models/Company";
+import { Customer } from "../models/Customer";
+import { Quotation } from "../models/Quotation";
 
 function extractTrailingNumber(code: string, prefix: string): number {
   if (!code.startsWith(prefix)) return 0;
@@ -41,4 +44,22 @@ export async function nextBillCode(): Promise<string> {
     .lean();
   const current = last?.billCode ? extractTrailingNumber(last.billCode, prefix) : 0;
   return `${prefix}${String(Math.max(0, current) + 1).padStart(4, "0")}`;
+}
+
+export async function nextCompanyCode(): Promise<string> {
+  const last = await Company.findOne().sort({ createdAt: -1 }).select("companyCode").lean();
+  const current = last?.companyCode ? extractTrailingNumber(last.companyCode, "VO-CO-") : 100;
+  return `VO-CO-${Math.max(100, current) + 1}`;
+}
+
+export async function nextCustomerCode(): Promise<string> {
+  const last = await Customer.findOne().sort({ createdAt: -1 }).select("customerCode").lean();
+  const current = last?.customerCode ? extractTrailingNumber(last.customerCode, "VO-CU-") : 100;
+  return `VO-CU-${Math.max(100, current) + 1}`;
+}
+
+export async function nextQuotationCode(): Promise<string> {
+  const last = await Quotation.findOne().sort({ createdAt: -1 }).select("quotationCode").lean();
+  const current = last?.quotationCode ? extractTrailingNumber(last.quotationCode, "VO-QT-") : 100;
+  return `VO-QT-${Math.max(100, current) + 1}`;
 }

@@ -7,6 +7,10 @@ function iso(value: unknown): string | null {
   return Number.isNaN(d.getTime()) ? null : d.toISOString();
 }
 
+function revisionOf(doc: Record<string, unknown>): number {
+  return typeof doc.revision === "number" ? doc.revision : 0;
+}
+
 export function serializeUser(doc: Record<string, unknown>) {
   const departmentPopulated =
     doc.departmentId && typeof doc.departmentId === "object"
@@ -41,6 +45,45 @@ export function serializeUser(doc: Record<string, unknown>) {
     department: departmentName,
     createdAt: iso(doc.createdAt) || new Date().toISOString(),
     updatedAt: iso(doc.updatedAt) || new Date().toISOString(),
+    revision: revisionOf(doc),
+  };
+}
+
+/** Lightweight lead payload for paginated list views. */
+export function serializeLeadSummary(doc: Record<string, unknown>) {
+  const assigned = doc.assignedToId && typeof doc.assignedToId === "object"
+    ? (doc.assignedToId as Record<string, unknown>)
+    : null;
+  const assignedToId = assigned
+    ? String(assigned._id ?? assigned.id)
+    : doc.assignedToId
+      ? String(doc.assignedToId)
+      : null;
+
+  return {
+    id: String(doc._id ?? doc.id),
+    leadCode: doc.leadCode,
+    name: doc.name,
+    company: doc.company,
+    phoneNumber: doc.phoneNumber,
+    email: doc.email || "",
+    country: doc.country,
+    productInterest: doc.productInterest || "",
+    leadSource: doc.source || doc.leadSource || "Direct Inquiry",
+    source: doc.source || doc.leadSource || "Direct Inquiry",
+    leadStatus: doc.status || doc.leadStatus || "New",
+    status: doc.status || doc.leadStatus || "New",
+    priority: doc.priority || "Medium",
+    assignedMemberId: assignedToId,
+    assignedToId,
+    assignedMemberName: assigned?.name ? String(assigned.name) : undefined,
+    createdDate: iso(doc.createdAt) || new Date().toISOString(),
+    nextFollowUp: iso(doc.nextFollowUp),
+    updatedAt: iso(doc.updatedAt) || new Date().toISOString(),
+    revision: revisionOf(doc),
+    companyId: refId(doc.companyId),
+    customerId: refId(doc.customerId),
+    lostReason: doc.lostReason || "",
   };
 }
 
@@ -94,6 +137,11 @@ export function serializeLead(doc: Record<string, unknown>) {
     createdById: refId(doc.createdById) || "",
     updatedAt: iso(doc.updatedAt) || new Date().toISOString(),
     archived: Boolean(doc.archived),
+    revision: revisionOf(doc),
+    companyId: refId(doc.companyId),
+    customerId: refId(doc.customerId),
+    lostReason: doc.lostReason || "",
+    convertedAt: iso(doc.convertedAt),
   };
 }
 
@@ -163,6 +211,7 @@ export function serializeTask(doc: Record<string, unknown>) {
     isOverdue,
     overdueDays,
     updatedAt: iso(doc.updatedAt) || new Date().toISOString(),
+    revision: revisionOf(doc),
   };
 }
 
@@ -201,8 +250,11 @@ export function serializeOrder(doc: Record<string, unknown>) {
     shippingCarrier: doc.shippingCarrier || "",
     trackingNumber: doc.trackingNumber || "",
     relatedLeadId: refId(doc.relatedLeadId),
+    companyId: refId(doc.companyId),
+    customerId: refId(doc.customerId),
     createdById: refId(doc.createdById) || "",
     updatedAt: iso(doc.updatedAt) || new Date().toISOString(),
+    revision: revisionOf(doc),
   };
 }
 
@@ -224,6 +276,7 @@ export function serializeDepartment(doc: Record<string, unknown>) {
     status: doc.status || "active",
     createdAt: iso(doc.createdAt) || new Date().toISOString(),
     updatedAt: iso(doc.updatedAt) || new Date().toISOString(),
+    revision: revisionOf(doc),
   };
 }
 
@@ -348,5 +401,157 @@ export function serializeBill(doc: Record<string, unknown>) {
     createdById: refId(doc.createdById) || "",
     createdAt: iso(doc.createdAt) || new Date().toISOString(),
     updatedAt: iso(doc.updatedAt) || new Date().toISOString(),
+  };
+}
+
+export function serializeCompany(doc: Record<string, unknown>) {
+  const assigned = doc.assignedToId && typeof doc.assignedToId === "object"
+    ? (doc.assignedToId as Record<string, unknown>)
+    : null;
+
+  return {
+    id: String(doc._id ?? doc.id),
+    companyCode: doc.companyCode,
+    name: doc.name,
+    legalName: doc.legalName || "",
+    country: doc.country,
+    city: doc.city || "",
+    address: doc.address || "",
+    website: doc.website || "",
+    industry: doc.industry || "",
+    taxId: doc.taxId || "",
+    notes: doc.notes || "",
+    status: doc.status || "active",
+    assignedToId: assigned
+      ? String(assigned._id ?? assigned.id)
+      : refId(doc.assignedToId),
+    assignedToName: assigned?.name ? String(assigned.name) : undefined,
+    createdById: refId(doc.createdById) || "",
+    createdAt: iso(doc.createdAt) || new Date().toISOString(),
+    updatedAt: iso(doc.updatedAt) || new Date().toISOString(),
+    revision: revisionOf(doc),
+  };
+}
+
+export function serializeCompanySummary(doc: Record<string, unknown>) {
+  return {
+    id: String(doc._id ?? doc.id),
+    companyCode: doc.companyCode,
+    name: doc.name,
+    country: doc.country,
+    industry: doc.industry || "",
+    status: doc.status || "active",
+    revision: revisionOf(doc),
+  };
+}
+
+export function serializeCustomer(doc: Record<string, unknown>) {
+  const company = doc.companyId && typeof doc.companyId === "object"
+    ? (doc.companyId as Record<string, unknown>)
+    : null;
+
+  return {
+    id: String(doc._id ?? doc.id),
+    customerCode: doc.customerCode,
+    companyId: company
+      ? String(company._id ?? company.id)
+      : refId(doc.companyId) || "",
+    companyName: company?.name ? String(company.name) : undefined,
+    name: doc.name,
+    email: doc.email || "",
+    phone: doc.phone || "",
+    whatsAppNumber: doc.whatsAppNumber || "",
+    designation: doc.designation || "",
+    isPrimaryContact: Boolean(doc.isPrimaryContact),
+    notes: doc.notes || "",
+    status: doc.status || "active",
+    relatedLeadId: refId(doc.relatedLeadId),
+    createdById: refId(doc.createdById) || "",
+    createdAt: iso(doc.createdAt) || new Date().toISOString(),
+    updatedAt: iso(doc.updatedAt) || new Date().toISOString(),
+    revision: revisionOf(doc),
+  };
+}
+
+export function serializeFollowUp(doc: Record<string, unknown>) {
+  const assigned = doc.assignedToId && typeof doc.assignedToId === "object"
+    ? (doc.assignedToId as Record<string, unknown>)
+    : null;
+  const lead = doc.leadId && typeof doc.leadId === "object"
+    ? (doc.leadId as Record<string, unknown>)
+    : null;
+
+  return {
+    id: String(doc._id ?? doc.id),
+    leadId: lead ? String(lead._id ?? lead.id) : refId(doc.leadId) || "",
+    leadCode: lead?.leadCode ? String(lead.leadCode) : undefined,
+    leadCompany: lead?.company ? String(lead.company) : undefined,
+    assignedToId: assigned
+      ? String(assigned._id ?? assigned.id)
+      : refId(doc.assignedToId) || "",
+    assignedToName: assigned?.name ? String(assigned.name) : undefined,
+    dueAt: iso(doc.dueAt) || new Date().toISOString(),
+    type: doc.type,
+    status: doc.status || "Pending",
+    outcome: doc.outcome || "",
+    notes: doc.notes || "",
+    completedAt: iso(doc.completedAt),
+    createdById: refId(doc.createdById) || "",
+    createdAt: iso(doc.createdAt) || new Date().toISOString(),
+    updatedAt: iso(doc.updatedAt) || new Date().toISOString(),
+    revision: revisionOf(doc),
+  };
+}
+
+export function serializeQuotation(doc: Record<string, unknown>) {
+  const assigned = doc.assignedToId && typeof doc.assignedToId === "object"
+    ? (doc.assignedToId as Record<string, unknown>)
+    : null;
+  const lead = doc.leadId && typeof doc.leadId === "object"
+    ? (doc.leadId as Record<string, unknown>)
+    : null;
+  const company = doc.companyId && typeof doc.companyId === "object"
+    ? (doc.companyId as Record<string, unknown>)
+    : null;
+  const customer = doc.customerId && typeof doc.customerId === "object"
+    ? (doc.customerId as Record<string, unknown>)
+    : null;
+  const order = doc.orderId && typeof doc.orderId === "object"
+    ? (doc.orderId as Record<string, unknown>)
+    : null;
+
+  return {
+    id: String(doc._id ?? doc.id),
+    quotationCode: doc.quotationCode,
+    title: doc.title,
+    currency: doc.currency || "USD",
+    lineItems: Array.isArray(doc.lineItems) ? doc.lineItems : [],
+    subtotal: doc.subtotal ?? 0,
+    discountAmount: doc.discountAmount ?? 0,
+    taxRate: doc.taxRate ?? 0,
+    taxAmount: doc.taxAmount ?? 0,
+    totalAmount: doc.totalAmount ?? 0,
+    validityDate: iso(doc.validityDate),
+    paymentTerms: doc.paymentTerms || "",
+    notes: doc.notes || "",
+    status: doc.status || "Draft",
+    leadId: lead ? String(lead._id ?? lead.id) : refId(doc.leadId),
+    leadCode: lead?.leadCode ? String(lead.leadCode) : undefined,
+    companyId: company ? String(company._id ?? company.id) : refId(doc.companyId),
+    companyName: company?.name ? String(company.name) : undefined,
+    customerId: customer ? String(customer._id ?? customer.id) : refId(doc.customerId),
+    customerName: customer?.name ? String(customer.name) : undefined,
+    orderId: order ? String(order._id ?? order.id) : refId(doc.orderId),
+    orderCode: order?.orderCode ? String(order.orderCode) : undefined,
+    assignedToId: assigned
+      ? String(assigned._id ?? assigned.id)
+      : refId(doc.assignedToId),
+    assignedToName: assigned?.name ? String(assigned.name) : undefined,
+    sentAt: iso(doc.sentAt),
+    acceptedAt: iso(doc.acceptedAt),
+    createdById: refId(doc.createdById) || "",
+    createdAt: iso(doc.createdAt) || new Date().toISOString(),
+    updatedAt: iso(doc.updatedAt) || new Date().toISOString(),
+    revision: revisionOf(doc),
   };
 }

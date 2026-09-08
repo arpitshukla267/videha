@@ -100,6 +100,14 @@ export const Topbar: React.FC<TopbarProps> = ({ currentTab, onNavigate, onOpenPr
       title: 'Lead Management',
       subtitle: 'Track global inquiries, trade buyers, and follow-up schedules'
     },
+    followups: {
+      title: 'Follow-ups',
+      subtitle: 'Today, upcoming, and overdue scheduled lead touchpoints'
+    },
+    quotations: {
+      title: 'Quotations',
+      subtitle: 'Draft, send, and track sales quotes through to orders'
+    },
     tasks: {
       title: 'Task Management',
       subtitle: 'Monitor pending, in-progress, and overdue operational actions'

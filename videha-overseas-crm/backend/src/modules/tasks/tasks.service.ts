@@ -7,6 +7,8 @@ import { AppError } from "../../utils/AppError";
 import { assertObjectId, optionalObjectId } from "../../utils/objectId";
 import { nextTaskCode } from "../../utils/codes";
 import { serializeTask } from "../../utils/serializers";
+import { parsePagination, paginatedResponse } from "../../utils/pagination";
+import { applyOptimisticUpdate, parseClientRequestId, parseRevision } from "../../utils/concurrency";
 import { writeAudit } from "../../services/audit.service";
 import { createNotification } from "../../services/notification.service";
 import type { AuthUser } from "../../middleware/auth";
@@ -16,6 +18,20 @@ const POPULATE = [
   { path: "createdById", select: "name email" },
   { path: "relatedLeadId", select: "name company leadCode" },
 ];
+
+const LIST_SELECT =
+  "taskCode title description assignedToId relatedLeadId taskType channel pickedUp outcome completionNotes priority status dueDate createdById completedAt revision createdAt updatedAt";
+
+const LOWER_STATUS_AFTER_COMPLETED: TaskStatus[] = ["Pending", "In Progress"];
+
+const SORT_FIELD_MAP: Record<string, string> = {
+  dueDate: "dueDate",
+  createdDate: "createdAt",
+  createdAt: "createdAt",
+  priority: "priority",
+  status: "status",
+  title: "title",
+};
 
 function normalizeTaskInput(body: Record<string, unknown>) {
   const title = (body.title ?? body.taskTitle) as string | undefined;
@@ -60,9 +76,14 @@ export async function listTasks(
     search?: string;
     assignedToId?: string;
     priority?: string;
+    page?: unknown;
+    limit?: unknown;
+    sortBy?: string;
+    sortOrder?: "asc" | "desc";
   },
   currentUserId: string,
 ) {
+  const { page, limit, skip } = parsePagination(filters);
   const query: Record<string, unknown> = {};
   const view = filters.view || "all";
 
@@ -70,6 +91,10 @@ export async function listTasks(
   else if (view === "pending") query.status = "Pending";
   else if (view === "in_progress") query.status = "In Progress";
   else if (view === "completed") query.status = "Completed";
+  else if (view === "overdue") {
+    query.status = { $nin: ["Completed", "Cancelled"] };
+    query.dueDate = { $lt: new Date() };
+  }
 
   if (filters.assignedToId && filters.assignedToId !== "all") {
     assertObjectId(filters.assignedToId, "assignedToId");
@@ -86,25 +111,26 @@ export async function listTasks(
     ];
   }
 
-  let docs = await Task.find(query).populate(POPULATE).sort({ dueDate: 1, createdAt: -1 });
+  const sortField = SORT_FIELD_MAP[filters.sortBy || "dueDate"] || "dueDate";
+  const sortDir = filters.sortOrder === "desc" ? -1 : 1;
+  const sort: Record<string, 1 | -1> =
+    view !== "completed"
+      ? { status: 1, [sortField]: sortDir, createdAt: -1 }
+      : { [sortField]: sortDir, createdAt: -1 };
 
-  let serialized = docs.map((d) => serializeTask(d.toObject() as unknown as Record<string, unknown>));
+  const [total, docs] = await Promise.all([
+    Task.countDocuments(query),
+    Task.find(query)
+      .select(LIST_SELECT)
+      .populate(POPULATE)
+      .sort(sort)
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+  ]);
 
-  if (view === "overdue") {
-    serialized = serialized.filter((t) => t.isOverdue);
-  }
-
-  // Keep completed / cancelled tasks at the bottom in mixed views
-  if (view !== "completed") {
-    serialized.sort((a, b) => {
-      const aDone = a.status === "Completed" || a.status === "Cancelled" ? 1 : 0;
-      const bDone = b.status === "Completed" || b.status === "Cancelled" ? 1 : 0;
-      if (aDone !== bDone) return aDone - bDone;
-      return 0;
-    });
-  }
-
-  return serialized;
+  const items = docs.map((d) => serializeTask(d as unknown as Record<string, unknown>));
+  return paginatedResponse(items, total, page, limit);
 }
 
 export async function getTask(id: string) {
@@ -115,6 +141,14 @@ export async function getTask(id: string) {
 }
 
 export async function createTask(body: Record<string, unknown>, actor: AuthUser) {
+  const clientRequestId = parseClientRequestId(body);
+  if (clientRequestId) {
+    const existing = await Task.findOne({ clientRequestId }).populate(POPULATE);
+    if (existing) {
+      return serializeTask(existing.toObject() as unknown as Record<string, unknown>);
+    }
+  }
+
   const input = normalizeTaskInput(body);
   if (!input.title || !input.assignedToId || !input.dueDate) {
     throw new AppError("Task title, assigned member, and due date are required.", 400);
@@ -146,6 +180,7 @@ export async function createTask(body: Record<string, unknown>, actor: AuthUser)
     dueDate: input.dueDate,
     createdById: actor.id,
     completedAt: status === "Completed" ? new Date() : null,
+    clientRequestId: clientRequestId ?? null,
   });
 
   if (String(assignee._id) !== actor.id) {
@@ -174,43 +209,66 @@ export async function createTask(body: Record<string, unknown>, actor: AuthUser)
 
 export async function updateTask(id: string, body: Record<string, unknown>, actor: AuthUser) {
   assertObjectId(id, "task id");
-  const task = await Task.findById(id);
-  if (!task) throw new AppError("Task not found.", 404);
+  const existing = await Task.findById(id).select("status assignedToId title taskCode revision");
+  if (!existing) throw new AppError("Task not found.", 404);
 
-  const prevAssignee = task.assignedToId ? String(task.assignedToId) : null;
-  const prevStatus = task.status;
+  const prevAssignee = existing.assignedToId ? String(existing.assignedToId) : null;
+  const prevStatus = existing.status;
+  const expectedRevision = parseRevision(body);
   const input = normalizeTaskInput(body);
-  if (input.title !== undefined) task.title = input.title.trim();
-  if (input.description !== undefined) task.description = input.description;
-  if (input.priority !== undefined) task.priority = input.priority;
-  if (input.dueDate !== undefined) task.dueDate = input.dueDate;
+
+  if (
+    prevStatus === "Completed" &&
+    input.status &&
+    LOWER_STATUS_AFTER_COMPLETED.includes(input.status) &&
+    expectedRevision === undefined
+  ) {
+    throw new AppError(
+      "Reopening a completed task requires the current revision. Please refresh and try again.",
+      409,
+      "REVISION_REQUIRED",
+    );
+  }
+
+  const setFields: Record<string, unknown> = {};
+  if (input.title !== undefined) setFields.title = input.title.trim();
+  if (input.description !== undefined) setFields.description = input.description;
+  if (input.priority !== undefined) setFields.priority = input.priority;
+  if (input.dueDate !== undefined) setFields.dueDate = input.dueDate;
   if (body.relatedLeadId !== undefined) {
     if (input.relatedLeadId) {
       const lead = await Lead.findById(input.relatedLeadId);
       if (!lead) throw new AppError("Related lead not found.", 400);
     }
-    task.relatedLeadId = input.relatedLeadId as Types.ObjectId | null;
+    setFields.relatedLeadId = input.relatedLeadId;
   }
-  if (input.taskType !== undefined) task.taskType = input.taskType;
-  if (input.channel !== undefined) task.channel = input.channel;
-  if (body.pickedUp !== undefined) task.pickedUp = input.pickedUp ?? null;
-  if (input.outcome !== undefined) task.outcome = input.outcome;
-  if (input.completionNotes !== undefined) task.completionNotes = input.completionNotes;
+  if (input.taskType !== undefined) setFields.taskType = input.taskType;
+  if (input.channel !== undefined) setFields.channel = input.channel;
+  if (body.pickedUp !== undefined) setFields.pickedUp = input.pickedUp ?? null;
+  if (input.outcome !== undefined) setFields.outcome = input.outcome;
+  if (input.completionNotes !== undefined) setFields.completionNotes = input.completionNotes;
   if (input.assignedToId !== undefined) {
     assertObjectId(input.assignedToId, "assignedToId");
-    task.assignedToId = new Types.ObjectId(input.assignedToId);
+    setFields.assignedToId = new Types.ObjectId(input.assignedToId);
   }
   if (input.status !== undefined) {
-    task.status = input.status;
-    if (input.status === "Completed" && !task.completedAt) {
-      task.completedAt = new Date();
-    }
-    if (input.status !== "Completed") {
-      task.completedAt = null;
+    setFields.status = input.status;
+    if (input.status === "Completed") {
+      setFields.completedAt = new Date();
+    } else {
+      setFields.completedAt = null;
     }
   }
 
-  await task.save();
+  if (Object.keys(setFields).length === 0) {
+    const task = await Task.findById(id).populate(POPULATE);
+    if (!task) throw new AppError("Task not found.", 404);
+    return serializeTask(task.toObject() as unknown as Record<string, unknown>);
+  }
+
+  const task = await applyOptimisticUpdate(Task, id, expectedRevision, setFields, {
+    notFoundMessage: "Task not found.",
+  });
 
   const newAssignee = task.assignedToId ? String(task.assignedToId) : null;
   if (newAssignee && newAssignee !== prevAssignee && newAssignee !== actor.id) {
@@ -240,12 +298,17 @@ export async function updateTask(id: string, body: Record<string, unknown>, acto
   return serializeTask(task.toObject() as unknown as Record<string, unknown>);
 }
 
-export async function updateTaskStatus(id: string, status: string, actor: AuthUser) {
+export async function updateTaskStatus(
+  id: string,
+  status: string,
+  actor: AuthUser,
+  body: Record<string, unknown> = {},
+) {
   if (!status) throw new AppError("Status is required.", 400);
   if (!TASK_STATUSES.includes(status as TaskStatus)) {
     throw new AppError(`Invalid task status: ${status}`, 400);
   }
-  return updateTask(id, { status }, actor);
+  return updateTask(id, { ...body, status }, actor);
 }
 
 export async function assignTask(id: string, assignedToId: string, actor: AuthUser) {

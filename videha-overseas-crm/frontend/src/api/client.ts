@@ -16,10 +16,30 @@ import {
   PublicOrderTrackingInfo,
   AuditLog,
   Notification,
-  OrderStatus
+  OrderStatus,
+  FollowUp,
+  Company,
+  Customer,
+  Quotation,
+  QuotationStatus,
+  LeadPipelineMeta,
+  FollowUpType,
+  FollowUpStatus
 } from '../types/crm';
+import { ApiError } from '../lib/apiErrors';
 
 const TOKEN_KEY = 'videha_crm_auth_token';
+
+export type PaginatedListResponse<T> = {
+  success: boolean;
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+};
+
+export type UpdatePayload<T> = Partial<T> & { revision?: number; clientRequestId?: string };
 
 export function getStoredToken(): string | null {
   return localStorage.getItem(TOKEN_KEY);
@@ -71,7 +91,11 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
         removeStoredToken();
       }
     }
-    throw new Error(data?.message || `Request failed with status ${response.status}`);
+    throw new ApiError(
+      data?.message || `Request failed with status ${response.status}`,
+      response.status,
+      data?.code,
+    );
   }
 
   return data;
@@ -208,20 +232,23 @@ export const api = {
         success: boolean;
         data: { lead: Lead; activities: LeadActivity[]; notes: LeadNote[]; callLogs: CallLog[] };
       }>(`/api/leads/${id}`),
-    createLead: (data: Partial<Lead>) =>
+    createLead: (data: UpdatePayload<Lead>) =>
       request<{ success: boolean; data: Lead }>('/api/leads', {
         method: 'POST',
         body: JSON.stringify(data)
       }),
-    updateLead: (id: string, data: Partial<Lead>) =>
+    updateLead: (id: string, data: UpdatePayload<Lead>) =>
       request<{ success: boolean; data: Lead }>(`/api/leads/${id}`, {
         method: 'PUT',
         body: JSON.stringify(data)
       }),
-    assignLead: (id: string, assignedMemberId: string | null) =>
+    assignLead: (id: string, assignedMemberId: string | null, revision?: number) =>
       request<{ success: boolean; data: Lead }>(`/api/leads/${id}/assign`, {
         method: 'PATCH',
-        body: JSON.stringify({ assignedMemberId })
+        body: JSON.stringify({
+          assignedMemberId,
+          ...(revision !== undefined ? { revision } : {})
+        })
       }),
     addNote: (id: string, content: string) =>
       request<{ success: boolean; data: { note: LeadNote; activities: LeadActivity[] } }>(
@@ -245,6 +272,7 @@ export const api = {
         notes?: string;
         nextFollowUp?: string | null;
         followUpRequired?: boolean;
+        revision?: number;
       }
     ) =>
       request<{
@@ -262,7 +290,22 @@ export const api = {
     deleteLead: (id: string) =>
       request<{ success: boolean; message: string }>(`/api/leads/${id}`, {
         method: 'DELETE'
-      })
+      }),
+    convertLead: (id: string, revision?: number) =>
+      request<{
+        success: boolean;
+        data: {
+          lead: Lead;
+          company: Company;
+          customer: Customer;
+          alreadyConverted?: boolean;
+        };
+      }>(`/api/leads/${id}/convert`, {
+        method: 'POST',
+        body: JSON.stringify(revision !== undefined ? { revision } : {})
+      }),
+    getLeadFollowUps: (id: string) =>
+      request<PaginatedListResponse<FollowUp>>(`/api/leads/${id}/follow-ups`)
   },
 
   // Tasks
@@ -272,6 +315,8 @@ export const api = {
       search?: string;
       assignedToId?: string;
       priority?: string;
+      page?: number;
+      limit?: number;
     }) => {
       const query = new URLSearchParams();
       if (params.view) query.set('view', params.view);
@@ -279,25 +324,30 @@ export const api = {
       if (params.assignedToId && params.assignedToId !== 'all')
         query.set('assignedToId', params.assignedToId);
       if (params.priority && params.priority !== 'all') query.set('priority', params.priority);
+      if (params.page) query.set('page', params.page.toString());
+      if (params.limit) query.set('limit', params.limit.toString());
 
-      return request<{ success: boolean; data: Task[] }>(`/api/tasks?${query.toString()}`);
+      return request<PaginatedListResponse<Task>>(`/api/tasks?${query.toString()}`);
     },
     getTask: (id: string) =>
       request<{ success: boolean; data: Task }>(`/api/tasks/${id}`),
-    createTask: (data: Partial<Task>) =>
+    createTask: (data: UpdatePayload<Task>) =>
       request<{ success: boolean; data: Task }>('/api/tasks', {
         method: 'POST',
         body: JSON.stringify(data)
       }),
-    updateTask: (id: string, data: Partial<Task>) =>
+    updateTask: (id: string, data: UpdatePayload<Task>) =>
       request<{ success: boolean; data: Task }>(`/api/tasks/${id}`, {
         method: 'PUT',
         body: JSON.stringify(data)
       }),
-    updateStatus: (id: string, status: string) =>
+    updateStatus: (id: string, status: string, revision?: number) =>
       request<{ success: boolean; data: Task }>(`/api/tasks/${id}/status`, {
         method: 'PATCH',
-        body: JSON.stringify({ status })
+        body: JSON.stringify({
+          status,
+          ...(revision !== undefined ? { revision } : {})
+        })
       }),
     assignTask: (id: string, assignedToId: string) =>
       request<{ success: boolean; data: Task }>(`/api/tasks/${id}/assign`, {
@@ -317,6 +367,8 @@ export const api = {
       status?: string;
       country?: string;
       assignedMemberId?: string;
+      page?: number;
+      limit?: number;
     }) => {
       const query = new URLSearchParams();
       if (params.search) query.set('search', params.search);
@@ -324,8 +376,10 @@ export const api = {
       if (params.country && params.country !== 'all') query.set('country', params.country);
       if (params.assignedMemberId && params.assignedMemberId !== 'all')
         query.set('assignedMemberId', params.assignedMemberId);
+      if (params.page) query.set('page', params.page.toString());
+      if (params.limit) query.set('limit', params.limit.toString());
 
-      return request<{ success: boolean; data: Order[] }>(`/api/orders?${query.toString()}`);
+      return request<PaginatedListResponse<Order>>(`/api/orders?${query.toString()}`);
     },
     getOrder: (id: string) =>
       request<{
@@ -337,15 +391,19 @@ export const api = {
         method: 'POST',
         body: JSON.stringify(data)
       }),
-    updateStatus: (id: string, status: OrderStatus, notes?: string) =>
+    updateStatus: (id: string, status: OrderStatus, notes?: string, revision?: number) =>
       request<{
         success: boolean;
         data: { order: Order; history: OrderStatusHistory[] };
       }>(`/api/orders/${id}/status`, {
         method: 'PATCH',
-        body: JSON.stringify({ status, notes })
+        body: JSON.stringify({
+          status,
+          notes,
+          ...(revision !== undefined ? { revision } : {})
+        })
       }),
-    updateOrder: (id: string, data: Partial<Order>) =>
+    updateOrder: (id: string, data: UpdatePayload<Order>) =>
       request<{ success: boolean; data: Order }>(`/api/orders/${id}`, {
         method: 'PUT',
         body: JSON.stringify(data)
@@ -354,22 +412,32 @@ export const api = {
 
   // Team / Users
   users: {
-    getUsers: () =>
-      request<{ success: boolean; data: User[] }>('/api/users'),
+    getUsers: (params?: { search?: string; status?: string; page?: number; limit?: number }) => {
+      const query = new URLSearchParams();
+      if (params?.search) query.set('search', params.search);
+      if (params?.status) query.set('status', params.status);
+      if (params?.page) query.set('page', params.page.toString());
+      if (params?.limit) query.set('limit', params.limit.toString());
+      const qs = query.toString();
+      return request<PaginatedListResponse<User>>(`/api/users${qs ? `?${qs}` : ''}`);
+    },
     createUser: (data: any) =>
       request<{ success: boolean; data: User }>('/api/users', {
         method: 'POST',
         body: JSON.stringify(data)
       }),
-    updateUser: (id: string, data: any) =>
+    updateUser: (id: string, data: UpdatePayload<User>) =>
       request<{ success: boolean; data: User }>(`/api/users/${id}`, {
         method: 'PUT',
         body: JSON.stringify(data)
       }),
-    toggleStatus: (id: string, status: 'active' | 'inactive') =>
+    toggleStatus: (id: string, status: 'active' | 'inactive', revision?: number) =>
       request<{ success: boolean; data: User }>(`/api/users/${id}/status`, {
         method: 'PATCH',
-        body: JSON.stringify({ status })
+        body: JSON.stringify({
+          status,
+          ...(revision !== undefined ? { revision } : {})
+        })
       })
   },
 
@@ -459,8 +527,13 @@ export const api = {
 
   // Audit
   audit: {
-    getLogs: (limit = 50) =>
-      request<{ success: boolean; data: AuditLog[] }>(`/api/audit?limit=${limit}`)
+    getLogs: (params?: { page?: number; limit?: number }) => {
+      const query = new URLSearchParams();
+      if (params?.page) query.set('page', params.page.toString());
+      if (params?.limit) query.set('limit', params.limit.toString());
+      const qs = query.toString();
+      return request<PaginatedListResponse<AuditLog>>(`/api/audit${qs ? `?${qs}` : ''}`);
+    }
   },
 
   // Departments
@@ -478,7 +551,7 @@ export const api = {
         method: 'POST',
         body: JSON.stringify(data)
       }),
-    updateDepartment: (id: string, data: Partial<Department>) =>
+    updateDepartment: (id: string, data: UpdatePayload<Department>) =>
       request<{ success: boolean; data: Department }>(`/api/departments/${id}`, {
         method: 'PATCH',
         body: JSON.stringify(data)
@@ -492,13 +565,125 @@ export const api = {
   // Meta
   meta: {
     getCountries: () =>
-      request<{ success: boolean; data: string[] }>('/api/meta/countries')
+      request<{ success: boolean; data: string[] }>('/api/meta/countries'),
+    getLeadPipeline: () =>
+      request<{ success: boolean; data: LeadPipelineMeta }>('/api/meta/lead-pipeline')
+  },
+
+  // Follow-ups
+  followUps: {
+    getFollowUps: (params: {
+      schedule?: 'today' | 'upcoming' | 'overdue' | 'all';
+      leadId?: string;
+      assignedToId?: string;
+      status?: string;
+      type?: string;
+      search?: string;
+      page?: number;
+      limit?: number;
+    }) => {
+      const query = new URLSearchParams();
+      if (params.schedule) query.set('schedule', params.schedule);
+      if (params.leadId) query.set('leadId', params.leadId);
+      if (params.assignedToId && params.assignedToId !== 'all')
+        query.set('assignedToId', params.assignedToId);
+      if (params.status && params.status !== 'all') query.set('status', params.status);
+      if (params.type && params.type !== 'all') query.set('type', params.type);
+      if (params.search) query.set('search', params.search);
+      if (params.page) query.set('page', params.page.toString());
+      if (params.limit) query.set('limit', params.limit.toString());
+      return request<PaginatedListResponse<FollowUp>>(`/api/follow-ups?${query.toString()}`);
+    },
+    getFollowUp: (id: string) =>
+      request<{ success: boolean; data: FollowUp }>(`/api/follow-ups/${id}`),
+    createFollowUp: (data: UpdatePayload<FollowUp>) =>
+      request<{ success: boolean; data: FollowUp }>('/api/follow-ups', {
+        method: 'POST',
+        body: JSON.stringify(data)
+      }),
+    updateFollowUp: (id: string, data: UpdatePayload<FollowUp>) =>
+      request<{ success: boolean; data: FollowUp }>(`/api/follow-ups/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data)
+      }),
+    completeFollowUp: (id: string, data: { outcome?: string; notes?: string; revision?: number }) =>
+      request<{ success: boolean; data: FollowUp }>(`/api/follow-ups/${id}/complete`, {
+        method: 'PATCH',
+        body: JSON.stringify(data)
+      }),
+    skipFollowUp: (id: string, data: { notes?: string; revision?: number }) =>
+      request<{ success: boolean; data: FollowUp }>(`/api/follow-ups/${id}/skip`, {
+        method: 'PATCH',
+        body: JSON.stringify(data)
+      }),
+    deleteFollowUp: (id: string) =>
+      request<{ success: boolean; message: string }>(`/api/follow-ups/${id}`, {
+        method: 'DELETE'
+      })
+  },
+
+  // Quotations
+  quotations: {
+    getQuotations: (params: {
+      search?: string;
+      status?: string;
+      leadId?: string;
+      companyId?: string;
+      customerId?: string;
+      assignedToId?: string;
+      page?: number;
+      limit?: number;
+    }) => {
+      const query = new URLSearchParams();
+      if (params.search) query.set('search', params.search);
+      if (params.status && params.status !== 'all') query.set('status', params.status);
+      if (params.leadId) query.set('leadId', params.leadId);
+      if (params.companyId) query.set('companyId', params.companyId);
+      if (params.customerId) query.set('customerId', params.customerId);
+      if (params.assignedToId && params.assignedToId !== 'all')
+        query.set('assignedToId', params.assignedToId);
+      if (params.page) query.set('page', params.page.toString());
+      if (params.limit) query.set('limit', params.limit.toString());
+      return request<PaginatedListResponse<Quotation>>(`/api/quotations?${query.toString()}`);
+    },
+    getQuotation: (id: string) =>
+      request<{ success: boolean; data: Quotation }>(`/api/quotations/${id}`),
+    createQuotation: (data: UpdatePayload<Quotation>) =>
+      request<{ success: boolean; data: Quotation }>('/api/quotations', {
+        method: 'POST',
+        body: JSON.stringify(data)
+      }),
+    updateQuotation: (id: string, data: UpdatePayload<Quotation>) =>
+      request<{ success: boolean; data: Quotation }>(`/api/quotations/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data)
+      }),
+    updateStatus: (
+      id: string,
+      status: QuotationStatus,
+      options?: { revision?: number; createOrder?: boolean }
+    ) =>
+      request<{
+        success: boolean;
+        data: { quotation: Quotation; order?: { id: string; orderCode: string } };
+      }>(`/api/quotations/${id}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status, ...options })
+      }),
+    deleteQuotation: (id: string) =>
+      request<{ success: boolean; message: string }>(`/api/quotations/${id}`, {
+        method: 'DELETE'
+      })
   },
 
   // Notifications
   notifications: {
-    getNotifications: () =>
-      request<{ success: boolean; data: Notification[] }>('/api/notifications'),
+    getNotifications: (params?: { page?: number; limit?: number }) => {
+      const query = new URLSearchParams();
+      if (params?.page) query.set('page', params.page.toString());
+      query.set('limit', String(params?.limit ?? 50));
+      return request<PaginatedListResponse<Notification>>(`/api/notifications?${query.toString()}`);
+    },
     markRead: (id: string) =>
       request<{ success: boolean }>(`/api/notifications/${id}/read`, {
         method: 'PATCH'

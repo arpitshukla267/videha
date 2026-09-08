@@ -3,8 +3,18 @@ import { asyncHandler } from "../../utils/asyncHandler";
 import * as service from "./notifications.service";
 
 export const list = asyncHandler(async (req: Request, res: Response) => {
-  const data = await service.listMine(req.user!.id);
-  res.json({ success: true, data });
+  const result = await service.listMine(req.user!.id, {
+    page: req.query.page,
+    limit: req.query.limit,
+  });
+  res.json({
+    success: true,
+    data: result.items,
+    total: result.total,
+    page: result.page,
+    limit: result.limit,
+    totalPages: result.totalPages,
+  });
 });
 
 export const markRead = asyncHandler(async (req: Request, res: Response) => {

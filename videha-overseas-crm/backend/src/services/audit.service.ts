@@ -1,4 +1,4 @@
-import { Types } from "mongoose";
+import { Types, type ClientSession } from "mongoose";
 import { AuditLog } from "../models/AuditLog";
 
 export interface WriteAuditInput {
@@ -11,14 +11,20 @@ export interface WriteAuditInput {
   details?: string;
 }
 
-export async function writeAudit(input: WriteAuditInput) {
-  return AuditLog.create({
-    userId: input.userId && Types.ObjectId.isValid(input.userId) ? input.userId : null,
-    userName: input.userName,
-    userRole: input.userRole,
-    action: input.action,
-    entity: input.entity,
-    entityId: input.entityId || "",
-    details: input.details || "",
-  });
+export async function writeAudit(input: WriteAuditInput, session?: ClientSession) {
+  const docs = await AuditLog.create(
+    [
+      {
+        userId: input.userId && Types.ObjectId.isValid(input.userId) ? input.userId : null,
+        userName: input.userName,
+        userRole: input.userRole,
+        action: input.action,
+        entity: input.entity,
+        entityId: input.entityId || "",
+        details: input.details || "",
+      },
+    ],
+    session ? { session } : undefined,
+  );
+  return docs[0];
 }

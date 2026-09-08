@@ -3,15 +3,26 @@ import { asyncHandler } from "../../utils/asyncHandler";
 import * as service from "./orders.service";
 
 export const list = asyncHandler(async (req: Request, res: Response) => {
-  const data = await service.listOrders({
+  const result = await service.listOrders({
     search: req.query.search as string | undefined,
     status: (req.query.status || req.query.orderStatus) as string | undefined,
     country: req.query.country as string | undefined,
     assignedMemberId: (req.query.assignedMemberId || req.query.assignedToId) as
       | string
       | undefined,
+    page: req.query.page,
+    limit: req.query.limit,
+    sortBy: req.query.sortBy as string | undefined,
+    sortOrder: req.query.sortOrder as "asc" | "desc" | undefined,
   });
-  res.json({ success: true, data });
+  res.json({
+    success: true,
+    data: result.items,
+    total: result.total,
+    page: result.page,
+    limit: result.limit,
+    totalPages: result.totalPages,
+  });
 });
 
 export const getOne = asyncHandler(async (req: Request, res: Response) => {
@@ -31,6 +42,12 @@ export const update = asyncHandler(async (req: Request, res: Response) => {
 
 export const patchStatus = asyncHandler(async (req: Request, res: Response) => {
   const { status, notes } = req.body as { status?: string; notes?: string };
-  const data = await service.updateOrderStatus(req.params.id, status || "", notes, req.user!);
+  const data = await service.updateOrderStatus(
+    req.params.id,
+    status || "",
+    notes,
+    req.user!,
+    req.body as Record<string, unknown>,
+  );
   res.json({ success: true, data });
 });

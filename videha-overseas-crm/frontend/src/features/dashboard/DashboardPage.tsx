@@ -28,6 +28,12 @@ interface DashboardProps {
 const LEAD_STATUS_BAR: Record<string, string> = {
   New: 'bg-blue-500',
   Contacted: 'bg-indigo-500',
+  Qualified: 'bg-violet-500',
+  'Sample Requested': 'bg-purple-500',
+  'Sample Sent': 'bg-fuchsia-500',
+  Negotiation: 'bg-amber-500',
+  'Quotation Sent': 'bg-orange-500',
+  Won: 'bg-emerald-600',
   Interested: 'bg-teal-500',
   'Follow-up': 'bg-sky-500',
   Converted: 'bg-emerald-500',
@@ -81,7 +87,7 @@ export const DashboardPage: React.FC<DashboardProps> = ({ onNavigate }) => {
     );
   }
 
-  const { kpi, attention, leadDistribution, taskOverview, recentActivities } = data;
+  const { kpi, attention, leadDistribution, pipelineDistribution, taskOverview, memberPerformance, recentActivities } = data;
 
   const kpiItems = [
     {
@@ -114,7 +120,32 @@ export const DashboardPage: React.FC<DashboardProps> = ({ onNavigate }) => {
       icon: Calendar,
       accent: kpi.followUpsDueCount > 0 ? 'border-violet-300' : 'border-violet-200',
       iconWrap: 'bg-violet-50 text-violet-600',
+      tab: 'followups' as NavigationTab
+    },
+    {
+      label: 'Overdue Follow-ups',
+      value: kpi.followUpsOverdue ?? 0,
+      icon: AlertTriangle,
+      accent: (kpi.followUpsOverdue ?? 0) > 0 ? 'border-rose-300 bg-rose-50/40' : 'border-rose-200',
+      iconWrap: 'bg-rose-50 text-rose-600',
+      tab: 'followups' as NavigationTab,
+      highlight: (kpi.followUpsOverdue ?? 0) > 0
+    },
+    {
+      label: 'Won Leads',
+      value: kpi.wonLeads ?? 0,
+      icon: CheckCircle2,
+      accent: 'border-emerald-200',
+      iconWrap: 'bg-emerald-50 text-emerald-600',
       tab: 'leads' as NavigationTab
+    },
+    {
+      label: 'Open Quotations',
+      value: (kpi.quotationsDraft ?? 0) + (kpi.quotationsSent ?? 0),
+      icon: HeartHandshake,
+      accent: 'border-orange-200',
+      iconWrap: 'bg-orange-50 text-orange-600',
+      tab: 'quotations' as NavigationTab
     },
     {
       label: 'Active Tasks',
@@ -255,33 +286,31 @@ export const DashboardPage: React.FC<DashboardProps> = ({ onNavigate }) => {
                 Follow-ups Scheduled ({attention.followUpsDueToday?.length || 0})
               </span>
               <button
-                onClick={() => onNavigate('leads')}
+                onClick={() => onNavigate('followups')}
                 className="text-[11px] font-medium text-slate-600 hover:text-slate-900 flex items-center gap-0.5"
               >
-                All leads <ArrowRight className="w-3 h-3" />
+                All follow-ups <ArrowRight className="w-3 h-3" />
               </button>
             </div>
             {attention.followUpsDueToday?.length === 0 ? (
               <p className="text-xs text-slate-400 py-3 text-center">No follow-ups due today</p>
             ) : (
               <div className="space-y-2">
-                {attention.followUpsDueToday.map((l: any) => (
+                {attention.followUpsDueToday.map((f: any) => (
                   <div
-                    key={l.id}
-                    onClick={() => onNavigate('leads')}
+                    key={f.id}
+                    onClick={() => onNavigate('followups')}
                     className="p-2.5 rounded-md bg-white border border-violet-100 hover:border-violet-300 transition-colors cursor-pointer"
                   >
                     <div className="flex items-center justify-between">
-                      <p className="text-xs font-medium text-slate-900">{l.company}</p>
-                      <StatusBadge status={l.leadStatus} />
+                      <p className="text-xs font-medium text-slate-900">{f.leadCompany || f.company}</p>
+                      <StatusBadge status={f.type || f.status} />
                     </div>
                     <div className="flex items-center gap-3 text-[11px] text-slate-500 mt-1">
-                      <span>Contact: {l.name}</span>
-                      <span>•</span>
-                      <span>{l.country}</span>
+                      <span>{f.leadCode}</span>
                       <span>•</span>
                       <span className="text-violet-700 font-medium">
-                        Due {l.nextFollowUp ? new Date(l.nextFollowUp).toLocaleDateString() : 'Today'}
+                        Due {new Date(f.dueAt || f.nextFollowUp).toLocaleString()}
                       </span>
                     </div>
                   </div>
@@ -368,6 +397,43 @@ export const DashboardPage: React.FC<DashboardProps> = ({ onNavigate }) => {
           </div>
         </div>
       </section>
+
+      {(pipelineDistribution && Object.keys(pipelineDistribution).length > 0) || (memberPerformance?.length > 0) ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          {pipelineDistribution && Object.keys(pipelineDistribution).length > 0 && (
+            <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs">
+              <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4">
+                Active Pipeline
+              </h4>
+              <div className="space-y-2">
+                {Object.entries(pipelineDistribution).map(([status, count]) => (
+                  <div key={status} className="flex justify-between text-xs">
+                    <span className="text-slate-700">{status}</span>
+                    <span className="font-semibold text-slate-900">{count as number}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {memberPerformance?.length > 0 && (
+            <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs">
+              <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4">
+                Member Performance
+              </h4>
+              <div className="space-y-2">
+                {memberPerformance.map((m: any) => (
+                  <div key={m.memberId} className="flex justify-between items-center text-xs border-b border-slate-50 pb-2">
+                    <span className="font-medium text-slate-800">{m.memberName}</span>
+                    <span className="text-slate-500">
+                      {m.leadsAssigned} leads · {m.wins}W / {m.losses}L · {m.winRate}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      ) : null}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs">

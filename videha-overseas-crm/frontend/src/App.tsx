@@ -11,6 +11,8 @@ import { BillsPage } from './features/bills/BillsPage';
 import { TeamPage } from './features/team/TeamPage';
 import { ReportsPage } from './features/reports/ReportsPage';
 import { SettingsPage } from './features/settings/SettingsPage';
+import { FollowUpsPage } from './features/followups/FollowUpsPage';
+import { QuotationsPage } from './features/quotations/QuotationsPage';
 import { PublicOrderTrackingPage } from './features/tracking/PublicOrderTrackingPage';
 import { LoginPage } from './features/auth/LoginPage';
 import { ProfileModal } from './components/ui/ProfileModal';
@@ -44,6 +46,8 @@ const CrmApp: React.FC = () => {
 
     const fallbacks: Array<{ tab: NavigationTab; perm: string }> = [
       { tab: 'leads', perm: 'leads.view' },
+      { tab: 'followups', perm: 'followups.view' },
+      { tab: 'quotations', perm: 'quotations.view' },
       { tab: 'tasks', perm: 'tasks.view' },
       { tab: 'orders', perm: 'orders.view' },
       { tab: 'finance', perm: 'finance.view' },
@@ -122,6 +126,24 @@ const CrmApp: React.FC = () => {
         return (
           <LeadsPage focusLeadId={focusEntityId} onFocusConsumed={clearFocusEntity} />
         );
+      case 'followups':
+        if (!hasPermission('followups.view')) {
+          return (
+            <div className="p-8 text-center text-xs text-slate-500">
+              You do not have permission to view Follow-ups.
+            </div>
+          );
+        }
+        return <FollowUpsPage />;
+      case 'quotations':
+        if (!hasPermission('quotations.view')) {
+          return (
+            <div className="p-8 text-center text-xs text-slate-500">
+              You do not have permission to view Quotations.
+            </div>
+          );
+        }
+        return <QuotationsPage />;
       case 'tasks':
         if (!hasPermission('tasks.view')) {
           return (

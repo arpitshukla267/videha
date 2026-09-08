@@ -1,5 +1,7 @@
 import React from 'react';
 import {
+  CalendarClock,
+  FileText,
   LayoutDashboard,
   Users,
   CheckSquare,
@@ -19,6 +21,8 @@ import { useAuth } from '../../context/AuthContext';
 export type NavigationTab =
   | 'dashboard'
   | 'leads'
+  | 'followups'
+  | 'quotations'
   | 'tasks'
   | 'orders'
   | 'finance'
@@ -45,6 +49,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onSelectTab, unrea
   }> = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, permission: 'dashboard.view' },
     { id: 'leads', label: 'Leads', icon: Users, permission: 'leads.view' },
+    { id: 'followups', label: 'Follow-ups', icon: CalendarClock, permission: 'followups.view' },
+    { id: 'quotations', label: 'Quotations', icon: FileText, permission: 'quotations.view' },
     { id: 'tasks', label: 'Tasks', icon: CheckSquare, permission: 'tasks.view' },
     { id: 'orders', label: 'Orders', icon: Package, permission: 'orders.view' },
     { id: 'finance', label: 'Finance', icon: IndianRupee, permission: 'finance.view' },

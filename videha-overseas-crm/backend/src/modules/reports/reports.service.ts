@@ -36,7 +36,7 @@ export async function getReports() {
   }
 
   const totalLeads = leads.length;
-  const converted = leads.filter((l) => l.status === "Converted").length;
+  const converted = leads.filter((l) => l.status === "Converted" || l.status === "Won").length;
   const conversionRate = totalLeads > 0 ? ((converted / totalLeads) * 100).toFixed(1) : "0";
 
   const tasksByStatus: Record<string, number> = {
