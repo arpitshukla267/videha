@@ -13,6 +13,8 @@ import { ReportsPage } from './features/reports/ReportsPage';
 import { SettingsPage } from './features/settings/SettingsPage';
 import { FollowUpsPage } from './features/followups/FollowUpsPage';
 import { QuotationsPage } from './features/quotations/QuotationsPage';
+import { DocumentsPage } from './features/documents/DocumentsPage';
+import { ShipmentsPage } from './features/shipments/ShipmentsPage';
 import { PublicOrderTrackingPage } from './features/tracking/PublicOrderTrackingPage';
 import { LoginPage } from './features/auth/LoginPage';
 import { ProfileModal } from './components/ui/ProfileModal';
@@ -48,8 +50,10 @@ const CrmApp: React.FC = () => {
       { tab: 'leads', perm: 'leads.view' },
       { tab: 'followups', perm: 'followups.view' },
       { tab: 'quotations', perm: 'quotations.view' },
+      { tab: 'documents', perm: 'documents.view' },
       { tab: 'tasks', perm: 'tasks.view' },
       { tab: 'orders', perm: 'orders.view' },
+      { tab: 'shipments', perm: 'shipments.view' },
       { tab: 'finance', perm: 'finance.view' },
       { tab: 'bills', perm: 'bills.view' },
       { tab: 'team', perm: 'users.view' },
@@ -144,6 +148,15 @@ const CrmApp: React.FC = () => {
           );
         }
         return <QuotationsPage />;
+      case 'documents':
+        if (!hasPermission('documents.view')) {
+          return (
+            <div className="p-8 text-center text-xs text-slate-500">
+              You do not have permission to view Documents.
+            </div>
+          );
+        }
+        return <DocumentsPage />;
       case 'tasks':
         if (!hasPermission('tasks.view')) {
           return (
@@ -171,6 +184,15 @@ const CrmApp: React.FC = () => {
             onFocusConsumed={clearFocusEntity}
           />
         );
+      case 'shipments':
+        if (!hasPermission('shipments.view')) {
+          return (
+            <div className="p-8 text-center text-xs text-slate-500">
+              You do not have permission to view Shipments.
+            </div>
+          );
+        }
+        return <ShipmentsPage />;
       case 'finance':
         if (!hasPermission('finance.view')) {
           return (

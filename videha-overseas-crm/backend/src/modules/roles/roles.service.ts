@@ -1,5 +1,5 @@
 import { Role } from "../../models/Role";
-import { PERMISSIONS } from "../../constants/permissions";
+import { PERMISSIONS, resolveRolePermissions } from "../../constants/permissions";
 import { AppError } from "../../utils/AppError";
 import { assertObjectId } from "../../utils/objectId";
 import { serializeRole } from "../../utils/serializers";
@@ -41,7 +41,8 @@ export async function updateRolePermissions(
   }
 
   const validCodes = new Set(PERMISSIONS.map((p) => p.code));
-  role.permissions = permissions.filter((p) => validCodes.has(p as (typeof PERMISSIONS)[number]["code"]));
+  const merged = resolveRolePermissions(role.name, permissions);
+  role.permissions = merged.filter((p) => validCodes.has(p as (typeof PERMISSIONS)[number]["code"]));
   await role.save();
 
   await writeAudit({

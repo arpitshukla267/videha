@@ -24,7 +24,14 @@ import {
   QuotationStatus,
   LeadPipelineMeta,
   FollowUpType,
-  FollowUpStatus
+  FollowUpStatus,
+  CrmDocument,
+  DocumentCategory,
+  DocumentEntityType,
+  Shipment,
+  ImportEntityType,
+  ImportFieldMeta,
+  ImportPreviewResult
 } from '../types/crm';
 import { ApiError } from '../lib/apiErrors';
 
@@ -101,6 +108,43 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
   return data;
 }
 
+async function uploadFormData<T>(endpoint: string, formData: FormData): Promise<T> {
+  const token = getStoredToken();
+  const headers: Record<string, string> = {};
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  let response: Response;
+  try {
+    response = await fetch(endpoint, { method: 'POST', headers, body: formData });
+  } catch {
+    throw new Error('Cannot reach the CRM API. Make sure the backend is running on port 5000.');
+  }
+
+  let data: any = null;
+  try {
+    data = await response.json();
+  } catch {
+    throw new Error(
+      response.ok
+        ? 'Invalid response from server.'
+        : `Request failed with status ${response.status}`,
+    );
+  }
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      removeStoredToken();
+    }
+    throw new ApiError(
+      data?.message || `Request failed with status ${response.status}`,
+      response.status,
+      data?.code,
+    );
+  }
+
+  return data;
+}
+
 async function downloadBlob(endpoint: string, filename: string): Promise<void> {
   const token = getStoredToken();
   const headers: Record<string, string> = {};
@@ -118,13 +162,33 @@ async function downloadBlob(endpoint: string, filename: string): Promise<void> {
     throw new Error(message);
   }
 
+  const disposition = response.headers.get('Content-Disposition');
+  const filenameMatch = disposition?.match(/filename="([^"]+)"/);
+  const downloadName = filenameMatch?.[1] ?? filename;
+
   const blob = await response.blob();
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
   anchor.href = url;
-  anchor.download = filename;
+  anchor.download = downloadName;
   anchor.click();
   URL.revokeObjectURL(url);
+}
+
+function appendExportQuery(
+  query: URLSearchParams,
+  params: Record<string, string | undefined>,
+): void {
+  for (const [key, value] of Object.entries(params)) {
+    if (value && value !== 'all') query.set(key, value);
+  }
+}
+
+function exportCsvDownload(path: string, params: Record<string, string | undefined>, fallbackFilename: string) {
+  const query = new URLSearchParams();
+  appendExportQuery(query, params);
+  const qs = query.toString();
+  return downloadBlob(qs ? `${path}?${qs}` : path, fallbackFilename);
 }
 
 export const api = {
@@ -305,7 +369,17 @@ export const api = {
         body: JSON.stringify(revision !== undefined ? { revision } : {})
       }),
     getLeadFollowUps: (id: string) =>
-      request<PaginatedListResponse<FollowUp>>(`/api/leads/${id}/follow-ups`)
+      request<PaginatedListResponse<FollowUp>>(`/api/leads/${id}/follow-ups`),
+    exportCsv: (params: {
+      search?: string;
+      status?: string;
+      country?: string;
+      priority?: string;
+      assignedMemberId?: string;
+      sortBy?: string;
+      sortOrder?: 'asc' | 'desc';
+    }) =>
+      exportCsvDownload('/api/leads/export', params, 'videha_leads.csv')
   },
 
   // Tasks
@@ -381,10 +455,18 @@ export const api = {
 
       return request<PaginatedListResponse<Order>>(`/api/orders?${query.toString()}`);
     },
+    exportCsv: (params: {
+      search?: string;
+      status?: string;
+      country?: string;
+      assignedMemberId?: string;
+      sortBy?: string;
+      sortOrder?: 'asc' | 'desc';
+    }) => exportCsvDownload('/api/orders/export', params, 'videha_orders.csv'),
     getOrder: (id: string) =>
       request<{
         success: boolean;
-        data: { order: Order; history: OrderStatusHistory[] };
+        data: { order: Order; history: OrderStatusHistory[]; shipments?: Shipment[] };
       }>(`/api/orders/${id}`),
     createOrder: (data: Partial<Order>) =>
       request<{ success: boolean; data: Order }>('/api/orders', {
@@ -412,6 +494,10 @@ export const api = {
 
   // Team / Users
   users: {
+    getTeamDirectory: () =>
+      request<{ success: boolean; data: Array<Pick<User, 'id' | 'name' | 'email' | 'roleName' | 'roleDisplayName' | 'designation'>> }>(
+        '/api/users/directory'
+      ),
     getUsers: (params?: { search?: string; status?: string; page?: number; limit?: number }) => {
       const query = new URLSearchParams();
       if (params?.search) query.set('search', params.search);
@@ -487,7 +573,24 @@ export const api = {
             byCountry: Record<string, number>;
           };
         };
-      }>('/api/reports')
+      }>('/api/reports'),
+    getAdvancedReports: (params?: {
+      from?: string;
+      to?: string;
+      memberId?: string;
+      departmentId?: string;
+    }) => {
+      const query = new URLSearchParams();
+      if (params?.from) query.set('from', params.from);
+      if (params?.to) query.set('to', params.to);
+      if (params?.memberId && params.memberId !== 'all') query.set('memberId', params.memberId);
+      if (params?.departmentId && params.departmentId !== 'all')
+        query.set('departmentId', params.departmentId);
+      const qs = query.toString();
+      return request<{ success: boolean; data: Record<string, unknown> }>(
+        `/api/reports/advanced${qs ? `?${qs}` : ''}`
+      );
+    }
   },
 
   // Finance
@@ -619,7 +722,15 @@ export const api = {
     deleteFollowUp: (id: string) =>
       request<{ success: boolean; message: string }>(`/api/follow-ups/${id}`, {
         method: 'DELETE'
-      })
+      }),
+    exportCsv: (params: {
+      schedule?: string;
+      leadId?: string;
+      assignedToId?: string;
+      status?: string;
+      type?: string;
+      search?: string;
+    }) => exportCsvDownload('/api/follow-ups/export', params, 'videha_followups.csv')
   },
 
   // Quotations
@@ -646,6 +757,16 @@ export const api = {
       if (params.limit) query.set('limit', params.limit.toString());
       return request<PaginatedListResponse<Quotation>>(`/api/quotations?${query.toString()}`);
     },
+    exportCsv: (params: {
+      search?: string;
+      status?: string;
+      leadId?: string;
+      companyId?: string;
+      customerId?: string;
+      assignedToId?: string;
+      sortBy?: string;
+      sortOrder?: 'asc' | 'desc';
+    }) => exportCsvDownload('/api/quotations/export', params, 'videha_quotations.csv'),
     getQuotation: (id: string) =>
       request<{ success: boolean; data: Quotation }>(`/api/quotations/${id}`),
     createQuotation: (data: UpdatePayload<Quotation>) =>
@@ -669,6 +790,54 @@ export const api = {
       }>(`/api/quotations/${id}/status`, {
         method: 'PATCH',
         body: JSON.stringify({ status, ...options })
+      }),
+    getOrderDraft: (id: string) =>
+      request<{
+        success: boolean;
+        data: {
+          alreadyLinked: boolean;
+          order?: { id: string; orderCode: string; status: string };
+          draft?: {
+            quotationId: string;
+            quotationCode: string;
+            customerName: string;
+            company: string;
+            phone: string;
+            email: string;
+            country: string;
+            products: string;
+            quantity: string;
+            orderValue: number;
+            currency: string;
+            assignedMemberId: string | null;
+            orderStatus: string;
+            expectedDelivery: string;
+            notes: string;
+            destinationPort: string;
+            shippingCarrier: string;
+            trackingNumber: string;
+            relatedLeadId: string | null;
+            companyId: string | null;
+            customerId: string | null;
+            paymentTerms: string;
+            totalAmount: number;
+          };
+        };
+      }>(`/api/quotations/${id}/order-draft`),
+    createOrderFromQuotation: (
+      id: string,
+      data: Record<string, unknown> & { revision?: number; clientRequestId?: string }
+    ) =>
+      request<{
+        success: boolean;
+        data: {
+          quotation: Quotation;
+          order: { id: string; orderCode: string; status: string; totalAmount: number; currency: string };
+          alreadyExists: boolean;
+        };
+      }>(`/api/quotations/${id}/order`, {
+        method: 'POST',
+        body: JSON.stringify(data)
       }),
     deleteQuotation: (id: string) =>
       request<{ success: boolean; message: string }>(`/api/quotations/${id}`, {
@@ -701,5 +870,177 @@ export const api = {
         success: boolean;
         data: PublicOrderTrackingInfo;
       }>(`/api/public/orders/track/${encodeURIComponent(orderCode)}`)
+  },
+
+  companies: {
+    getCompanies: (params?: { search?: string; page?: number; limit?: number }) => {
+      const query = new URLSearchParams();
+      if (params?.search) query.set('search', params.search);
+      if (params?.page) query.set('page', params.page.toString());
+      query.set('limit', String(params?.limit ?? 100));
+      return request<PaginatedListResponse<Company>>(`/api/companies?${query.toString()}`);
+    },
+    exportCsv: (params?: { search?: string; status?: string; country?: string }) =>
+      exportCsvDownload('/api/companies/export', params ?? {}, 'videha_companies.csv')
+  },
+
+  customers: {
+    getCustomers: (params?: { search?: string; page?: number; limit?: number }) => {
+      const query = new URLSearchParams();
+      if (params?.search) query.set('search', params.search);
+      if (params?.page) query.set('page', params.page.toString());
+      query.set('limit', String(params?.limit ?? 100));
+      return request<PaginatedListResponse<Customer>>(`/api/customers?${query.toString()}`);
+    },
+    exportCsv: (params?: { search?: string; status?: string; companyId?: string }) =>
+      exportCsvDownload('/api/customers/export', params ?? {}, 'videha_customers.csv')
+  },
+
+  documents: {
+    getDocuments: (params: {
+      search?: string;
+      category?: string;
+      entityType?: string;
+      entityId?: string;
+      fileKind?: string;
+      page?: number;
+      limit?: number;
+    }) => {
+      const query = new URLSearchParams();
+      if (params.search) query.set('search', params.search);
+      if (params.category && params.category !== 'all') query.set('category', params.category);
+      if (params.entityType && params.entityType !== 'all') query.set('entityType', params.entityType);
+      if (params.entityId && params.entityId !== 'all') query.set('entityId', params.entityId);
+      if (params.fileKind && params.fileKind !== 'all') query.set('fileKind', params.fileKind);
+      if (params.page) query.set('page', params.page.toString());
+      if (params.limit) query.set('limit', params.limit.toString());
+      return request<PaginatedListResponse<CrmDocument>>(`/api/documents?${query.toString()}`);
+    },
+    getDocument: (id: string) =>
+      request<{ success: boolean; data: CrmDocument }>(`/api/documents/${id}`),
+    uploadDocument: (input: {
+      file: File;
+      title: string;
+      category: DocumentCategory;
+      entityType: DocumentEntityType;
+      entityId: string;
+    }) => {
+      const formData = new FormData();
+      formData.append('file', input.file);
+      formData.append('title', input.title);
+      formData.append('category', input.category);
+      formData.append('entityType', input.entityType);
+      formData.append('entityId', input.entityId);
+      return uploadFormData<{ success: boolean; data: CrmDocument }>('/api/documents', formData);
+    },
+    renameDocument: (id: string, data: { title: string; revision?: number }) =>
+      request<{ success: boolean; data: CrmDocument }>(`/api/documents/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data)
+      }),
+    deleteDocument: (id: string) =>
+      request<{ success: boolean; message: string }>(`/api/documents/${id}`, {
+        method: 'DELETE'
+      }),
+    downloadDocument: (id: string, fileName: string) =>
+      downloadBlob(`/api/documents/${id}/file?disposition=attachment`, fileName),
+    previewDocument: async (id: string) => {
+      const token = getStoredToken();
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const response = await fetch(`/api/documents/${id}/file?disposition=inline`, { headers });
+      if (!response.ok) {
+        let message = `Preview failed with status ${response.status}`;
+        try {
+          const data = await response.json();
+          message = data?.message || message;
+        } catch {
+          // ignore
+        }
+        throw new ApiError(message, response.status);
+      }
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank', 'noopener,noreferrer');
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    }
+  },
+
+  import: {
+    getMeta: (entity: ImportEntityType) =>
+      request<{
+        success: boolean;
+        data: {
+          entityType: ImportEntityType;
+          label: string;
+          permission: string;
+          fields: ImportFieldMeta[];
+          limits: { maxFileBytes: number; maxRows: number; previewRows: number };
+        };
+      }>(`/api/import/${entity}/meta`),
+    preview: (entity: ImportEntityType, file: File, mapping?: Record<string, string | null>) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      if (mapping) formData.append('mapping', JSON.stringify(mapping));
+      return uploadFormData<{ success: boolean; data: ImportPreviewResult }>(
+        `/api/import/${entity}/preview`,
+        formData
+      );
+    },
+    confirm: (entity: ImportEntityType, sessionId: string) =>
+      request<{
+        success: boolean;
+        data: {
+          imported: number;
+          processed: number;
+          failed: number;
+          skipped: number;
+          duplicates: number;
+          totalRows: number;
+          failedRows: Array<{
+            rowNumber: number;
+            errors: string[];
+            valid: boolean;
+          }>;
+        };
+      }>(`/api/import/${entity}/confirm`, {
+        method: 'POST',
+        body: JSON.stringify({ sessionId })
+      }),
+    downloadErrors: (entity: ImportEntityType, sessionId: string, filename: string) =>
+      downloadBlob(`/api/import/${entity}/errors/${sessionId}`, filename)
+  },
+
+  shipments: {
+    getShipments: (params?: {
+      search?: string;
+      status?: string;
+      orderId?: string;
+      page?: number;
+      limit?: number;
+    }) => {
+      const query = new URLSearchParams();
+      if (params?.search) query.set('search', params.search);
+      if (params?.status && params.status !== 'all') query.set('status', params.status);
+      if (params?.orderId) query.set('orderId', params.orderId);
+      if (params?.page) query.set('page', params.page.toString());
+      if (params?.limit) query.set('limit', params.limit.toString());
+      return request<PaginatedListResponse<Shipment>>(`/api/shipments?${query.toString()}`);
+    },
+    getShipment: (id: string) =>
+      request<{ success: boolean; data: Shipment }>(`/api/shipments/${id}`),
+    getByOrder: (orderId: string) =>
+      request<{ success: boolean; data: Shipment[] }>(`/api/shipments/by-order/${orderId}`),
+    createShipment: (data: Partial<Shipment>) =>
+      request<{ success: boolean; data: Shipment }>('/api/shipments', {
+        method: 'POST',
+        body: JSON.stringify(data)
+      }),
+    updateShipment: (id: string, data: Partial<Shipment> & { revision?: number }) =>
+      request<{ success: boolean; data: Shipment }>(`/api/shipments/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data)
+      })
   }
 };

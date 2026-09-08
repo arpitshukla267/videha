@@ -10,6 +10,9 @@ import { applyOptimisticUpdate, parseClientRequestId, parseRevision } from "../.
 import { writeAudit } from "../../services/audit.service";
 import type { AuthUser } from "../../middleware/auth";
 import { buildAssigneeVisibilityFilter } from "../../utils/visibility";
+import { exportFilename } from "../../utils/csv";
+import { streamCsvExport } from "../../utils/csvExport";
+import { FOLLOWUP_EXPORT_COLUMNS } from "../../constants/exportColumns";
 
 const POPULATE = [
   { path: "leadId", select: "leadCode company name status" },
@@ -149,7 +152,7 @@ export async function syncFollowUpFromLead(
   );
 }
 
-export async function listFollowUps(
+async function buildFollowUpsQuery(
   filters: {
     schedule?: string;
     leadId?: string;
@@ -157,12 +160,9 @@ export async function listFollowUps(
     status?: string;
     type?: string;
     search?: string;
-    page?: unknown;
-    limit?: unknown;
   },
   actor?: AuthUser,
 ) {
-  const { page, limit, skip } = parsePagination(filters);
   const clauses: Record<string, unknown>[] = [];
 
   const scheduleQuery: Record<string, unknown> = {};
@@ -207,7 +207,64 @@ export async function listFollowUps(
     clauses.push({ leadId: { $in: leadIds.map((l) => l._id) } });
   }
 
-  const query = clauses.length === 0 ? {} : clauses.length === 1 ? clauses[0] : { $and: clauses };
+  return clauses.length === 0 ? {} : clauses.length === 1 ? clauses[0] : { $and: clauses };
+}
+
+export async function exportFollowUps(
+  filters: {
+    schedule?: string;
+    leadId?: string;
+    assignedToId?: string;
+    status?: string;
+    type?: string;
+    search?: string;
+  },
+  actor: AuthUser,
+) {
+  const query = await buildFollowUpsQuery(filters, actor);
+  const result = await streamCsvExport({
+    columns: FOLLOWUP_EXPORT_COLUMNS,
+    count: () => FollowUp.countDocuments(query),
+    fetchBatch: async (skip, limit) => {
+      const docs = await FollowUp.find(query)
+        .populate(POPULATE)
+        .sort({ dueAt: 1, createdAt: -1 })
+        .skip(skip)
+        .limit(limit);
+      return docs.map((d) =>
+        serializeFollowUp(d.toObject() as unknown as Record<string, unknown>) as Record<string, unknown>,
+      );
+    },
+  });
+
+  await writeAudit({
+    userId: actor.id,
+    userName: actor.name,
+    userRole: actor.roleName,
+    action: "Follow-ups Exported",
+    entity: "FollowUp",
+    entityId: "export",
+    details: `Exported ${result.total} follow-up(s) to CSV.`,
+  });
+
+  return { body: result.body, filename: exportFilename("followups"), total: result.total };
+}
+
+export async function listFollowUps(
+  filters: {
+    schedule?: string;
+    leadId?: string;
+    assignedToId?: string;
+    status?: string;
+    type?: string;
+    search?: string;
+    page?: unknown;
+    limit?: unknown;
+  },
+  actor?: AuthUser,
+) {
+  const { page, limit, skip } = parsePagination(filters);
+  const query = await buildFollowUpsQuery(filters, actor);
 
   const [total, docs] = await Promise.all([
     FollowUp.countDocuments(query),

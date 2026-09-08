@@ -537,10 +537,39 @@ export function serializeQuotation(doc: Record<string, unknown>) {
     status: doc.status || "Draft",
     leadId: lead ? String(lead._id ?? lead.id) : refId(doc.leadId),
     leadCode: lead?.leadCode ? String(lead.leadCode) : undefined,
+    leadName: lead?.name ? String(lead.name) : undefined,
+    leadCountry: lead?.country ? String(lead.country) : undefined,
+    leadEmail: lead?.email ? String(lead.email) : undefined,
+    leadPhone: lead?.phoneNumber ? String(lead.phoneNumber) : undefined,
     companyId: company ? String(company._id ?? company.id) : refId(doc.companyId),
-    companyName: company?.name ? String(company.name) : undefined,
+    companyCode: company?.companyCode ? String(company.companyCode) : undefined,
+    companyName: company?.name
+      ? String(company.name)
+      : lead?.company
+        ? String(lead.company)
+        : undefined,
+    companyCountry: company?.country
+      ? String(company.country)
+      : lead?.country
+        ? String(lead.country)
+        : undefined,
     customerId: customer ? String(customer._id ?? customer.id) : refId(doc.customerId),
-    customerName: customer?.name ? String(customer.name) : undefined,
+    customerCode: customer?.customerCode ? String(customer.customerCode) : undefined,
+    customerName: customer?.name
+      ? String(customer.name)
+      : lead?.name
+        ? String(lead.name)
+        : undefined,
+    customerEmail: customer?.email
+      ? String(customer.email)
+      : lead?.email
+        ? String(lead.email)
+        : undefined,
+    customerPhone: customer?.phone
+      ? String(customer.phone)
+      : lead?.phoneNumber
+        ? String(lead.phoneNumber)
+        : undefined,
     orderId: order ? String(order._id ?? order.id) : refId(doc.orderId),
     orderCode: order?.orderCode ? String(order.orderCode) : undefined,
     assignedToId: assigned
@@ -549,6 +578,94 @@ export function serializeQuotation(doc: Record<string, unknown>) {
     assignedToName: assigned?.name ? String(assigned.name) : undefined,
     sentAt: iso(doc.sentAt),
     acceptedAt: iso(doc.acceptedAt),
+    createdById: refId(doc.createdById) || "",
+    createdAt: iso(doc.createdAt) || new Date().toISOString(),
+    updatedAt: iso(doc.updatedAt) || new Date().toISOString(),
+    revision: revisionOf(doc),
+  };
+}
+
+export function serializeDocument(doc: Record<string, unknown>, id?: string) {
+  const createdBy =
+    doc.createdById && typeof doc.createdById === "object"
+      ? (doc.createdById as Record<string, unknown>)
+      : null;
+
+  const docId = id || String(doc._id ?? doc.id);
+  const resourceType = (doc.resourceType || "raw") as "image" | "raw";
+  const publicId = String(doc.publicId || "");
+  const previewUrl = `/api/documents/${docId}/file?disposition=inline`;
+  const downloadUrl = `/api/documents/${docId}/file?disposition=attachment`;
+
+  return {
+    id: docId,
+    documentCode: doc.documentCode,
+    title: doc.title,
+    fileName: doc.fileName,
+    category: doc.category,
+    entityType: doc.entityType,
+    entityId: String(doc.entityId ?? ""),
+    entityLabel: doc.entityLabel || "",
+    entityCode: doc.entityCode || "",
+    mimeType: doc.mimeType,
+    fileSize: doc.fileSize ?? 0,
+    publicId,
+    url: previewUrl,
+    resourceType,
+    previewUrl,
+    downloadUrl,
+    createdById: createdBy
+      ? String(createdBy._id ?? createdBy.id)
+      : refId(doc.createdById) || "",
+    createdAt: iso(doc.createdAt) || new Date().toISOString(),
+    updatedAt: iso(doc.updatedAt) || new Date().toISOString(),
+    revision: revisionOf(doc),
+  };
+}
+
+export function serializeShipment(doc: Record<string, unknown>) {
+  const order =
+    doc.orderId && typeof doc.orderId === "object"
+      ? (doc.orderId as Record<string, unknown>)
+      : null;
+  const company =
+    doc.companyId && typeof doc.companyId === "object"
+      ? (doc.companyId as Record<string, unknown>)
+      : null;
+  const customer =
+    doc.customerId && typeof doc.customerId === "object"
+      ? (doc.customerId as Record<string, unknown>)
+      : null;
+  const assignee =
+    doc.assignedToId && typeof doc.assignedToId === "object"
+      ? (doc.assignedToId as Record<string, unknown>)
+      : null;
+
+  return {
+    id: String(doc._id ?? doc.id),
+    shipmentCode: doc.shipmentCode,
+    shipmentReference: doc.shipmentReference || "",
+    containerReference: doc.containerReference || "",
+    orderId: order ? String(order._id ?? order.id) : refId(doc.orderId),
+    orderCode: order?.orderCode ? String(order.orderCode) : "",
+    orderStatus: order?.status ? String(order.status) : "",
+    companyId: company ? String(company._id ?? company.id) : refId(doc.companyId),
+    companyName: company?.name ? String(company.name) : "",
+    customerId: customer ? String(customer._id ?? customer.id) : refId(doc.customerId),
+    customerName: customer?.name ? String(customer.name) : "",
+    product: doc.product || "",
+    quantity: doc.quantity || "",
+    originPort: doc.originPort || "",
+    destinationPort: doc.destinationPort || "",
+    etd: iso(doc.etd),
+    eta: iso(doc.eta),
+    carrier: doc.carrier || "",
+    shippingLine: doc.shippingLine || "",
+    trackingNumber: doc.trackingNumber || "",
+    status: doc.status,
+    notes: doc.notes || "",
+    assignedToId: assignee ? String(assignee._id ?? assignee.id) : refId(doc.assignedToId),
+    assignedToName: assignee?.name ? String(assignee.name) : "",
     createdById: refId(doc.createdById) || "",
     createdAt: iso(doc.createdAt) || new Date().toISOString(),
     updatedAt: iso(doc.updatedAt) || new Date().toISOString(),

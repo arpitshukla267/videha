@@ -7,6 +7,7 @@ export const companiesRoutes = Router();
 companiesRoutes.use(authenticate);
 
 companiesRoutes.get("/", requirePermission("companies.view", "leads.view"), ctrl.list);
+companiesRoutes.get("/export", requirePermission("companies.view", "leads.view"), ctrl.exportCsv);
 companiesRoutes.get("/:id/customers", requirePermission("customers.view", "leads.view"), ctrl.listCustomers);
 companiesRoutes.get("/:id", requirePermission("companies.view", "leads.view"), ctrl.getOne);
 companiesRoutes.post("/", requirePermission("companies.create", "leads.edit"), ctrl.create);

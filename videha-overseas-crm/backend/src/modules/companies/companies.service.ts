@@ -8,8 +8,64 @@ import { parsePagination, paginatedResponse } from "../../utils/pagination";
 import { applyOptimisticUpdate, parseRevision } from "../../utils/concurrency";
 import { writeAudit } from "../../services/audit.service";
 import type { AuthUser } from "../../middleware/auth";
+import { exportFilename } from "../../utils/csv";
+import { streamCsvExport } from "../../utils/csvExport";
+import { COMPANY_EXPORT_COLUMNS } from "../../constants/exportColumns";
 
 const POPULATE = [{ path: "assignedToId", select: "name email" }];
+
+function buildCompaniesQuery(filters: {
+  search?: string;
+  status?: string;
+  country?: string;
+}) {
+  const query: Record<string, unknown> = {};
+
+  if (filters.status && filters.status !== "all") query.status = filters.status;
+  if (filters.country && filters.country !== "all") query.country = filters.country;
+
+  if (filters.search?.trim()) {
+    const s = filters.search.trim();
+    query.$or = [
+      { name: new RegExp(s, "i") },
+      { legalName: new RegExp(s, "i") },
+      { companyCode: new RegExp(s, "i") },
+      { country: new RegExp(s, "i") },
+      { industry: new RegExp(s, "i") },
+    ];
+  }
+
+  return query;
+}
+
+export async function exportCompanies(
+  filters: { search?: string; status?: string; country?: string },
+  actor: AuthUser,
+) {
+  const query = buildCompaniesQuery(filters);
+  const result = await streamCsvExport({
+    columns: COMPANY_EXPORT_COLUMNS,
+    count: () => Company.countDocuments(query),
+    fetchBatch: async (skip, limit) => {
+      const docs = await Company.find(query).populate(POPULATE).sort({ name: 1 }).skip(skip).limit(limit);
+      return docs.map((d) =>
+        serializeCompany(d.toObject() as unknown as Record<string, unknown>) as Record<string, unknown>,
+      );
+    },
+  });
+
+  await writeAudit({
+    userId: actor.id,
+    userName: actor.name,
+    userRole: actor.roleName,
+    action: "Companies Exported",
+    entity: "Company",
+    entityId: "export",
+    details: `Exported ${result.total} company(ies) to CSV.`,
+  });
+
+  return { body: result.body, filename: exportFilename("companies"), total: result.total };
+}
 
 function normalizeCompanyInput(body: Record<string, unknown>) {
   const status = body.status ? String(body.status) : undefined;
@@ -40,21 +96,7 @@ export async function listCompanies(filters: {
   limit?: unknown;
 }) {
   const { page, limit, skip } = parsePagination(filters);
-  const query: Record<string, unknown> = {};
-
-  if (filters.status && filters.status !== "all") query.status = filters.status;
-  if (filters.country && filters.country !== "all") query.country = filters.country;
-
-  if (filters.search?.trim()) {
-    const s = filters.search.trim();
-    query.$or = [
-      { name: new RegExp(s, "i") },
-      { legalName: new RegExp(s, "i") },
-      { companyCode: new RegExp(s, "i") },
-      { country: new RegExp(s, "i") },
-      { industry: new RegExp(s, "i") },
-    ];
-  }
+  const query = buildCompaniesQuery(filters);
 
   const [total, docs] = await Promise.all([
     Company.countDocuments(query),

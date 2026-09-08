@@ -40,6 +40,9 @@ import {
   isLostLeadStatus,
   isWonLeadStatus,
 } from "../../constants/leadPipeline";
+import { exportFilename } from "../../utils/csv";
+import { streamCsvExport } from "../../utils/csvExport";
+import { LEAD_EXPORT_COLUMNS } from "../../constants/exportColumns";
 import { buildAssigneeVisibilityFilter } from "../../utils/visibility";
 
 type ActivityType = LeadActivityType;
@@ -168,21 +171,18 @@ const POPULATE = [{ path: "assignedToId", select: "name email" }, { path: "depar
 const LEAD_LIST_SELECT =
   "leadCode name company phoneNumber email country source productInterest status priority assignedToId nextFollowUp revision createdAt updatedAt";
 
-export async function listLeads(
+async function buildLeadsQuery(
   filters: {
     search?: string;
     status?: string;
     country?: string;
     priority?: string;
     assignedMemberId?: string;
-    page?: unknown;
-    limit?: unknown;
     sortBy?: string;
     sortOrder?: "asc" | "desc";
   },
   actor?: AuthUser,
 ) {
-  const { page, limit, skip } = parsePagination(filters);
   const clauses: Record<string, unknown>[] = [{ archived: { $ne: true } }];
 
   if (filters.status && filters.status !== "all") clauses.push({ status: filters.status });
@@ -215,7 +215,6 @@ export async function listLeads(
   }
 
   const query = clauses.length === 1 ? clauses[0] : { $and: clauses };
-
   const sortFieldMap: Record<string, string> = {
     createdDate: "createdAt",
     createdAt: "createdAt",
@@ -229,12 +228,75 @@ export async function listLeads(
   const sortField = sortFieldMap[filters.sortBy || "createdDate"] || "createdAt";
   const sortOrder = filters.sortOrder === "asc" ? 1 : -1;
 
+  return { query, sort: { [sortField]: sortOrder } as Record<string, 1 | -1> };
+}
+
+export async function exportLeads(
+  filters: {
+    search?: string;
+    status?: string;
+    country?: string;
+    priority?: string;
+    assignedMemberId?: string;
+    sortBy?: string;
+    sortOrder?: "asc" | "desc";
+  },
+  actor: AuthUser,
+) {
+  const { query, sort } = await buildLeadsQuery(filters, actor);
+  const result = await streamCsvExport({
+    columns: LEAD_EXPORT_COLUMNS,
+    count: () => Lead.countDocuments(query),
+    fetchBatch: async (skip, limit) => {
+      const docs = await Lead.find(query)
+        .select(LEAD_LIST_SELECT)
+        .populate(POPULATE)
+        .sort(sort)
+        .skip(skip)
+        .limit(limit)
+        .lean();
+      return docs.map((d) =>
+        serializeLeadSummary(d as unknown as Record<string, unknown>) as Record<string, unknown>,
+      );
+    },
+  });
+
+  await writeAudit({
+    userId: actor.id,
+    userName: actor.name,
+    userRole: actor.roleName,
+    action: "Leads Exported",
+    entity: "Lead",
+    entityId: "export",
+    details: `Exported ${result.total} lead(s) to CSV.`,
+  });
+
+  return { body: result.body, filename: exportFilename("leads"), total: result.total };
+}
+
+export async function listLeads(
+  filters: {
+    search?: string;
+    status?: string;
+    country?: string;
+    priority?: string;
+    assignedMemberId?: string;
+    page?: unknown;
+    limit?: unknown;
+    sortBy?: string;
+    sortOrder?: "asc" | "desc";
+  },
+  actor?: AuthUser,
+) {
+  const { page, limit, skip } = parsePagination(filters);
+  const { query, sort } = await buildLeadsQuery(filters, actor);
+
   const [total, docs] = await Promise.all([
     Lead.countDocuments(query),
     Lead.find(query)
       .select(LEAD_LIST_SELECT)
       .populate(POPULATE)
-      .sort({ [sortField]: sortOrder })
+      .sort(sort)
       .skip(skip)
       .limit(limit)
       .lean(),
@@ -366,7 +428,7 @@ export async function createLead(body: Record<string, unknown>, actor: AuthUser)
     notes: input.notes || "",
     createdById: actor.id,
     archived: false,
-    clientRequestId: clientRequestId ?? null,
+    ...(clientRequestId ? { clientRequestId } : {}),
   });
 
   await addActivity(

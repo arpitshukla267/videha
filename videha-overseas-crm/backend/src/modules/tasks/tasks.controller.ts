@@ -14,7 +14,7 @@ export const list = asyncHandler(async (req: Request, res: Response) => {
       sortBy: req.query.sortBy as string | undefined,
       sortOrder: req.query.sortOrder as "asc" | "desc" | undefined,
     },
-    req.user!.id,
+    req.user!,
   );
   res.json({
     success: true,

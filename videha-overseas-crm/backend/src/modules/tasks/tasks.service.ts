@@ -11,6 +11,7 @@ import { parsePagination, paginatedResponse } from "../../utils/pagination";
 import { applyOptimisticUpdate, parseClientRequestId, parseRevision } from "../../utils/concurrency";
 import { writeAudit } from "../../services/audit.service";
 import { createNotification } from "../../services/notification.service";
+import { buildAssigneeVisibilityFilter, isAdminRole } from "../../utils/visibility";
 import type { AuthUser } from "../../middleware/auth";
 
 const POPULATE = [
@@ -70,6 +71,15 @@ function normalizeTaskInput(body: Record<string, unknown>) {
   };
 }
 
+function mergeQuery(
+  base: Record<string, unknown>,
+  extra: Record<string, unknown>,
+): Record<string, unknown> {
+  if (Object.keys(extra).length === 0) return base;
+  if (Object.keys(base).length === 0) return extra;
+  return { $and: [base, extra] };
+}
+
 export async function listTasks(
   filters: {
     view?: string;
@@ -81,13 +91,13 @@ export async function listTasks(
     sortBy?: string;
     sortOrder?: "asc" | "desc";
   },
-  currentUserId: string,
+  actor: AuthUser,
 ) {
   const { page, limit, skip } = parsePagination(filters);
-  const query: Record<string, unknown> = {};
+  let query: Record<string, unknown> = {};
   const view = filters.view || "all";
 
-  if (view === "my") query.assignedToId = currentUserId;
+  if (view === "my") query.assignedToId = actor.id;
   else if (view === "pending") query.status = "Pending";
   else if (view === "in_progress") query.status = "In Progress";
   else if (view === "completed") query.status = "Completed";
@@ -104,11 +114,18 @@ export async function listTasks(
 
   if (filters.search?.trim()) {
     const s = filters.search.trim();
-    query.$or = [
-      { title: new RegExp(s, "i") },
-      { taskCode: new RegExp(s, "i") },
-      { description: new RegExp(s, "i") },
-    ];
+    query = mergeQuery(query, {
+      $or: [
+        { title: new RegExp(s, "i") },
+        { taskCode: new RegExp(s, "i") },
+        { description: new RegExp(s, "i") },
+      ],
+    });
+  }
+
+  if (!isAdminRole(actor.roleName)) {
+    const visibility = await buildAssigneeVisibilityFilter(actor, "assignedToId", "createdById");
+    query = mergeQuery(query, visibility);
   }
 
   const sortField = SORT_FIELD_MAP[filters.sortBy || "dueDate"] || "dueDate";

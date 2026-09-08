@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 import { asyncHandler } from "../../utils/asyncHandler";
+import { sendCsvResponse } from "../../utils/csvExport";
 import * as service from "./companies.service";
 
 export const list = asyncHandler(async (req: Request, res: Response) => {
@@ -18,6 +19,18 @@ export const list = asyncHandler(async (req: Request, res: Response) => {
     limit: result.limit,
     totalPages: result.totalPages,
   });
+});
+
+export const exportCsv = asyncHandler(async (req: Request, res: Response) => {
+  const result = await service.exportCompanies(
+    {
+      search: req.query.search as string | undefined,
+      status: req.query.status as string | undefined,
+      country: req.query.country as string | undefined,
+    },
+    req.user!,
+  );
+  sendCsvResponse(res, result.filename, result.body);
 });
 
 export const getOne = asyncHandler(async (req: Request, res: Response) => {

@@ -108,6 +108,10 @@ export const Topbar: React.FC<TopbarProps> = ({ currentTab, onNavigate, onOpenPr
       title: 'Quotations',
       subtitle: 'Draft, send, and track sales quotes through to orders'
     },
+    documents: {
+      title: 'Documents',
+      subtitle: 'Upload and manage CRM files linked to leads, orders, and accounts'
+    },
     tasks: {
       title: 'Task Management',
       subtitle: 'Monitor pending, in-progress, and overdue operational actions'
@@ -115,6 +119,10 @@ export const Topbar: React.FC<TopbarProps> = ({ currentTab, onNavigate, onOpenPr
     orders: {
       title: 'Order & Shipment Fulfillment',
       subtitle: 'Manage overseas purchase orders, logistics stages, and delivery tracking'
+    },
+    shipments: {
+      title: 'Export Shipments',
+      subtitle: 'Operational shipment records linked to orders, ports, and carriers'
     },
     finance: {
       title: 'Finance Overview',

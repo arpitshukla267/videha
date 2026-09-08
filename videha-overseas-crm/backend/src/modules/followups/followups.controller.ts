@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 import { asyncHandler } from "../../utils/asyncHandler";
+import { sendCsvResponse } from "../../utils/csvExport";
 import * as service from "./followups.service";
 
 export const list = asyncHandler(async (req: Request, res: Response) => {
@@ -24,6 +25,21 @@ export const list = asyncHandler(async (req: Request, res: Response) => {
     limit: result.limit,
     totalPages: result.totalPages,
   });
+});
+
+export const exportCsv = asyncHandler(async (req: Request, res: Response) => {
+  const result = await service.exportFollowUps(
+    {
+      schedule: req.query.schedule as string | undefined,
+      leadId: req.query.leadId as string | undefined,
+      assignedToId: (req.query.assignedToId || req.query.assignedMemberId) as string | undefined,
+      status: req.query.status as string | undefined,
+      type: req.query.type as string | undefined,
+      search: req.query.search as string | undefined,
+    },
+    req.user!,
+  );
+  sendCsvResponse(res, result.filename, result.body);
 });
 
 export const getOne = asyncHandler(async (req: Request, res: Response) => {

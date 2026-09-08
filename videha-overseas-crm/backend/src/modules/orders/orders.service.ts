@@ -1,11 +1,12 @@
 import { Types } from "mongoose";
 import { Order, ORDER_STATUSES, type OrderStatus } from "../../models/Order";
 import { OrderStatusHistory } from "../../models/OrderStatusHistory";
+import { Shipment } from "../../models/Shipment";
 import { User } from "../../models/User";
 import { AppError } from "../../utils/AppError";
 import { assertObjectId, optionalObjectId } from "../../utils/objectId";
-import { nextOrderCode } from "../../utils/codes";
-import { serializeOrder, serializeOrderHistory } from "../../utils/serializers";
+import { nextOrderCode, isDuplicateKeyError } from "../../utils/codes";
+import { serializeOrder, serializeOrderHistory, serializeShipment } from "../../utils/serializers";
 import { parsePagination, paginatedResponse } from "../../utils/pagination";
 import { applyOptimisticUpdate, parseClientRequestId, parseRevision } from "../../utils/concurrency";
 import { withTransaction } from "../../utils/transactions";
@@ -13,6 +14,9 @@ import { writeAudit } from "../../services/audit.service";
 import { createNotification } from "../../services/notification.service";
 import { createBillFromOrder } from "../bills/bills.service";
 import type { AuthUser } from "../../middleware/auth";
+import { exportFilename } from "../../utils/csv";
+import { streamCsvExport } from "../../utils/csvExport";
+import { ORDER_EXPORT_COLUMNS } from "../../constants/exportColumns";
 
 const POPULATE = [{ path: "assignedToId", select: "name email" }];
 
@@ -24,17 +28,14 @@ async function historyFor(orderId: string) {
   return docs.map((d) => serializeOrderHistory(d.toObject() as unknown as Record<string, unknown>));
 }
 
-export async function listOrders(filters: {
+function buildOrdersQuery(filters: {
   search?: string;
   status?: string;
   country?: string;
   assignedMemberId?: string;
-  page?: unknown;
-  limit?: unknown;
   sortBy?: string;
   sortOrder?: "asc" | "desc";
 }) {
-  const { page, limit, skip } = parsePagination(filters);
   const query: Record<string, unknown> = {};
 
   if (filters.status && filters.status !== "all") {
@@ -58,13 +59,68 @@ export async function listOrders(filters: {
 
   const sortField = filters.sortBy === "expectedDelivery" ? "expectedDelivery" : "createdAt";
   const sortDir = filters.sortOrder === "asc" ? 1 : -1;
+  return { query, sort: { [sortField]: sortDir } as Record<string, 1 | -1> };
+}
+
+export async function exportOrders(
+  filters: {
+    search?: string;
+    status?: string;
+    country?: string;
+    assignedMemberId?: string;
+    sortBy?: string;
+    sortOrder?: "asc" | "desc";
+  },
+  actor: AuthUser,
+) {
+  const { query, sort } = buildOrdersQuery(filters);
+  const result = await streamCsvExport({
+    columns: ORDER_EXPORT_COLUMNS,
+    count: () => Order.countDocuments(query),
+    fetchBatch: async (skip, limit) => {
+      const docs = await Order.find(query)
+        .select(LIST_SELECT)
+        .populate(POPULATE)
+        .sort(sort)
+        .skip(skip)
+        .limit(limit)
+        .lean();
+      return docs.map((d) => serializeOrder(d as unknown as Record<string, unknown>) as Record<string, unknown>);
+    },
+  });
+
+  await writeAudit({
+    userId: actor.id,
+    userName: actor.name,
+    userRole: actor.roleName,
+    action: "Orders Exported",
+    entity: "Order",
+    entityId: "export",
+    details: `Exported ${result.total} order(s) to CSV.`,
+  });
+
+  return { body: result.body, filename: exportFilename("orders"), total: result.total };
+}
+
+export async function listOrders(filters: {
+  search?: string;
+  status?: string;
+  country?: string;
+  assignedMemberId?: string;
+  page?: unknown;
+  limit?: unknown;
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
+}) {
+  const { page, limit, skip } = parsePagination(filters);
+  const { query, sort } = buildOrdersQuery(filters);
 
   const [total, docs] = await Promise.all([
     Order.countDocuments(query),
     Order.find(query)
       .select(LIST_SELECT)
       .populate(POPULATE)
-      .sort({ [sortField]: sortDir })
+      .sort(sort)
       .skip(skip)
       .limit(limit)
       .lean(),
@@ -78,9 +134,20 @@ export async function getOrder(id: string) {
   assertObjectId(id, "order id");
   const order = await Order.findById(id).populate(POPULATE);
   if (!order) throw new AppError("Order not found.", 404);
+  const shipmentDocs = await Shipment.find({ orderId: id })
+    .populate([
+      { path: "orderId", select: "orderCode customerName company status" },
+      { path: "companyId", select: "companyCode name" },
+      { path: "customerId", select: "customerCode name" },
+      { path: "assignedToId", select: "name email" },
+    ])
+    .sort({ createdAt: -1 });
   return {
     order: serializeOrder(order.toObject() as unknown as Record<string, unknown>),
     history: await historyFor(id),
+    shipments: shipmentDocs.map((doc) =>
+      serializeShipment(doc.toObject() as unknown as Record<string, unknown>),
+    ),
   };
 }
 
@@ -118,8 +185,7 @@ export async function createOrder(body: Record<string, unknown>, actor: AuthUser
     throw new AppError(`Invalid order status: ${statusRaw}`, 400);
   }
 
-  const order = await Order.create({
-    orderCode: await nextOrderCode(),
+  const orderPayload = {
     customerName: customerName.trim(),
     company: company.trim(),
     phone: (body.phone as string) || "",
@@ -141,7 +207,23 @@ export async function createOrder(body: Record<string, unknown>, actor: AuthUser
     customerId: optionalObjectId((body.customerId as string) || null),
     createdById: actor.id,
     clientRequestId: clientRequestId ?? null,
-  });
+  };
+
+  let order: InstanceType<typeof Order> | null = null;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      const orderCode = await nextOrderCode();
+      order = await Order.create({ ...orderPayload, orderCode });
+      break;
+    } catch (error: unknown) {
+      if (isDuplicateKeyError(error, "orderCode") && attempt < 4) continue;
+      throw error;
+    }
+  }
+
+  if (!order) {
+    throw new AppError("Failed to allocate a unique order code.", 500);
+  }
 
   await OrderStatusHistory.create({
     orderId: order._id,

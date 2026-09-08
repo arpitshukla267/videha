@@ -3,6 +3,7 @@ import {
   Plus,
   Search,
   Download,
+  Upload,
   Phone,
   Mail,
   MessageSquare,
@@ -44,6 +45,8 @@ import { CRM_COUNTRIES } from '../../constants/countries';
 import { refreshNotifications } from '../../lib/notifications';
 import { handleConflictWithReload, alertSaveError } from '../../lib/apiErrors';
 import { createClientRequestId as generateClientRequestId } from '../../lib/clientRequestId';
+import { ImportWizard } from '../../components/import/ImportWizard';
+import { ListStatePanel, ownScopeEmptyCopy } from '../../components/ui/ListStatePanel';
 
 const LEAD_SOURCES = [
   { value: 'Website', label: 'Website Form' },
@@ -195,11 +198,12 @@ type LeadsPageProps = {
 };
 
 export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsumed }) => {
-  const { hasPermission } = useAuth();
+  const { user, hasPermission } = useAuth();
 
   const [leads, setLeads] = useState<Lead[]>([]);
   const [totalLeads, setTotalLeads] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [limit] = useState(12);
@@ -227,6 +231,7 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
   const [exportStatus, setExportStatus] = useState('all');
   const [isExporting, setIsExporting] = useState(false);
   const [exportSuccessMsg, setExportSuccessMsg] = useState<string | null>(null);
+  const [isImportOpen, setIsImportOpen] = useState(false);
 
   // Create Lead Modal State
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -290,16 +295,28 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
   // Load team members & departments
   useEffect(() => {
     api.users
-      .getUsers({ limit: 100, page: 1 })
+      .getTeamDirectory()
       .then(res => {
         if (res.success) {
-          setTeamMembers(res.data);
+          setTeamMembers(res.data as CrmUser[]);
           if (res.data.length > 0 && !exportMemberId) {
             setExportMemberId(res.data[0].id);
           }
         }
       })
-      .catch(() => {});
+      .catch(() => {
+        if (user) {
+          setTeamMembers([
+            {
+              id: user.id,
+              name: user.name,
+              email: user.email,
+              roleName: user.roleName,
+              roleDisplayName: user.roleName
+            } as CrmUser
+          ]);
+        }
+      });
 
     api.departments
       .getDepartments('active')
@@ -319,6 +336,7 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
   // Fetch leads
   const fetchLeads = async (page = currentPage) => {
     setIsLoading(true);
+    setLoadError(null);
     try {
       const res = await api.leads.getLeads({
         search,
@@ -336,6 +354,8 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
         setTotalPages(res.totalPages);
       }
     } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to load leads';
+      setLoadError(message);
       console.error('Failed to fetch leads:', err);
     } finally {
       setIsLoading(false);
@@ -599,117 +619,40 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
     }
   };
 
-  // Export Leads functionality (supports exporting for specific member only or all)
+  // Export leads via server-side CSV (respects RBAC and current list filters)
   const handleExportLeads = async () => {
     setIsExporting(true);
     setExportSuccessMsg(null);
     try {
-      const targetMember =
+      const assignedMemberId =
         exportTarget === 'specific'
-          ? teamMembers.find(m => m.id === exportMemberId)
-          : null;
+          ? exportMemberId
+          : memberFilter !== 'all'
+            ? memberFilter
+            : undefined;
+      const status =
+        exportStatus !== 'all' ? exportStatus : statusFilter !== 'all' ? statusFilter : undefined;
 
-      const res = await api.leads.getLeads({
-        assignedMemberId: exportTarget === 'specific' ? exportMemberId : undefined,
-        status: exportStatus !== 'all' ? exportStatus : undefined,
-        limit: 1000
+      await api.leads.exportCsv({
+        search: search.trim() || undefined,
+        status,
+        country: countryFilter,
+        priority: priorityFilter,
+        assignedMemberId
       });
 
-      if (!res.success || res.items.length === 0) {
-        alert('No leads found matching the selected export parameters.');
-        setIsExporting(false);
-        return;
-      }
-
-      const headers = [
-        'Lead Code',
-        'Buyer Name',
-        'Company',
-        'Email',
-        'Phone Number',
-        'WhatsApp Number',
-        'Secondary Phone',
-        'Company Website',
-        'Country',
-        'City',
-        'Destination Port',
-        'Product of Interest',
-        'HS Code',
-        'IncoTerms',
-        'Estimated Value (USD)',
-        'Estimated Volume',
-        'Lead Source',
-        'Category',
-        'Status',
-        'Priority',
-        'Preferred Contact',
-        'Assigned Member',
-        'Next Follow-Up',
-        'Created Date',
-        'Notes'
-      ];
-
-      const rows = res.items.map(lead => {
-        const assigned = teamMembers.find(m => m.id === lead.assignedMemberId);
-        const assignedName = assigned ? assigned.name : lead.assignedMemberName || 'Unassigned';
-
-        return [
-          `"${lead.leadCode || ''}"`,
-          `"${(lead.name || '').replace(/"/g, '""')}"`,
-          `"${(lead.company || '').replace(/"/g, '""')}"`,
-          `"${lead.email || ''}"`,
-          `"${lead.phoneNumber || ''}"`,
-          `"${lead.whatsAppNumber || ''}"`,
-          `"${lead.secondaryPhone || ''}"`,
-          `"${lead.companyWebsite || ''}"`,
-          `"${lead.country || ''}"`,
-          `"${lead.city || ''}"`,
-          `"${lead.destinationPort || ''}"`,
-          `"${(lead.productInterest || '').replace(/"/g, '""')}"`,
-          `"${lead.hsCode || ''}"`,
-          `"${lead.tradeIncoTerms || ''}"`,
-          `"${lead.estimatedValue || ''}"`,
-          `"${lead.estimatedVolume || ''}"`,
-          `"${lead.leadSource || ''}"`,
-          `"${lead.leadCategory || ''}"`,
-          `"${lead.leadStatus || ''}"`,
-          `"${lead.priority || ''}"`,
-          `"${lead.preferredContact || ''}"`,
-          `"${assignedName.replace(/"/g, '""')}"`,
-          `"${lead.nextFollowUp ? new Date(lead.nextFollowUp).toLocaleDateString() : ''}"`,
-          `"${lead.createdDate ? new Date(lead.createdDate).toLocaleDateString() : ''}"`,
-          `"${(lead.notes || '').replace(/"/g, '""').replace(/\n/g, ' ')}"`
-        ].join(',');
-      });
-
-      const csvContent = [headers.join(','), ...rows].join('\n');
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-
-      const dateStr = new Date().toISOString().slice(0, 10);
-      const memberSlug = targetMember
-        ? targetMember.name.toLowerCase().replace(/[^a-z0-9]/g, '_')
-        : 'all_members';
-      link.href = url;
-      link.setAttribute('download', `videha_leads_${memberSlug}_${dateStr}.csv`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-
+      const targetMember =
+        exportTarget === 'specific' ? teamMembers.find(m => m.id === exportMemberId) : null;
       setExportSuccessMsg(
-        `Exported ${res.items.length} leads successfully ${
-          targetMember ? `for ${targetMember.name}` : ''
-        }!`
+        `Export started successfully${targetMember ? ` for ${targetMember.name}` : ''}.`
       );
 
       setTimeout(() => {
         setIsExportOpen(false);
         setExportSuccessMsg(null);
       }, 1600);
-    } catch (err: any) {
-      alert(err.message || 'Failed to export leads');
+    } catch (err: unknown) {
+      alertSaveError(err, 'Failed to export leads');
     } finally {
       setIsExporting(false);
     }
@@ -755,6 +698,16 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
           </div>
 
           {/* Export Leads to Specific Member Only Button */}
+          {hasPermission('leads.create') && (
+            <button
+              onClick={() => setIsImportOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-2 bg-sky-50 text-sky-800 hover:bg-sky-100 border border-sky-200/80 rounded-lg text-xs font-medium transition-colors shadow-2xs"
+              title="Import Leads CSV"
+            >
+              <Upload className="w-3.5 h-3.5 text-sky-600" />
+              <span>Import CSV</span>
+            </button>
+          )}
           <button
             onClick={() => setIsExportOpen(true)}
             className="inline-flex items-center gap-1.5 px-3 py-2 bg-teal-50 text-teal-800 hover:bg-teal-100 border border-teal-200/80 rounded-lg text-xs font-medium transition-colors shadow-2xs"
@@ -836,15 +789,23 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
       {/* Main Content: Card View (Default) or Table View */}
       {viewMode === 'cards' ? (
         <div>
-          {isLoading ? (
-            <div className="py-16 text-center text-slate-400 bg-white border border-slate-200 rounded-xl">
-              Loading leads in card view...
-            </div>
-          ) : leads.length === 0 ? (
-            <div className="py-16 text-center text-slate-400 bg-white border border-slate-200 rounded-xl">
-              No leads match the selected criteria.
-            </div>
-          ) : (
+          <ListStatePanel
+            isLoading={isLoading}
+            error={loadError}
+            isEmpty={!loadError && leads.length === 0}
+            loadingLabel="Loading leads…"
+            emptyTitle={
+              user?.roleName === 'SALES_MEMBER' && memberFilter === 'all' && !search.trim()
+                ? ownScopeEmptyCopy('leads').title
+                : 'No leads match the selected criteria'
+            }
+            emptyDescription={
+              user?.roleName === 'SALES_MEMBER' && memberFilter === 'all' && !search.trim()
+                ? ownScopeEmptyCopy('leads').description
+                : undefined
+            }
+          />
+          {!isLoading && !loadError && leads.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4.5">
               {leads.map(lead => {
                 const assigned = teamMembers.find(m => m.id === lead.assignedMemberId);
@@ -1024,7 +985,7 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
                 );
               })}
             </div>
-          )}
+          ) : null}
         </div>
       ) : (
         /* Table View */
@@ -1048,14 +1009,22 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
               <tbody className="divide-y divide-slate-100">
                 {isLoading ? (
                   <tr>
-                    <td colSpan={10} className="py-12 text-center text-slate-400">
-                      Loading leads database...
+                    <td colSpan={10} className="py-12 text-center text-slate-400 animate-pulse">
+                      Loading leads…
+                    </td>
+                  </tr>
+                ) : loadError ? (
+                  <tr>
+                    <td colSpan={10} className="py-12 text-center text-rose-600 text-xs">
+                      {loadError}
                     </td>
                   </tr>
                 ) : leads.length === 0 ? (
                   <tr>
-                    <td colSpan={10} className="py-12 text-center text-slate-400">
-                      No leads match the selected criteria.
+                    <td colSpan={10} className="py-12 text-center text-slate-500 text-xs">
+                      {user?.roleName === 'SALES_MEMBER' && memberFilter === 'all' && !search.trim()
+                        ? ownScopeEmptyCopy('leads').title
+                        : 'No leads match the selected criteria.'}
                     </td>
                   </tr>
                 ) : (
@@ -2064,6 +2033,13 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
           </form>
         )}
       </Modal>
+
+      <ImportWizard
+        entity="leads"
+        isOpen={isImportOpen}
+        onClose={() => setIsImportOpen(false)}
+        onComplete={() => fetchLeads(currentPage)}
+      />
     </div>
   );
 };

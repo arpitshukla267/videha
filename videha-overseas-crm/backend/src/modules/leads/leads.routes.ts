@@ -7,6 +7,7 @@ export const leadsRoutes = Router();
 leadsRoutes.use(authenticate);
 
 leadsRoutes.get("/", requirePermission("leads.view"), ctrl.list);
+leadsRoutes.get("/export", requirePermission("leads.view"), ctrl.exportCsv);
 leadsRoutes.get("/:id/activities", requirePermission("leads.view"), ctrl.getActivities);
 leadsRoutes.get("/:id/notes", requirePermission("leads.view"), ctrl.getNotes);
 leadsRoutes.get("/:id/calls", requirePermission("leads.view"), ctrl.getCalls);

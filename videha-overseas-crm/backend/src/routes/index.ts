@@ -21,6 +21,9 @@ import { dashboardRoutes } from "../modules/dashboard/dashboard.routes";
 import { reportsRoutes } from "../modules/reports/reports.routes";
 import { billsRoutes } from "../modules/bills/bills.routes";
 import { financeRoutes } from "../modules/finance/finance.routes";
+import { documentsRoutes } from "../modules/documents/documents.routes";
+import { importRoutes } from "../modules/import/import.routes";
+import { shipmentsRoutes } from "../modules/shipments/shipments.routes";
 import { publicRoutes } from "../modules/public/public.routes";
 
 export const apiRouter = Router();
@@ -65,6 +68,9 @@ apiRouter.use("/dashboard", dashboardRoutes);
 apiRouter.use("/reports", reportsRoutes);
 apiRouter.use("/bills", billsRoutes);
 apiRouter.use("/finance", financeRoutes);
+apiRouter.use("/documents", documentsRoutes);
+apiRouter.use("/import", importRoutes);
+apiRouter.use("/shipments", shipmentsRoutes);
 apiRouter.use("/public", publicRoutes);
 
 apiRouter.get("/health", (_req, res) => {

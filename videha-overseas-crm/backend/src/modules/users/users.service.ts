@@ -14,6 +14,12 @@ import { writeAudit } from "../../services/audit.service";
 import type { AuthUser } from "../../middleware/auth";
 import type { RoleName } from "../../models/Role";
 
+const DEFAULT_DEPARTMENT_BY_ROLE: Partial<Record<RoleName, string>> = {
+  MANAGER: "Sales",
+  SALES_MEMBER: "Sales",
+  OPERATIONS: "Operations",
+};
+
 type WorkloadStats = {
   activeTasks: number;
   overdueTasks: number;
@@ -139,6 +145,30 @@ export async function listUsers(filters: {
   return paginatedResponse(items, total, page, limit);
 }
 
+/** Minimal active-user list for assignee dropdowns (no users.view required). */
+export async function listTeamDirectory() {
+  const users = await User.find({ status: "active" })
+    .populate("roleId", "displayName name")
+    .sort({ name: 1 })
+    .limit(200)
+    .lean();
+
+  return users.map((user) => {
+    const role =
+      user.roleId && typeof user.roleId === "object" && "displayName" in user.roleId
+        ? user.roleId
+        : null;
+    return {
+      id: String(user._id),
+      name: user.name,
+      email: user.email,
+      roleName: user.roleName,
+      roleDisplayName: role?.displayName || user.roleName,
+      designation: user.designation || "",
+    };
+  });
+}
+
 async function resolveDepartmentId(
   departmentId?: string | null,
   departmentName?: string | null,
@@ -156,6 +186,28 @@ async function resolveDepartmentId(
     return dept ? String(dept._id) : null;
   }
   return null;
+}
+
+/** Resolve department for a new user, applying role defaults when none was chosen. */
+async function resolveDepartmentForCreate(
+  roleName: RoleName,
+  departmentId?: string | null,
+  departmentName?: string | null,
+): Promise<Types.ObjectId | null> {
+  const explicitId = await resolveDepartmentId(departmentId, departmentName);
+  if (explicitId) return new Types.ObjectId(explicitId);
+
+  const fallbackName = DEFAULT_DEPARTMENT_BY_ROLE[roleName];
+  if (!fallbackName) return null;
+
+  const escaped = fallbackName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const dept = await Department.findOne({
+    name: new RegExp(`^${escaped}$`, "i"),
+    status: "active",
+  })
+    .select("_id")
+    .lean();
+  return dept?._id ? (dept._id as Types.ObjectId) : null;
 }
 
 async function serializeSingleUser(user: InstanceType<typeof User>) {
@@ -194,7 +246,11 @@ export async function createUser(
     throw new AppError("A team member with this email already exists.", 400);
   }
 
-  const departmentId = await resolveDepartmentId(data.departmentId, data.department);
+  const departmentObjectId = await resolveDepartmentForCreate(
+    role.name as RoleName,
+    data.departmentId,
+    data.department,
+  );
 
   const passwordHash = await bcrypt.hash(data.password, 10);
   const user = await User.create({
@@ -203,7 +259,7 @@ export async function createUser(
     passwordHash,
     roleId: role._id,
     roleName: role.name as RoleName,
-    departmentId,
+    departmentId: departmentObjectId,
     status: "active",
     phone: data.phone || "",
     designation: data.designation || "",

@@ -21,9 +21,25 @@ export function resolveVisibilityScope(roleName: RoleName): VisibilityScope {
 }
 
 async function userIdsInDepartment(departmentId: string | null): Promise<Types.ObjectId[]> {
-  if (!departmentId) return [];
-  const users = await User.find({ departmentId, status: "active" }).select("_id").lean();
+  if (!departmentId || !Types.ObjectId.isValid(departmentId)) return [];
+  const deptObjectId = new Types.ObjectId(departmentId);
+  const users = await User.find({ departmentId: deptObjectId, status: "active" }).select("_id").lean();
   return users.map((u) => u._id as Types.ObjectId);
+}
+
+export function isAdminRole(roleName: RoleName): boolean {
+  return roleName === "SUPER_ADMIN" || roleName === "ADMIN";
+}
+
+export function isManagerRole(roleName: RoleName): boolean {
+  return roleName === "MANAGER";
+}
+
+export async function userIdsInActorScope(actor: AuthUser): Promise<Types.ObjectId[]> {
+  const scope = resolveVisibilityScope(actor.roleName);
+  if (scope === "all") return [];
+  if (scope === "own") return [new Types.ObjectId(actor.id)];
+  return userIdsInDepartment(actor.departmentId);
 }
 
 /** Build MongoDB filter for assignee/owner fields based on role visibility. */

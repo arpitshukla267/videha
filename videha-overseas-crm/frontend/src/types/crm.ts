@@ -51,7 +51,7 @@ export interface Permission {
   id: string;
   code: string;
   name: string;
-  category: 'dashboard' | 'users' | 'leads' | 'tasks' | 'orders' | 'finance' | 'reports' | 'settings';
+  category: 'dashboard' | 'users' | 'leads' | 'tasks' | 'orders' | 'finance' | 'reports' | 'settings' | 'documents';
   description: string;
 }
 
@@ -165,10 +165,19 @@ export interface Quotation {
   status: QuotationStatus;
   leadId: string | null;
   leadCode?: string;
+  leadName?: string;
+  leadCountry?: string;
+  leadEmail?: string;
+  leadPhone?: string;
   companyId: string | null;
+  companyCode?: string;
   companyName?: string;
+  companyCountry?: string;
   customerId: string | null;
+  customerCode?: string;
   customerName?: string;
+  customerEmail?: string;
+  customerPhone?: string;
   orderId: string | null;
   orderCode?: string;
   assignedToId: string | null;
@@ -370,6 +379,85 @@ export interface Order {
   revision?: number;
 }
 
+export type ShipmentStatus =
+  | 'Planned'
+  | 'Booked'
+  | 'In Transit'
+  | 'Arrived'
+  | 'Delivered'
+  | 'Cancelled';
+
+export interface Shipment {
+  id: string;
+  shipmentCode: string;
+  shipmentReference: string;
+  containerReference: string;
+  orderId: string | null;
+  orderCode?: string;
+  orderStatus?: string;
+  companyId: string | null;
+  companyName?: string;
+  customerId: string | null;
+  customerName?: string;
+  product: string;
+  quantity: string;
+  originPort: string;
+  destinationPort: string;
+  etd: string | null;
+  eta: string | null;
+  carrier: string;
+  shippingLine: string;
+  trackingNumber: string;
+  status: ShipmentStatus;
+  notes: string;
+  assignedToId: string | null;
+  assignedToName?: string;
+  createdAt: string;
+  updatedAt: string;
+  revision?: number;
+}
+
+export type ImportEntityType =
+  | 'leads'
+  | 'companies'
+  | 'customers'
+  | 'follow-ups'
+  | 'quotations'
+  | 'orders';
+
+export interface ImportPreviewRow {
+  rowNumber: number;
+  raw: Record<string, string>;
+  mapped: Record<string, unknown>;
+  errors: string[];
+  warnings: string[];
+  isDuplicate: boolean;
+  valid: boolean;
+}
+
+export interface ImportFieldMeta {
+  key: string;
+  label: string;
+  required: boolean;
+  aliases?: string[];
+}
+
+export interface ImportPreviewResult {
+  sessionId: string;
+  entityType: ImportEntityType;
+  fileName: string;
+  headers: string[];
+  mapping: Record<string, string | null>;
+  fields: ImportFieldMeta[];
+  summary: {
+    totalRows: number;
+    validRows: number;
+    errorRows: number;
+    duplicateRows: number;
+  };
+  previewRows: ImportPreviewRow[];
+}
+
 export interface PublicOrderTrackingInfo {
   orderCode: string;
   customerCompany: string;
@@ -486,4 +574,38 @@ export interface FinanceOverview {
     currency: string;
     paidAt: string;
   }>;
+}
+
+export type DocumentCategory =
+  | 'KYC'
+  | 'Quotation'
+  | 'Invoice'
+  | 'Contract'
+  | 'Shipping'
+  | 'Other';
+
+export type DocumentEntityType = 'Lead' | 'Company' | 'Customer' | 'Quotation' | 'Order';
+
+export interface CrmDocument {
+  id: string;
+  documentCode: string;
+  title: string;
+  fileName: string;
+  category: DocumentCategory;
+  entityType: DocumentEntityType;
+  entityId: string;
+  entityLabel: string;
+  entityCode: string;
+  mimeType: string;
+  fileSize: number;
+  publicId: string;
+  url: string;
+  resourceType: 'image' | 'raw';
+  previewUrl: string;
+  downloadUrl: string;
+  createdById: string;
+  createdByName?: string;
+  createdAt: string;
+  updatedAt: string;
+  revision?: number;
 }

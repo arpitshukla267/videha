@@ -8,7 +8,9 @@ import {
   Trash2,
   Calendar,
   Clock,
-  AlertTriangle
+  AlertTriangle,
+  Download,
+  Upload
 } from 'lucide-react';
 import { api } from '../../api/client';
 import { FollowUp, FollowUpStatus, FollowUpType, Lead, User as CrmUser } from '../../types/crm';
@@ -21,6 +23,8 @@ import { useAuth } from '../../context/AuthContext';
 import { handleConflictWithReload, alertSaveError } from '../../lib/apiErrors';
 import { createClientRequestId as generateClientRequestId } from '../../lib/clientRequestId';
 import { refreshNotifications } from '../../lib/notifications';
+import { ImportWizard } from '../../components/import/ImportWizard';
+import { ListStatePanel, ownScopeEmptyCopy } from '../../components/ui/ListStatePanel';
 
 type ScheduleTab = 'today' | 'upcoming' | 'overdue' | 'all';
 
@@ -57,6 +61,7 @@ export const FollowUpsPage: React.FC = () => {
   const [limit] = useState(15);
   const [search, setSearch] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [teamMembers, setTeamMembers] = useState<CrmUser[]>([]);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -67,6 +72,8 @@ export const FollowUpsPage: React.FC = () => {
   const [completeModal, setCompleteModal] = useState<FollowUp | null>(null);
   const [completeNotes, setCompleteNotes] = useState('');
   const [completeOutcome, setCompleteOutcome] = useState('');
+  const [isExporting, setIsExporting] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
 
   const memberOptions = useMemo(
     () => teamMembers.map(m => ({ value: m.id, label: m.name })),
@@ -79,6 +86,7 @@ export const FollowUpsPage: React.FC = () => {
 
   const fetchFollowUps = async (pageNum = page) => {
     setIsLoading(true);
+    setLoadError(null);
     try {
       const res = await api.followUps.getFollowUps({
         schedule: schedule === 'all' ? undefined : schedule,
@@ -93,6 +101,8 @@ export const FollowUpsPage: React.FC = () => {
         setTotalPages(res.totalPages);
       }
     } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to load follow-ups';
+      setLoadError(message);
       alertSaveError(err, 'Failed to load follow-ups');
     } finally {
       setIsLoading(false);
@@ -104,13 +114,28 @@ export const FollowUpsPage: React.FC = () => {
   }, [schedule, search]);
 
   useEffect(() => {
-    api.users.getUsers({ status: 'active', limit: 100 }).then(res => {
-      if (res.success) setTeamMembers(res.data);
-    });
-    api.leads.getLeads({ limit: 100, sortBy: 'createdAt', sortOrder: 'desc' }).then(res => {
+    api.users
+      .getTeamDirectory()
+      .then(res => {
+        if (res.success) setTeamMembers(res.data as CrmUser[]);
+      })
+      .catch(() => {
+        if (user) {
+          setTeamMembers([
+            {
+              id: user.id,
+              name: user.name,
+              email: user.email,
+              roleName: user.roleName,
+              roleDisplayName: user.roleName
+            } as CrmUser
+          ]);
+        }
+      });
+    api.leads.getLeads({ limit: 100 }).then(res => {
       if (res.success) setLeads(res.items);
     });
-  }, []);
+  }, [user]);
 
   const openCreate = () => {
     setEditing(null);
@@ -208,6 +233,20 @@ export const FollowUpsPage: React.FC = () => {
     }
   };
 
+  const handleExportCsv = async () => {
+    setIsExporting(true);
+    try {
+      await api.followUps.exportCsv({
+        schedule: schedule === 'all' ? undefined : schedule,
+        search: search.trim() || undefined
+      });
+    } catch (err: unknown) {
+      alertSaveError(err, 'Failed to export follow-ups');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const scheduleTabs: { id: ScheduleTab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
     { id: 'today', label: 'Today', icon: Calendar },
     { id: 'upcoming', label: 'Upcoming', icon: Clock },
@@ -222,15 +261,38 @@ export const FollowUpsPage: React.FC = () => {
           <h2 className="text-sm font-semibold text-slate-800">Follow-ups</h2>
           <p className="text-xs text-slate-500 mt-0.5">Scheduled lead touchpoints — today, upcoming, and overdue</p>
         </div>
-        {hasPermission('followups.create') && (
-          <button
-            onClick={openCreate}
-            className="inline-flex items-center gap-1.5 px-3 py-2 bg-sky-600 text-white text-xs font-medium rounded-lg hover:bg-sky-700"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            Schedule Follow-up
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {hasPermission('followups.create') && (
+            <button
+              type="button"
+              onClick={() => setIsImportOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-2 bg-sky-50 text-sky-800 hover:bg-sky-100 border border-sky-200/80 rounded-lg text-xs font-medium transition-colors"
+            >
+              <Upload className="w-3.5 h-3.5 text-sky-600" />
+              Import CSV
+            </button>
+          )}
+          {hasPermission('followups.view') && (
+            <button
+              type="button"
+              onClick={handleExportCsv}
+              disabled={isExporting}
+              className="inline-flex items-center gap-1.5 px-3 py-2 bg-teal-50 text-teal-800 hover:bg-teal-100 border border-teal-200/80 rounded-lg text-xs font-medium transition-colors disabled:opacity-60"
+            >
+              <Download className="w-3.5 h-3.5 text-teal-600" />
+              {isExporting ? 'Exporting…' : 'Export CSV'}
+            </button>
+          )}
+          {hasPermission('followups.create') && (
+            <button
+              onClick={openCreate}
+              className="inline-flex items-center gap-1.5 px-3 py-2 bg-sky-600 text-white text-xs font-medium rounded-lg hover:bg-sky-700"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              Schedule Follow-up
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -266,18 +328,26 @@ export const FollowUpsPage: React.FC = () => {
       </div>
 
       <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-        {isLoading ? (
-          <div className="p-8 text-center text-xs text-slate-500 animate-pulse">Loading follow-ups…</div>
-        ) : followUps.length === 0 ? (
-          <div className="p-8 text-center text-xs text-slate-500">
-            No follow-ups in this view.
-            {schedule !== 'all' && (
-              <span className="block mt-1">
-                Try the <strong>All</strong> tab, or set a &quot;Next follow-up&quot; date on a lead and save.
-              </span>
-            )}
-          </div>
-        ) : (
+        <ListStatePanel
+          isLoading={isLoading}
+          error={loadError}
+          isEmpty={!loadError && followUps.length === 0}
+          loadingLabel="Loading follow-ups…"
+          emptyTitle={
+            user?.roleName === 'SALES_MEMBER' && schedule === 'all' && !search.trim()
+              ? ownScopeEmptyCopy('follow-ups').title
+              : 'No follow-ups in this view'
+          }
+          emptyDescription={
+            user?.roleName === 'SALES_MEMBER' && schedule === 'all' && !search.trim()
+              ? ownScopeEmptyCopy('follow-ups').description
+              : schedule !== 'all'
+                ? 'Try the All tab, or schedule a follow-up on one of your leads.'
+                : undefined
+          }
+          className="p-8 text-center text-xs text-slate-500"
+        />
+        {!isLoading && !loadError && followUps.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead className="bg-slate-50 border-b border-slate-200 text-slate-500">
@@ -350,7 +420,7 @@ export const FollowUpsPage: React.FC = () => {
               </tbody>
             </table>
           </div>
-        )}
+        ) : null}
       </div>
 
       <PaginationBar
@@ -469,6 +539,13 @@ export const FollowUpsPage: React.FC = () => {
           </div>
         </div>
       </Modal>
+
+      <ImportWizard
+        entity="follow-ups"
+        isOpen={isImportOpen}
+        onClose={() => setIsImportOpen(false)}
+        onComplete={() => fetchFollowUps(page)}
+      />
     </div>
   );
 };

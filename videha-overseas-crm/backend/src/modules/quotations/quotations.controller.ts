@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 import { asyncHandler } from "../../utils/asyncHandler";
+import { sendCsvResponse } from "../../utils/csvExport";
 import * as service from "./quotations.service";
 
 export const list = asyncHandler(async (req: Request, res: Response) => {
@@ -28,8 +29,25 @@ export const list = asyncHandler(async (req: Request, res: Response) => {
   });
 });
 
+export const exportCsv = asyncHandler(async (req: Request, res: Response) => {
+  const result = await service.exportQuotations(
+    {
+      search: req.query.search as string | undefined,
+      status: req.query.status as string | undefined,
+      leadId: req.query.leadId as string | undefined,
+      companyId: req.query.companyId as string | undefined,
+      customerId: req.query.customerId as string | undefined,
+      assignedToId: (req.query.assignedToId || req.query.assignedMemberId) as string | undefined,
+      sortBy: req.query.sortBy as string | undefined,
+      sortOrder: req.query.sortOrder as "asc" | "desc" | undefined,
+    },
+    req.user!,
+  );
+  sendCsvResponse(res, result.filename, result.body);
+});
+
 export const getOne = asyncHandler(async (req: Request, res: Response) => {
-  const data = await service.getQuotation(req.params.id);
+  const data = await service.getQuotation(req.params.id, req.user!);
   res.json({ success: true, data });
 });
 
@@ -46,6 +64,16 @@ export const update = asyncHandler(async (req: Request, res: Response) => {
 export const updateStatus = asyncHandler(async (req: Request, res: Response) => {
   const data = await service.updateQuotationStatus(req.params.id, req.body, req.user!);
   res.json({ success: true, data });
+});
+
+export const getOrderDraft = asyncHandler(async (req: Request, res: Response) => {
+  const data = await service.getQuotationOrderDraft(req.params.id, req.user!);
+  res.json({ success: true, data });
+});
+
+export const createOrder = asyncHandler(async (req: Request, res: Response) => {
+  const data = await service.createQuotationOrder(req.params.id, req.body, req.user!);
+  res.status(data.alreadyExists ? 200 : 201).json({ success: true, data });
 });
 
 export const remove = asyncHandler(async (req: Request, res: Response) => {

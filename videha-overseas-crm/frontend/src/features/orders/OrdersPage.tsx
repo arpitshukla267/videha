@@ -17,10 +17,12 @@ import {
   LayoutGrid,
   List,
   MapPin,
-  UserCheck
+  UserCheck,
+  Download,
+  Upload
 } from 'lucide-react';
 import { api } from '../../api/client';
-import { Order, OrderStatus, OrderStatusHistory, User as CrmUser } from '../../types/crm';
+import { Order, OrderStatus, OrderStatusHistory, User as CrmUser, Shipment } from '../../types/crm';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { Modal } from '../../components/ui/Modal';
 import { SearchableSelect } from '../../components/ui/SearchableSelect';
@@ -31,6 +33,7 @@ import { CRM_COUNTRIES } from '../../constants/countries';
 import { handleConflictWithReload, alertSaveError } from '../../lib/apiErrors';
 import { PaginationBar } from '../../components/ui/PaginationBar';
 import { createClientRequestId as generateClientRequestId } from '../../lib/clientRequestId';
+import { ImportWizard } from '../../components/import/ImportWizard';
 
 interface OrdersPageProps {
   onNavigate: (tab: NavigationTab, entityId?: string) => void;
@@ -90,6 +93,7 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({
   const [orderDetail, setOrderDetail] = useState<{
     order: Order;
     history: OrderStatusHistory[];
+    shipments?: Shipment[];
   } | null>(null);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
 
@@ -97,6 +101,8 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({
   const [nextStatus, setNextStatus] = useState<OrderStatus>('Processing');
   const [statusNotes, setStatusNotes] = useState('');
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
 
   useEffect(() => {
     api.users
@@ -137,6 +143,21 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({
   useEffect(() => {
     fetchOrders(currentPage);
   }, [search, statusFilter, countryFilter, currentPage]);
+
+  const handleExportCsv = async () => {
+    setIsExporting(true);
+    try {
+      await api.orders.exportCsv({
+        search: search.trim() || undefined,
+        status: statusFilter,
+        country: countryFilter
+      });
+    } catch (err: unknown) {
+      alertSaveError(err, 'Failed to export orders');
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const handleOpenDetail = async (id: string) => {
     setSelectedOrderId(id);
@@ -283,6 +304,29 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({
               <span className="hidden md:inline">Table</span>
             </button>
           </div>
+
+          {hasPermission('orders.create') && (
+            <button
+              type="button"
+              onClick={() => setIsImportOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-2 bg-sky-50 text-sky-800 hover:bg-sky-100 border border-sky-200/80 rounded-lg text-xs font-medium transition-colors disabled:opacity-60"
+            >
+              <Upload className="w-3.5 h-3.5 text-sky-600" />
+              Import CSV
+            </button>
+          )}
+
+          {hasPermission('orders.view') && (
+            <button
+              type="button"
+              onClick={handleExportCsv}
+              disabled={isExporting}
+              className="inline-flex items-center gap-1.5 px-3 py-2 bg-teal-50 text-teal-800 hover:bg-teal-100 border border-teal-200/80 rounded-lg text-xs font-medium transition-colors disabled:opacity-60"
+            >
+              <Download className="w-3.5 h-3.5 text-teal-600" />
+              {isExporting ? 'Exporting…' : 'Export CSV'}
+            </button>
+          )}
 
           {hasPermission('orders.create') && (
             <button
@@ -864,6 +908,27 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({
               </form>
             )}
 
+            {orderDetail.shipments && orderDetail.shipments.length > 0 && (
+              <div className="border border-slate-200 rounded-xl p-4 bg-white">
+                <h4 className="text-xs font-semibold text-slate-800 uppercase tracking-wider mb-3">
+                  Linked Shipments
+                </h4>
+                <div className="space-y-2">
+                  {orderDetail.shipments.map(shipment => (
+                    <div key={shipment.id} className="flex items-center justify-between text-xs p-2 rounded-lg bg-slate-50 border border-slate-200">
+                      <div>
+                        <div className="font-medium text-slate-800">{shipment.shipmentCode}</div>
+                        <div className="text-[10px] text-slate-500">
+                          {shipment.shipmentReference || shipment.containerReference || shipment.trackingNumber || 'No reference'}
+                        </div>
+                      </div>
+                      <StatusBadge status={shipment.status} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Order Status History Audit Trail */}
             <div className="border border-slate-200 rounded-xl p-4 bg-white">
               <h4 className="text-xs font-semibold text-slate-800 uppercase tracking-wider mb-4 flex items-center justify-between">
@@ -911,6 +976,13 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({
           </div>
         )}
       </Modal>
+
+      <ImportWizard
+        entity="orders"
+        isOpen={isImportOpen}
+        onClose={() => setIsImportOpen(false)}
+        onComplete={() => fetchOrders(currentPage)}
+      />
     </div>
   );
 };

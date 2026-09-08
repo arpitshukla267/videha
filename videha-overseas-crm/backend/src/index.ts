@@ -1,11 +1,14 @@
 import { createApp } from "./app";
 import { connectDatabase } from "./db/connect";
-import { backfillMissingRevisions, backfillLeadPipelineFields, backfillFollowUpsFromLeads } from "./db/backfillRevisions";
+import { backfillMissingRevisions, backfillLeadPipelineFields, backfillFollowUpsFromLeads, backfillNullClientRequestIds, syncRolePermissionDefaults, backfillUserDepartments } from "./db/backfillRevisions";
 import { env } from "./config/env";
 
 async function main() {
   await connectDatabase();
   await backfillMissingRevisions();
+  await backfillNullClientRequestIds();
+  await syncRolePermissionDefaults();
+  await backfillUserDepartments();
   await backfillLeadPipelineFields();
   await backfillFollowUpsFromLeads();
   const app = createApp();

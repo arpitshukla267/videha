@@ -33,6 +33,7 @@ import { refreshNotifications } from '../../lib/notifications';
 import { handleConflictWithReload, alertSaveError, isConflictError } from '../../lib/apiErrors';
 import { PaginationBar } from '../../components/ui/PaginationBar';
 import { createClientRequestId as generateClientRequestId } from '../../lib/clientRequestId';
+import { ListStatePanel, ownScopeEmptyCopy } from '../../components/ui/ListStatePanel';
 
 type TasksPageProps = {
   focusTaskId?: string | null;
@@ -146,13 +147,14 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
   const [pageLimit] = useState(25);
   const [activeView, setActiveView] = useState<
     'my' | 'all' | 'pending' | 'in_progress' | 'completed' | 'overdue'
-  >('all');
+  >('my');
   const [search, setSearch] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [memberFilter, setMemberFilter] = useState('all');
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
   const [teamMembers, setTeamMembers] = useState<CrmUser[]>([]);
   const [leadOptions, setLeadOptions] = useState<Lead[]>([]);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [createRequestId, setCreateRequestId] = useState(generateClientRequestId);
@@ -190,21 +192,34 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
 
   useEffect(() => {
     api.users
-      .getUsers({ limit: 100, page: 1 })
+      .getTeamDirectory()
       .then(res => {
-        if (res.success) setTeamMembers(res.data);
+        if (res.success) setTeamMembers(res.data as CrmUser[]);
       })
-      .catch(() => {});
+      .catch(() => {
+        if (user) {
+          setTeamMembers([
+            {
+              id: user.id,
+              name: user.name,
+              email: user.email,
+              roleName: user.roleName,
+              roleDisplayName: user.roleName
+            } as CrmUser
+          ]);
+        }
+      });
     api.leads
       .getLeads({ limit: 200, page: 1 })
       .then(res => {
         if (res.success) setLeadOptions(res.items);
       })
       .catch(() => {});
-  }, []);
+  }, [user]);
 
   const fetchTasks = async (page = currentPage) => {
     setIsLoading(true);
+    setLoadError(null);
     try {
       const res = await api.tasks.getTasks({
         view: activeView,
@@ -221,6 +236,8 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
         setTotalPages(res.totalPages);
       }
     } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to load tasks';
+      setLoadError(message);
       console.error('Failed to fetch tasks:', err);
     } finally {
       setIsLoading(false);
@@ -657,15 +674,23 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
 
       {viewMode === 'cards' ? (
         <div>
-          {isLoading ? (
-            <div className="py-16 text-center text-slate-400 bg-white border border-slate-200 rounded-xl">
-              Loading tasks…
-            </div>
-          ) : tasks.length === 0 ? (
-            <div className="py-16 text-center text-slate-400 bg-white border border-slate-200 rounded-xl">
-              No tasks found.
-            </div>
-          ) : (
+          <ListStatePanel
+            isLoading={isLoading}
+            error={loadError}
+            isEmpty={!loadError && tasks.length === 0}
+            loadingLabel="Loading tasks…"
+            emptyTitle={
+              activeView === 'my' || user?.roleName === 'SALES_MEMBER'
+                ? ownScopeEmptyCopy('tasks').title
+                : 'No tasks found'
+            }
+            emptyDescription={
+              activeView === 'my' || user?.roleName === 'SALES_MEMBER'
+                ? ownScopeEmptyCopy('tasks').description
+                : undefined
+            }
+          />
+          {!isLoading && !loadError && tasks.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
               {tasks.map(task => {
                 const isDone = task.status === 'Completed' || task.status === 'Cancelled';
@@ -711,23 +736,23 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
                             <div className="flex flex-wrap items-center gap-1.5 mb-1">
                               <span className="inline-flex text-[10px] font-medium uppercase tracking-wide text-sky-700 bg-sky-50 px-1.5 py-0.5 rounded border border-sky-100">
                                 {taskTypeLabel(task.taskType || task.category)}
-                              </span>
+                          </span>
                               {channel && (
                                 <span className="inline-flex text-[10px] font-medium text-slate-600 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100">
                                   {channel}
-                                </span>
-                              )}
-                            </div>
+                            </span>
+                          )}
+                        </div>
                             <h4
                               className={`text-sm font-semibold leading-snug ${
                                 isDone ? 'line-through text-slate-400' : 'text-slate-800'
-                              }`}
-                            >
-                              {task.taskTitle}
-                            </h4>
-                          </div>
-                          <PriorityBadge priority={task.priority} />
+                            }`}
+                          >
+                            {task.taskTitle}
+                          </h4>
                         </div>
+                          <PriorityBadge priority={task.priority} />
+                      </div>
 
                         {task.description ? (
                           <p className="text-xs text-slate-500 mt-1.5 line-clamp-2">{task.description}</p>
@@ -764,9 +789,9 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
                               title={outcomeText}
                             >
                               {outcomeText}
-                            </span>
-                          )}
-                        </div>
+                          </span>
+                        )}
+                      </div>
 
                         {task.completionNotes ? (
                           <p className="text-[11px] text-slate-500 mt-2 line-clamp-2 italic">
@@ -796,39 +821,39 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
                               <p className="text-[10px] text-slate-400 flex items-center gap-1">
                                 <Clock className="w-3 h-3 shrink-0" />
                                 {new Date(task.dueDate).toLocaleString([], {
-                                  month: 'short',
-                                  day: 'numeric',
-                                  hour: '2-digit',
-                                  minute: '2-digit'
-                                })}
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
                               </p>
-                            </div>
-                          </div>
+                      </div>
+                    </div>
 
                           <div
                             className="flex items-center gap-0.5 opacity-70 group-hover:opacity-100"
                             onClick={e => e.stopPropagation()}
                           >
                             {hasPermission('tasks.edit') && (
-                              <button
+                          <button
                                 type="button"
                                 onClick={() => openEditTask(task)}
                                 className="p-1.5 rounded-lg text-slate-400 hover:text-sky-700 hover:bg-sky-50"
                                 title="Edit task"
                               >
                                 <Pencil className="w-3.5 h-3.5" />
-                              </button>
-                            )}
+                          </button>
+                        )}
                             {hasPermission('tasks.edit') && (
-                              <button
+                          <button
                                 type="button"
-                                onClick={e => handleDeleteTask(task.id, e)}
+                            onClick={e => handleDeleteTask(task.id, e)}
                                 className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50"
                                 title="Delete"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            )}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                           </div>
                         </div>
                       </div>
@@ -837,7 +862,7 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
                 );
               })}
             </div>
-          )}
+          ) : null}
         </div>
       ) : (
         <div className="bg-white border border-slate-200 rounded-xl shadow-2xs overflow-hidden">
@@ -856,14 +881,22 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
               <tbody className="divide-y divide-slate-100">
                 {isLoading ? (
                   <tr>
-                    <td colSpan={6} className="py-12 text-center text-slate-400">
-                      Loading…
+                    <td colSpan={6} className="py-12 text-center text-slate-400 animate-pulse">
+                      Loading tasks…
+                    </td>
+                  </tr>
+                ) : loadError ? (
+                  <tr>
+                    <td colSpan={6} className="py-12 text-center text-rose-600 text-xs">
+                      {loadError}
                     </td>
                   </tr>
                 ) : tasks.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="py-12 text-center text-slate-400">
-                      No tasks found.
+                    <td colSpan={6} className="py-12 text-center text-slate-500 text-xs">
+                      {activeView === 'my' || user?.roleName === 'SALES_MEMBER'
+                        ? ownScopeEmptyCopy('tasks').title
+                        : 'No tasks found.'}
                     </td>
                   </tr>
                 ) : (
@@ -886,10 +919,10 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
                         <p
                           className={`font-semibold ${
                             task.status === 'Completed' ? 'line-through text-slate-400' : 'text-slate-800'
-                          }`}
-                        >
-                          {task.taskTitle}
-                        </p>
+                            }`}
+                          >
+                            {task.taskTitle}
+                          </p>
                         <p className="text-[10px] font-mono text-slate-400">{task.taskCode}</p>
                       </td>
                       <td className="py-3 px-4 text-slate-700">{task.assignedToName || '—'}</td>
@@ -910,7 +943,7 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
                       <td className="py-3 px-4 text-right">
                         <div className="inline-flex items-center gap-1">
                           {hasPermission('tasks.edit') && (
-                            <button
+                          <button
                               type="button"
                               onClick={() => openEditTask(task)}
                               className="p-1 rounded text-slate-500 hover:text-sky-700"
@@ -968,7 +1001,7 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
             >
               {isSubmittingCreate ? 'Creating…' : 'Create Task'}
             </button>
-          </div>
+            </div>
         </form>
       </Modal>
 
@@ -988,25 +1021,25 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
               setEditForm(prev => (prev ? { ...prev, ...patch } : prev))
             )}
             <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
-              <button
-                type="button"
+            <button
+              type="button"
                 onClick={() => {
                   setEditTaskId(null);
                   setEditForm(null);
                 }}
                 className="px-4 py-2 rounded-lg border border-slate-200 text-slate-600"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
                 disabled={isSavingEdit || !editForm.assignedToId}
                 className="px-4 py-2 rounded-lg bg-sky-600 text-white font-medium disabled:opacity-50"
-              >
+            >
                 {isSavingEdit ? 'Saving…' : 'Save changes'}
-              </button>
-            </div>
-          </form>
+            </button>
+          </div>
+        </form>
         )}
       </Modal>
 
@@ -1021,7 +1054,7 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
         maxWidth="lg"
       >
         {viewingTask && (
-          <div className="space-y-4 text-xs">
+        <div className="space-y-4 text-xs">
             {viewingTask.description ? (
               <p className="text-slate-600 leading-relaxed">{viewingTask.description}</p>
             ) : null}
@@ -1099,12 +1132,12 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
                 {viewingTask.completionNotes ? (
                   <p className="text-slate-600 leading-relaxed">{viewingTask.completionNotes}</p>
                 ) : null}
-              </div>
+          </div>
             ) : null}
             <div className="flex justify-end gap-2 pt-1">
               {hasPermission('tasks.edit') && (
-                <button
-                  type="button"
+            <button
+              type="button"
                   onClick={() => {
                     openEditTask(viewingTask);
                     setViewingTask(null);
@@ -1112,10 +1145,10 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
                   className="px-4 py-2 rounded-lg border border-slate-200 text-slate-700 font-medium"
                 >
                   Edit
-                </button>
+            </button>
               )}
-              <button
-                type="button"
+            <button
+              type="button"
                 onClick={() => {
                   setViewingTask(null);
                   setHighlightedTaskId(null);
@@ -1123,9 +1156,9 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
                 className="px-4 py-2 rounded-lg bg-sky-600 text-white font-medium"
               >
                 Close
-              </button>
-            </div>
+            </button>
           </div>
+        </div>
         )}
       </Modal>
     </div>

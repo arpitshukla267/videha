@@ -2,6 +2,7 @@ import React from 'react';
 import {
   CalendarClock,
   FileText,
+  FolderOpen,
   LayoutDashboard,
   Users,
   CheckSquare,
@@ -14,7 +15,8 @@ import {
   Building2,
   ExternalLink,
   IndianRupee,
-  Receipt
+  Receipt,
+  Ship
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -23,8 +25,10 @@ export type NavigationTab =
   | 'leads'
   | 'followups'
   | 'quotations'
+  | 'documents'
   | 'tasks'
   | 'orders'
+  | 'shipments'
   | 'finance'
   | 'bills'
   | 'team'
@@ -51,8 +55,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onSelectTab, unrea
     { id: 'leads', label: 'Leads', icon: Users, permission: 'leads.view' },
     { id: 'followups', label: 'Follow-ups', icon: CalendarClock, permission: 'followups.view' },
     { id: 'quotations', label: 'Quotations', icon: FileText, permission: 'quotations.view' },
+    { id: 'documents', label: 'Documents', icon: FolderOpen, permission: 'documents.view' },
     { id: 'tasks', label: 'Tasks', icon: CheckSquare, permission: 'tasks.view' },
     { id: 'orders', label: 'Orders', icon: Package, permission: 'orders.view' },
+    { id: 'shipments', label: 'Shipments', icon: Ship, permission: 'shipments.view' },
     { id: 'finance', label: 'Finance', icon: IndianRupee, permission: 'finance.view' },
     { id: 'bills', label: 'Bills', icon: Receipt, permission: 'bills.view' },
     { id: 'team', label: 'Team', icon: UserCheck, permission: 'users.view' },

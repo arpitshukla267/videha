@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
 import { ZodError } from "zod";
+import { IMPORT_MAX_FILE_ERROR } from "../constants/importFields";
 import { AppError } from "../utils/AppError";
 import { env } from "../config/env";
 
@@ -20,6 +21,28 @@ export function errorHandler(err: unknown, _req: Request, res: Response, _next: 
       success: false,
       message: rateLimitErr.message || "Too many requests. Please try again later.",
       code: "RATE_LIMIT",
+    });
+    return;
+  }
+
+  const uploadErr = err as { name?: string; message?: string; code?: string };
+  if (uploadErr?.name === "MulterError") {
+    const isImportUpload = _req.originalUrl?.includes("/import/") ?? false;
+    const message =
+      uploadErr.code === "LIMIT_FILE_SIZE"
+        ? isImportUpload
+          ? IMPORT_MAX_FILE_ERROR
+          : "File exceeds the 10 MB upload limit."
+        : uploadErr.message || "File upload failed.";
+    res.status(400).json({ success: false, message, code: "UPLOAD_ERROR" });
+    return;
+  }
+
+  if (String(uploadErr?.message || "").includes("Unsupported file type")) {
+    res.status(400).json({
+      success: false,
+      message: "Unsupported file type. Allowed: PDF, images, Word, and Excel files.",
+      code: "UPLOAD_ERROR",
     });
     return;
   }

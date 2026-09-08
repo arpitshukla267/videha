@@ -7,6 +7,7 @@ export const followupsRoutes = Router();
 followupsRoutes.use(authenticate);
 
 followupsRoutes.get("/", requirePermission("followups.view", "leads.view"), ctrl.list);
+followupsRoutes.get("/export", requirePermission("followups.view", "leads.view"), ctrl.exportCsv);
 followupsRoutes.get("/:id", requirePermission("followups.view", "leads.view"), ctrl.getOne);
 followupsRoutes.post("/", requirePermission("followups.create", "leads.edit"), ctrl.create);
 followupsRoutes.put("/:id", requirePermission("followups.edit", "leads.edit"), ctrl.update);

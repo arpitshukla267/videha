@@ -6,3 +6,4 @@ export const reportsRoutes = Router();
 
 reportsRoutes.use(authenticate);
 reportsRoutes.get("/", requirePermission("reports.view"), ctrl.getReports);
+reportsRoutes.get("/advanced", requirePermission("reports.view"), ctrl.getAdvancedReports);

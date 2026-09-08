@@ -65,7 +65,7 @@ const orderSchema = new Schema<IOrder>(
     customerId: { type: Schema.Types.ObjectId, ref: "Customer", default: null, index: true },
     createdById: { type: Schema.Types.ObjectId, ref: "User", required: true },
     revision: { type: Number, default: 0, min: 0 },
-    clientRequestId: { type: String, default: null, sparse: true, unique: true, index: true },
+    clientRequestId: { type: String, sparse: true, unique: true, index: true },
   },
   { timestamps: true },
 );

@@ -6,6 +6,17 @@ export const usersRoutes = Router();
 
 usersRoutes.use(authenticate);
 
+usersRoutes.get(
+  "/directory",
+  requirePermission(
+    "leads.create",
+    "followups.create",
+    "quotations.create",
+    "tasks.create",
+    "orders.create",
+  ),
+  ctrl.directory,
+);
 usersRoutes.get("/", requirePermission("users.view"), ctrl.list);
 usersRoutes.post("/", requirePermission("users.create"), ctrl.create);
 usersRoutes.put("/:id", requirePermission("users.edit"), ctrl.update);

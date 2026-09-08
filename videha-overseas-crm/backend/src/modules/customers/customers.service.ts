@@ -8,8 +8,66 @@ import { parsePagination, paginatedResponse } from "../../utils/pagination";
 import { applyOptimisticUpdate, parseRevision } from "../../utils/concurrency";
 import { writeAudit } from "../../services/audit.service";
 import type { AuthUser } from "../../middleware/auth";
+import { exportFilename } from "../../utils/csv";
+import { streamCsvExport } from "../../utils/csvExport";
+import { CUSTOMER_EXPORT_COLUMNS } from "../../constants/exportColumns";
 
 const POPULATE = [{ path: "companyId", select: "companyCode name country status" }];
+
+function buildCustomersQuery(filters: {
+  search?: string;
+  status?: string;
+  companyId?: string;
+}) {
+  const query: Record<string, unknown> = {};
+
+  if (filters.status && filters.status !== "all") query.status = filters.status;
+  if (filters.companyId && filters.companyId !== "all") {
+    assertObjectId(filters.companyId, "companyId");
+    query.companyId = filters.companyId;
+  }
+
+  if (filters.search?.trim()) {
+    const s = filters.search.trim();
+    query.$or = [
+      { name: new RegExp(s, "i") },
+      { email: new RegExp(s, "i") },
+      { phone: new RegExp(s, "i") },
+      { customerCode: new RegExp(s, "i") },
+    ];
+  }
+
+  return query;
+}
+
+export async function exportCustomers(
+  filters: { search?: string; status?: string; companyId?: string },
+  actor: AuthUser,
+) {
+  const query = buildCustomersQuery(filters);
+  const result = await streamCsvExport({
+    columns: CUSTOMER_EXPORT_COLUMNS,
+    count: () => Customer.countDocuments(query),
+    fetchBatch: async (skip, limit) => {
+      const docs = await Customer.find(query).populate(POPULATE).sort({ name: 1 }).skip(skip).limit(limit);
+      return docs.map((d) =>
+        serializeCustomer(d.toObject() as unknown as Record<string, unknown>) as Record<string, unknown>,
+      );
+    },
+  });
+
+  await writeAudit({
+    userId: actor.id,
+    userName: actor.name,
+    userRole: actor.roleName,
+    action: "Customers Exported",
+    entity: "Customer",
+    entityId: "export",
+    details: `Exported ${result.total} customer(s) to CSV.`,
+  });
+
+  return { body: result.body, filename: exportFilename("customers"), total: result.total };
+}
 
 function normalizeCustomerInput(body: Record<string, unknown>) {
   const status = body.status ? String(body.status) : undefined;
@@ -41,23 +99,7 @@ export async function listCustomers(filters: {
   limit?: unknown;
 }) {
   const { page, limit, skip } = parsePagination(filters);
-  const query: Record<string, unknown> = {};
-
-  if (filters.status && filters.status !== "all") query.status = filters.status;
-  if (filters.companyId && filters.companyId !== "all") {
-    assertObjectId(filters.companyId, "companyId");
-    query.companyId = filters.companyId;
-  }
-
-  if (filters.search?.trim()) {
-    const s = filters.search.trim();
-    query.$or = [
-      { name: new RegExp(s, "i") },
-      { email: new RegExp(s, "i") },
-      { phone: new RegExp(s, "i") },
-      { customerCode: new RegExp(s, "i") },
-    ];
-  }
+  const query = buildCustomersQuery(filters);
 
   const [total, docs] = await Promise.all([
     Customer.countDocuments(query),

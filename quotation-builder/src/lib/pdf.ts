@@ -74,9 +74,23 @@ function drawPageFooter(
   pdf.setFillColor(255, 255, 255);
   pdf.rect(0, footerLineY - 1.5, A4_WIDTH_MM, FOOTER_ZONE_MM + 2, "F");
 
-  pdf.setDrawColor(102, 94, 82);
-  pdf.setLineWidth(0.25);
-  pdf.line(PAGE_MARGIN_MM, footerLineY, A4_WIDTH_MM - PAGE_MARGIN_MM, footerLineY);
+  /* Apply 0.6 opacity — matches .qb-doc-page-footer { opacity: 0.6 } */
+  pdf.saveGraphicsState();
+  // @ts-ignore – GState constructor exists at runtime in jsPDF 2.x+
+  pdf.setGState(new pdf.GState({ opacity: 0.6, "stroke-opacity": 0.6 }));
+
+  pdf.setDrawColor(184, 176, 165);
+  pdf.setLineWidth(0.15);
+  pdf.setLineDashPattern([0.7, 0.5], 0);
+
+  pdf.line(
+    PAGE_MARGIN_MM,
+    footerLineY,
+    A4_WIDTH_MM - PAGE_MARGIN_MM,
+    footerLineY,
+  );
+
+  pdf.setLineDashPattern([], 0);
 
   pdf.setFont("helvetica", "normal");
   pdf.setFontSize(7.5);
@@ -93,21 +107,23 @@ function drawPageFooter(
   ];
 
   metaLines.forEach((line, index) => {
-    pdf.text(line, PAGE_MARGIN_MM, footerLineY + 4.5 + index * 3.8, { align: "left" });
+    pdf.text(line, PAGE_MARGIN_MM, footerLineY + 7.2 + index * 3.8, { align: "left" });
   });
 
-  pdf.text(`Page ${pageNum} of ${totalPages}`, rightX, footerLineY + 4.5, { align: "right" });
+  pdf.text(`Page ${pageNum} of ${totalPages}`, rightX, footerLineY + 7.2, { align: "right" });
 
   if (logoDataUrl) {
     pdf.addImage(
       logoDataUrl,
       "PNG",
       rightX - logoSizeMm + logoNudgeMm,
-      footerLineY + 6 - logoNudgeMm,
+      footerLineY + 7.4 - logoNudgeMm,
       logoSizeMm,
       logoSizeMm,
     );
   }
+
+  pdf.restoreGraphicsState();
 }
 
 function applyCanvasCloneStyles(clonedEl: HTMLElement): void {

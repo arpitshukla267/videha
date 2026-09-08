@@ -80,7 +80,7 @@ const taskSchema = new Schema<ITask>(
     createdById: { type: Schema.Types.ObjectId, ref: "User", required: true },
     completedAt: { type: Date, default: null },
     revision: { type: Number, default: 0, min: 0 },
-    clientRequestId: { type: String, default: null, sparse: true, unique: true, index: true },
+    clientRequestId: { type: String, sparse: true, unique: true, index: true },
   },
   { timestamps: true },
 );
