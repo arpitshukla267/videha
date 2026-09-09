@@ -663,24 +663,24 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
   };
 
   return (
-    <div className="p-6 space-y-5 max-w-7xl mx-auto">
+    <div className="p-6 space-y-5 mx-auto" style={{ fontFamily: "'Poppins', sans-serif" }}>
       {/* Header & Action Buttons */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h3 className="text-base font-semibold text-slate-800">Overseas Inquiries & Leads</h3>
-          <p className="text-xs text-slate-500">
-            Total records: {totalLeads} global buyer leads · Trade dispatch & commodity inquiries
+          <h3 className="text-base font-semibold text-stone-900">Overseas Inquiries &amp; Leads</h3>
+          <p className="text-sm text-stone-500 mt-0.5">
+            Total records: {totalLeads} global buyer leads · Trade dispatch &amp; commodity inquiries
           </p>
         </div>
         <div className="flex items-center gap-2">
           {/* View Mode Toggle */}
-          <div className="flex items-center bg-slate-100 p-1 rounded-lg border border-slate-200">
+          <div className="flex items-center bg-stone-100 p-1 rounded-lg border border-stone-200">
             <button
               onClick={() => setViewMode('cards')}
-              className={`p-1.5 rounded-md text-xs font-medium flex items-center gap-1.5 transition-all ${
+              className={`px-2.5 py-1.5 rounded-md text-xs font-medium flex items-center gap-1.5 transition-colors ${
                 viewMode === 'cards'
-                  ? 'bg-white text-sky-700 shadow-2xs'
-                  : 'text-slate-600 hover:text-slate-800'
+                  ? 'bg-white text-teal-700 shadow-sm'
+                  : 'text-stone-600 hover:text-stone-800'
               }`}
               title="Card Form View"
             >
@@ -689,10 +689,10 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
             </button>
             <button
               onClick={() => setViewMode('table')}
-              className={`p-1.5 rounded-md text-xs font-medium flex items-center gap-1.5 transition-all ${
+              className={`px-2.5 py-1.5 rounded-md text-xs font-medium flex items-center gap-1.5 transition-colors ${
                 viewMode === 'table'
-                  ? 'bg-white text-sky-700 shadow-2xs'
-                  : 'text-slate-600 hover:text-slate-800'
+                  ? 'bg-white text-teal-700 shadow-sm'
+                  : 'text-stone-600 hover:text-stone-800'
               }`}
               title="Table View"
             >
@@ -701,23 +701,23 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
             </button>
           </div>
 
-          {/* Export Leads to Specific Member Only Button */}
+          {/* Import Leads Button */}
           {hasPermission('leads.create') && (
             <button
               onClick={() => setIsImportOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-2 bg-sky-50 text-sky-800 hover:bg-sky-100 border border-sky-200/80 rounded-lg text-xs font-medium transition-colors shadow-2xs"
+              className="inline-flex items-center gap-1.5 px-3 py-2 bg-white text-stone-700 hover:bg-stone-50 border border-stone-200 rounded-lg text-xs font-medium transition-colors"
               title="Import Leads CSV"
             >
-              <Upload className="w-3.5 h-3.5 text-sky-600" />
+              <Upload className="w-3.5 h-3.5 text-stone-500" />
               <span>Import CSV</span>
             </button>
           )}
           <button
             onClick={() => setIsExportOpen(true)}
-            className="inline-flex items-center gap-1.5 px-3 py-2 bg-teal-50 text-teal-800 hover:bg-teal-100 border border-teal-200/80 rounded-lg text-xs font-medium transition-colors shadow-2xs"
+            className="inline-flex items-center gap-1.5 px-3 py-2 bg-white text-stone-700 hover:bg-stone-50 border border-stone-200 rounded-lg text-xs font-medium transition-colors"
             title="Export Leads Data for Specific Member"
           >
-            <Download className="w-3.5 h-3.5 text-teal-600" />
+            <Download className="w-3.5 h-3.5 text-stone-500" />
             <span>Export Leads</span>
           </button>
 
@@ -728,7 +728,7 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
                 setCreateRequestId(generateClientRequestId());
                 setIsCreateOpen(true);
               }}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-xs font-medium transition-colors shadow-xs"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-teal-700 hover:bg-teal-800 text-white rounded-lg text-xs font-medium transition-colors shadow-sm"
             >
               <Plus className="w-4 h-4" />
               <span>Add New Lead</span>
@@ -738,17 +738,17 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
       </div>
 
       {/* Filter Bar */}
-      <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-2xs space-y-3">
+      <div className="bg-white border border-stone-200 rounded-xl p-4 space-y-3">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
           {/* Search */}
           <div className="relative">
-            <Search className="w-3.5 h-3.5 absolute left-3 top-3 text-slate-400" />
+            <Search className="w-3.5 h-3.5 absolute left-3 top-3 text-stone-400" />
             <input
               type="text"
               placeholder="Search buyer, company, product..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="w-full pl-8 pr-3 py-1.5 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-sky-600 text-slate-800"
+              className="w-full pl-8 pr-3 py-2 border border-stone-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-600/30 focus:border-teal-600 text-stone-800"
             />
           </div>
 
@@ -820,12 +820,12 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
                   <div
                     key={lead.id}
                     onClick={() => handleOpenDetail(lead.id)}
-                    className="bg-white border border-slate-200/90 hover:border-sky-300 rounded-xl p-4 shadow-2xs hover:shadow-xs transition-all cursor-pointer flex flex-col justify-between group relative"
+                    className="bg-white border border-stone-200 hover:border-teal-300 rounded-xl p-4 hover:shadow-md transition-all cursor-pointer flex flex-col justify-between group relative"
                   >
                     <div>
                       {/* Top Bar: Code, Priority, Status */}
-                      <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-slate-100">
-                        <span className="font-mono text-[11px] font-semibold text-slate-600 bg-slate-100/90 px-2 py-0.5 rounded">
+                      <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-stone-100">
+                        <span className="font-mono text-xs font-medium text-stone-600 bg-stone-100 px-2 py-0.5 rounded">
                           {lead.leadCode}
                         </span>
                         <div className="flex items-center gap-1.5">
@@ -836,18 +836,18 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
 
                       {/* Buyer & Company Info */}
                       <div className="mt-3">
-                        <h4 className="text-sm font-semibold text-slate-800 group-hover:text-sky-700 transition-colors leading-snug">
+                        <h4 className="text-sm font-semibold text-stone-900 group-hover:text-teal-700 transition-colors leading-snug">
                           {lead.company}
                         </h4>
-                        <p className="text-xs text-slate-600 mt-0.5 font-medium flex items-center gap-1.5">
+                        <p className="text-xs text-stone-600 mt-0.5 font-medium flex items-center gap-1.5">
                           <span>{lead.name}</span>
-                          <span className="text-slate-300">·</span>
-                          <span className="text-[11px] text-slate-500 font-normal">
+                          <span className="text-stone-300">·</span>
+                          <span className="text-xs text-stone-500 font-normal">
                             {lead.leadCategory || 'Wholesale'}
                           </span>
                         </p>
-                        <p className="text-[11px] text-slate-500 flex items-center gap-1 mt-1">
-                          <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
+                        <p className="text-xs text-stone-500 flex items-center gap-1 mt-1">
+                          <MapPin className="w-3 h-3 text-stone-400 shrink-0" />
                           <span className="truncate">
                             {[lead.city, lead.country].filter(Boolean).join(', ')}
                             {lead.destinationPort ? ` (${lead.destinationPort})` : ''}
@@ -856,38 +856,38 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
                       </div>
 
                       {/* Product of Interest Pill */}
-                      <div className="mt-3 bg-sky-50/70 border border-sky-100 rounded-lg p-2.5 text-xs">
-                        <div className="flex items-center justify-between text-[10px] text-sky-800 font-medium mb-0.5 uppercase tracking-wider">
-                          <span>Product Requirement</span>
+                      <div className="mt-3 bg-teal-50/70 border border-teal-100 rounded-lg p-2.5 text-xs">
+                        <div className="flex items-center justify-between text-xs text-teal-800 font-medium mb-0.5">
+                          <span>Product requirement</span>
                           {lead.tradeIncoTerms && (
-                            <span className="bg-sky-100 text-sky-700 px-1.5 py-0.2 rounded font-semibold">
+                            <span className="bg-teal-100 text-teal-700 px-1.5 py-0.5 rounded font-medium">
                               {lead.tradeIncoTerms}
                             </span>
                           )}
                         </div>
-                        <p className="text-slate-800 font-medium truncate" title={lead.productInterest}>
+                        <p className="text-stone-800 font-medium truncate" title={lead.productInterest}>
                           {lead.productInterest}
                         </p>
                       </div>
 
                       {/* Trade Parameters Specs */}
-                      <div className="grid grid-cols-2 gap-2 mt-2.5 text-[11px]">
-                        <div className="bg-slate-50 p-2 rounded-lg border border-slate-100">
-                          <span className="text-[10px] text-slate-400 block font-medium">Est. Value</span>
-                          <span className="font-semibold text-slate-800">
+                      <div className="grid grid-cols-2 gap-2 mt-2.5 text-xs">
+                        <div className="bg-stone-50 p-2 rounded-lg border border-stone-100">
+                          <span className="text-xs text-stone-400 block font-medium">Est. Value</span>
+                          <span className="font-medium text-stone-800">
                             {lead.estimatedValue ? `$${Number(lead.estimatedValue).toLocaleString()} USD` : 'Negotiable'}
                           </span>
                         </div>
-                        <div className="bg-slate-50 p-2 rounded-lg border border-slate-100">
-                          <span className="text-[10px] text-slate-400 block font-medium">Order Volume</span>
-                          <span className="font-medium text-slate-700 truncate block" title={lead.estimatedVolume || '1 FCL'}>
+                        <div className="bg-stone-50 p-2 rounded-lg border border-stone-100">
+                          <span className="text-xs text-stone-400 block font-medium">Order Volume</span>
+                          <span className="font-medium text-stone-700 truncate block" title={lead.estimatedVolume || '1 FCL'}>
                             {lead.estimatedVolume || '1 FCL Container'}
                           </span>
                         </div>
                       </div>
 
                       {/* Contact Channels */}
-                      <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs" onClick={e => e.stopPropagation()}>
+                      <div className="mt-3 pt-2.5 border-t border-stone-100 flex items-center justify-between text-xs" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center gap-2">
                           {lead.phoneNumber && (
                             <button
@@ -896,7 +896,7 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
                                 setQuickCallLead(lead);
                                 setCallForm(emptyCallForm());
                               }}
-                              className="p-1.5 rounded-md text-slate-500 hover:text-sky-700 hover:bg-sky-50 transition-colors"
+                              className="p-1.5 rounded-md text-stone-500 hover:text-teal-700 hover:bg-teal-50 transition-colors"
                               title={`Log call: ${lead.phoneNumber}`}
                             >
                               <Phone className="w-3.5 h-3.5" />
@@ -916,7 +916,7 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
                           {lead.email && (
                             <a
                               href={`mailto:${lead.email}`}
-                              className="p-1.5 rounded-md text-slate-500 hover:text-sky-700 hover:bg-sky-50 transition-colors"
+                              className="p-1.5 rounded-md text-stone-500 hover:text-teal-700 hover:bg-teal-50 transition-colors"
                               title={`Email: ${lead.email}`}
                             >
                               <Mail className="w-3.5 h-3.5" />
@@ -928,7 +928,7 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
                         <div className="flex flex-col items-end gap-1">
                           {lead.lastCallAt && (
                             <span
-                              className={`inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded border ${
+                              className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded border ${
                                 lead.lastCallPickedUp
                                   ? 'text-emerald-700 bg-emerald-50 border-emerald-100'
                                   : 'text-amber-700 bg-amber-50 border-amber-100'
@@ -945,24 +945,24 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
                             </span>
                           )}
                           {lead.nextFollowUp ? (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-medium text-sky-700 bg-sky-50 px-2 py-0.5 rounded border border-sky-100">
+                            <span className="inline-flex items-center gap-1 text-xs font-medium text-teal-700 bg-teal-50 px-2 py-0.5 rounded border border-teal-100">
                               <Clock className="w-3 h-3" />
                               {new Date(lead.nextFollowUp).toLocaleDateString([], { month: 'short', day: 'numeric' })}
                             </span>
                           ) : (
-                            <span className="text-[10px] text-slate-400">No follow-up set</span>
+                            <span className="text-xs text-stone-400">No follow-up set</span>
                           )}
                         </div>
                       </div>
                     </div>
 
                     {/* Card Footer: Assignee & Details Button */}
-                    <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between">
+                    <div className="mt-3 pt-2.5 border-t border-stone-100 flex items-center justify-between">
                       <div className="flex items-center gap-1.5 min-w-0">
-                        <div className="w-5 h-5 rounded-full bg-gradient-to-br from-sky-500 to-teal-600 text-white flex items-center justify-center text-[9px] font-bold shrink-0">
+                        <div className="w-5 h-5 rounded-full bg-teal-700 text-white flex items-center justify-center text-xs font-medium shrink-0">
                           {assignedName.slice(0, 1).toUpperCase()}
                         </div>
-                        <span className="text-[11px] text-slate-600 truncate max-w-[120px]" title={assignedName}>
+                        <span className="text-xs text-stone-600 truncate max-w-[120px]" title={assignedName}>
                           {assignedName}
                         </span>
                       </div>
@@ -970,14 +970,14 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
                       <div className="flex items-center gap-1.5" onClick={e => e.stopPropagation()}>
                         <button
                           onClick={() => handleOpenDetail(lead.id)}
-                          className="px-2.5 py-1 bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200/80 rounded-lg text-[11px] font-medium transition-colors"
+                          className="px-2.5 py-1 bg-teal-50 hover:bg-teal-100 text-teal-700 border border-teal-200 rounded-lg text-xs font-medium transition-colors"
                         >
                           View Details
                         </button>
                         {hasPermission('leads.delete') && (
                           <button
                             onClick={e => handleDeleteLead(lead.id, e)}
-                            className="p-1 text-slate-400 hover:text-rose-600 rounded"
+                            className="p-1 text-stone-400 hover:text-rose-600 rounded"
                             title="Delete Lead"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -993,11 +993,11 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
         </div>
       ) : (
         /* Table View */
-        <div className="bg-white border border-slate-200 rounded-xl shadow-2xs overflow-hidden">
+        <div className="bg-white border border-stone-200 rounded-xl overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-50/75 text-slate-600 font-semibold">
+                <tr className="border-b border-stone-200 bg-stone-50 text-stone-600 font-medium">
                   <th className="py-3 px-4">Lead ID</th>
                   <th className="py-3 px-4">Buyer / Contact</th>
                   <th className="py-3 px-4">Company</th>
@@ -1010,10 +1010,10 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
                   <th className="py-3 px-4 text-right">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-stone-100">
                 {isLoading ? (
                   <tr>
-                    <td colSpan={10} className="py-12 text-center text-slate-400 animate-pulse">
+                    <td colSpan={10} className="py-12 text-center text-stone-400 animate-pulse">
                       Loading leads…
                     </td>
                   </tr>
@@ -1025,7 +1025,7 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
                   </tr>
                 ) : leads.length === 0 ? (
                   <tr>
-                    <td colSpan={10} className="py-12 text-center text-slate-500 text-xs">
+                    <td colSpan={10} className="py-12 text-center text-stone-500 text-xs">
                       {user?.roleName === 'SALES_MEMBER' && memberFilter === 'all' && !search.trim()
                         ? ownScopeEmptyCopy('leads').title
                         : 'No leads match the selected criteria.'}
@@ -1035,25 +1035,25 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
                   leads.map(lead => (
                     <tr
                       key={lead.id}
-                      className="hover:bg-slate-50/70 transition-colors group cursor-pointer"
+                      className="hover:bg-stone-50 transition-colors group cursor-pointer"
                       onClick={() => handleOpenDetail(lead.id)}
                     >
-                      <td className="py-3 px-4 font-mono font-medium text-slate-700 whitespace-nowrap">
+                      <td className="py-3 px-4 font-mono font-medium text-stone-700 whitespace-nowrap">
                         {lead.leadCode}
                       </td>
-                      <td className="py-3 px-4 font-medium text-slate-800 whitespace-nowrap">
+                      <td className="py-3 px-4 font-medium text-stone-800 whitespace-nowrap">
                         <div>
                           <p>{lead.name}</p>
-                          <span className="text-[10px] text-slate-400">{lead.phoneNumber}</span>
+                          <span className="text-xs text-stone-400">{lead.phoneNumber}</span>
                         </div>
                       </td>
-                      <td className="py-3 px-4 font-medium text-slate-700 whitespace-nowrap">
+                      <td className="py-3 px-4 font-medium text-stone-700 whitespace-nowrap">
                         {lead.company}
                       </td>
                       <td className="py-3 px-4 max-w-xs truncate" title={lead.productInterest}>
-                        <span className="text-slate-700 font-medium">{lead.productInterest}</span>
+                        <span className="text-stone-700 font-medium">{lead.productInterest}</span>
                       </td>
-                      <td className="py-3 px-4 whitespace-nowrap text-slate-600">
+                      <td className="py-3 px-4 whitespace-nowrap text-stone-600">
                         {[lead.city, lead.country].filter(Boolean).join(', ')}
                       </td>
                       <td className="py-3 px-4 whitespace-nowrap">
@@ -1062,10 +1062,10 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
                       <td className="py-3 px-4 whitespace-nowrap">
                         <PriorityBadge priority={lead.priority} />
                       </td>
-                      <td className="py-3 px-4 whitespace-nowrap text-slate-600">
+                      <td className="py-3 px-4 whitespace-nowrap text-stone-600">
                         {lead.assignedMemberName || 'Unassigned'}
                       </td>
-                      <td className="py-3 px-4 whitespace-nowrap text-slate-600">
+                      <td className="py-3 px-4 whitespace-nowrap text-stone-600">
                         {lead.nextFollowUp ? new Date(lead.nextFollowUp).toLocaleDateString() : 'None'}
                       </td>
                       <td
@@ -1075,7 +1075,7 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
                         <div className="flex items-center justify-end gap-1.5">
                           <button
                             onClick={() => handleOpenDetail(lead.id)}
-                            className="px-2 py-1 rounded bg-sky-50 text-sky-700 hover:bg-sky-100 border border-sky-200 text-[11px] font-medium"
+                            className="px-2 py-1 rounded bg-teal-50 text-teal-700 hover:bg-teal-100 border border-teal-200 text-xs font-medium"
                           >
                             Details
                           </button>
@@ -1091,7 +1091,7 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
       )}
 
       {/* Pagination Bar */}
-      <div className="flex items-center justify-between text-xs text-slate-500 pt-2">
+      <div className="flex items-center justify-between text-xs text-stone-500 pt-2">
         <span>
           Showing page {currentPage} of {totalPages} ({totalLeads} total leads)
         </span>
@@ -1099,14 +1099,14 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
           <button
             onClick={() => fetchLeads(currentPage - 1)}
             disabled={currentPage <= 1 || isLoading}
-            className="px-3 py-1.5 border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-40 transition-colors text-slate-700 font-medium"
+            className="px-3 py-1.5 border border-stone-200 rounded-lg hover:bg-stone-50 disabled:opacity-40 transition-colors text-stone-700 font-medium"
           >
             Previous
           </button>
           <button
             onClick={() => fetchLeads(currentPage + 1)}
             disabled={currentPage >= totalPages || isLoading}
-            className="px-3 py-1.5 border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-40 transition-colors text-slate-700 font-medium"
+            className="px-3 py-1.5 border border-stone-200 rounded-lg hover:bg-stone-50 disabled:opacity-40 transition-colors text-stone-700 font-medium"
           >
             Next
           </button>
@@ -1121,7 +1121,7 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
         subtitle="Export international buyer inquiries to CSV for specific team member or entire organization"
         maxWidth="lg"
       >
-        <div className="space-y-4 text-xs">
+        <div className="space-y-4 text-xs" style={{ fontFamily: "'Poppins', sans-serif" }}>
           {exportSuccessMsg && (
             <div className="p-3 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-lg flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
@@ -1131,19 +1131,19 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
 
           {/* Member Selection Option */}
           <div>
-            <label className="block font-semibold text-slate-700 mb-2">Export Scope</label>
+            <label className="block text-sm font-medium text-stone-700 mb-2">Export Scope</label>
             <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
                 onClick={() => setExportTarget('specific')}
-                className={`p-3 rounded-lg border text-left flex flex-col transition-all ${
+                className={`p-3 rounded-lg border text-left flex flex-col transition-colors ${
                   exportTarget === 'specific'
-                    ? 'border-sky-500 bg-sky-50/60 text-sky-900 ring-1 ring-sky-500'
-                    : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                    ? 'border-teal-600 bg-teal-50/60 text-teal-900 ring-1 ring-teal-600'
+                    : 'border-stone-200 bg-white text-stone-700 hover:bg-stone-50'
                 }`}
               >
-                <span className="font-semibold text-xs">Specific Member Only</span>
-                <span className="text-[11px] text-slate-500 mt-0.5">
+                <span className="font-medium text-xs">Specific Member Only</span>
+                <span className="text-xs text-stone-500 mt-0.5">
                   Export buyer records delegated to one designated staff member
                 </span>
               </button>
@@ -1151,14 +1151,14 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
               <button
                 type="button"
                 onClick={() => setExportTarget('all')}
-                className={`p-3 rounded-lg border text-left flex flex-col transition-all ${
+                className={`p-3 rounded-lg border text-left flex flex-col transition-colors ${
                   exportTarget === 'all'
-                    ? 'border-sky-500 bg-sky-50/60 text-sky-900 ring-1 ring-sky-500'
-                    : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                    ? 'border-teal-600 bg-teal-50/60 text-teal-900 ring-1 ring-teal-600'
+                    : 'border-stone-200 bg-white text-stone-700 hover:bg-stone-50'
                 }`}
               >
-                <span className="font-semibold text-xs">All Team Members</span>
-                <span className="text-[11px] text-slate-500 mt-0.5">
+                <span className="font-medium text-xs">All Team Members</span>
+                <span className="text-xs text-stone-500 mt-0.5">
                   Full corporate export containing every inquiry and lead
                 </span>
               </button>
@@ -1167,8 +1167,8 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
 
           {/* Member Dropdown (When Specific Member Selected) */}
           {exportTarget === 'specific' && (
-            <div className="bg-slate-50/80 p-3.5 rounded-xl border border-slate-200 space-y-2">
-              <label className="block font-medium text-slate-800">
+            <div className="bg-stone-50 p-3.5 rounded-xl border border-stone-200 space-y-2">
+              <label className="block text-sm font-medium text-stone-800">
                 Select Team Member to Export:
               </label>
               <SearchableSelect
@@ -1178,7 +1178,7 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
                 placeholder="Select member…"
                 searchPlaceholder="Search member…"
               />
-              <p className="text-[11px] text-slate-500">
+              <p className="text-xs text-stone-500">
                 The exported spreadsheet will solely include buyer leads currently assigned to this member.
               </p>
             </div>
@@ -1186,7 +1186,7 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
 
           {/* Status Filter for Export */}
           <div>
-            <label className="block font-medium text-slate-700 mb-1">Filter by Status (Optional)</label>
+            <label className="block text-sm font-medium text-stone-700 mb-1">Filter by Status (Optional)</label>
             <SearchableSelect
               options={statusFilterOptions}
               value={exportStatus}
@@ -1196,18 +1196,18 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
             />
           </div>
 
-          <div className="bg-sky-50/50 p-3 rounded-lg border border-sky-100 flex items-center justify-between">
+          <div className="bg-teal-50/50 p-3 rounded-lg border border-teal-100 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <FileSpreadsheet className="w-4 h-4 text-sky-600" />
-              <span className="text-xs text-sky-900 font-medium">Export Format: Standard CSV (Excel / Google Sheets Compatible)</span>
+              <FileSpreadsheet className="w-4 h-4 text-teal-600" />
+              <span className="text-xs text-teal-900 font-medium">Export Format: Standard CSV (Excel / Google Sheets Compatible)</span>
             </div>
           </div>
 
-          <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+          <div className="flex justify-end gap-2 pt-3 border-t border-stone-100">
             <button
               type="button"
               onClick={() => setIsExportOpen(false)}
-              className="px-4 py-2 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 font-medium"
+              className="px-4 py-2 rounded-lg border border-stone-200 text-stone-700 hover:bg-stone-50 font-medium"
             >
               Cancel
             </button>
@@ -1215,7 +1215,7 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
               type="button"
               onClick={handleExportLeads}
               disabled={isExporting}
-              className="px-5 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-medium flex items-center gap-1.5 disabled:opacity-50 transition-colors shadow-2xs"
+              className="px-5 py-2 rounded-lg bg-teal-700 hover:bg-teal-800 text-white font-medium flex items-center gap-1.5 disabled:opacity-50 transition-colors shadow-sm"
             >
               <Download className="w-4 h-4" />
               <span>{isExporting ? 'Generating CSV...' : 'Download Leads CSV'}</span>
@@ -1232,50 +1232,50 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
         subtitle="Register overseas trade inquiry and assign to a team member"
         maxWidth="2xl"
       >
-        <form onSubmit={handleCreateLead} className="space-y-5 text-xs">
+        <form onSubmit={handleCreateLead} className="space-y-6" style={{ fontFamily: "'Poppins', sans-serif" }}>
           {/* Contact */}
           <section className="space-y-3">
-            <h4 className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+            <h4 className="text-sm font-semibold text-stone-800 pb-2 border-b border-stone-100">
               Contact
             </h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block font-medium text-slate-700 mb-1">Contact Person / Buyer *</label>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Contact Person / Buyer *</label>
                 <input
                   type="text"
                   required
                   value={newLeadForm.name}
                   onChange={e => setNewLeadForm({ ...newLeadForm, name: e.target.value })}
                   placeholder="e.g. Tariq Al-Mansoor"
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-sky-600 text-slate-800"
+                  className="w-full px-3 py-2.5 border border-stone-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-600/30 focus:border-teal-600 text-stone-800"
                 />
               </div>
               <div>
-                <label className="block font-medium text-slate-700 mb-1">Company / Organization *</label>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Company / Organization *</label>
                 <input
                   type="text"
                   required
                   value={newLeadForm.company}
                   onChange={e => setNewLeadForm({ ...newLeadForm, company: e.target.value })}
                   placeholder="e.g. Al-Mansoor General Trading LLC"
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-sky-600 text-slate-800"
+                  className="w-full px-3 py-2.5 border border-stone-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-600/30 focus:border-teal-600 text-stone-800"
                 />
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
-                <label className="block font-medium text-slate-700 mb-1">Business Email *</label>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Business Email *</label>
                 <input
                   type="email"
                   required
                   value={newLeadForm.email}
                   onChange={e => setNewLeadForm({ ...newLeadForm, email: e.target.value })}
                   placeholder="buyer@company.com"
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-sky-600 text-slate-800"
+                  className="w-full px-3 py-2.5 border border-stone-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-600/30 focus:border-teal-600 text-stone-800"
                 />
               </div>
               <div>
-                <label className="block font-medium text-slate-700 mb-1">Primary Phone *</label>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Primary Phone *</label>
                 <input
                   type="text"
                   required
@@ -1288,17 +1288,17 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
                     })
                   }
                   placeholder="+971 50 123 4567"
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-sky-600 text-slate-800"
+                  className="w-full px-3 py-2.5 border border-stone-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-600/30 focus:border-teal-600 text-stone-800"
                 />
               </div>
               <div>
-                <label className="block font-medium text-slate-700 mb-1">WhatsApp Number</label>
+                <label className="block text-sm font-medium text-stone-700 mb-1">WhatsApp Number</label>
                 <input
                   type="text"
                   value={newLeadForm.whatsAppNumber}
                   onChange={e => setNewLeadForm({ ...newLeadForm, whatsAppNumber: e.target.value })}
                   placeholder="+971 50 123 4567"
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-sky-600 text-slate-800"
+                  className="w-full px-3 py-2.5 border border-stone-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-600/30 focus:border-teal-600 text-stone-800"
                 />
               </div>
             </div>
@@ -1306,12 +1306,12 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
 
           {/* Opportunity */}
           <section className="space-y-3">
-            <h4 className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+            <h4 className="text-sm font-semibold text-stone-800 pb-2 border-b border-stone-100">
               Opportunity
             </h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block font-medium text-slate-700 mb-1">Destination Country *</label>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Destination Country *</label>
                 <SearchableSelect
                   options={countryOptions}
                   value={newLeadForm.country}
@@ -1321,20 +1321,20 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
                 />
               </div>
               <div>
-                <label className="block font-medium text-slate-700 mb-1">Product of Interest *</label>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Product of Interest *</label>
                 <input
                   type="text"
                   required
                   value={newLeadForm.productInterest}
                   onChange={e => setNewLeadForm({ ...newLeadForm, productInterest: e.target.value })}
                   placeholder="e.g. Fox Nuts (Makhana) - Premium Grade"
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-sky-600 text-slate-800"
+                  className="w-full px-3 py-2.5 border border-stone-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-600/30 focus:border-teal-600 text-stone-800"
                 />
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
-                <label className="block font-medium text-slate-700 mb-1">Lead Source</label>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Lead Source</label>
                 <SearchableSelect
                   options={LEAD_SOURCES}
                   value={newLeadForm.leadSource}
@@ -1343,7 +1343,7 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
                 />
               </div>
               <div>
-                <label className="block font-medium text-slate-700 mb-1">Priority</label>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Priority</label>
                 <SearchableSelect
                   options={PRIORITY_OPTIONS}
                   value={newLeadForm.priority}
@@ -1352,7 +1352,7 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
                 />
               </div>
               <div>
-                <label className="block font-medium text-slate-700 mb-1">Initial Status</label>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Initial Status</label>
                 <SearchableSelect
                   options={statusOptions}
                   value={newLeadForm.leadStatus}
@@ -1362,25 +1362,25 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
               </div>
             </div>
             <div>
-              <label className="block font-medium text-slate-700 mb-1">Notes</label>
+              <label className="block text-sm font-medium text-stone-700 mb-1">Notes</label>
               <textarea
                 rows={2}
                 value={newLeadForm.notes}
                 onChange={e => setNewLeadForm({ ...newLeadForm, notes: e.target.value })}
                 placeholder="e.g. Requires phytosanitary certificate, lab testing report."
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-sky-600 text-slate-800"
+                className="w-full px-3 py-2.5 border border-stone-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-600/30 focus:border-teal-600 text-stone-800"
               />
             </div>
           </section>
 
           {/* Assignment */}
           <section className="space-y-3">
-            <h4 className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+            <h4 className="text-sm font-semibold text-stone-800 pb-2 border-b border-stone-100">
               Assignment
             </h4>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
-                <label className="block font-medium text-slate-700 mb-1">Assign Team Member</label>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Assign Team Member</label>
                 <SearchableSelect
                   options={[{ value: '', label: 'Leave Unassigned' }, ...memberOptions]}
                   value={newLeadForm.assignedMemberId}
@@ -1391,7 +1391,7 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
                 />
               </div>
               <div>
-                <label className="block font-medium text-slate-700 mb-1">Department</label>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Department</label>
                 <SearchableSelect
                   options={departmentOptions}
                   value={newLeadForm.departmentId}
@@ -1401,7 +1401,7 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
                 />
               </div>
               <div>
-                <label className="block font-medium text-slate-700 mb-1">Next Follow-up Date</label>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Next Follow-up Date</label>
                 <DateTimePicker
                   value={newLeadForm.nextFollowUp}
                   onChange={v => setNewLeadForm({ ...newLeadForm, nextFollowUp: v })}
@@ -1411,18 +1411,18 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
             </div>
           </section>
 
-          <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+          <div className="flex justify-end gap-2 pt-3 border-t border-stone-100">
             <button
               type="button"
               onClick={() => setIsCreateOpen(false)}
-              className="px-4 py-2 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 font-medium"
+              className="px-4 py-2 rounded-lg border border-stone-200 text-stone-700 hover:bg-stone-50 font-medium text-sm"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmittingCreate}
-              className="px-5 py-2 rounded-lg bg-sky-600 hover:bg-sky-700 text-white font-medium disabled:opacity-50 transition-colors shadow-2xs"
+              className="px-5 py-2 rounded-lg bg-teal-700 hover:bg-teal-800 text-white font-medium text-sm disabled:opacity-50 transition-colors shadow-sm"
             >
               {isSubmittingCreate ? 'Saving Lead...' : 'Register Buyer Lead'}
             </button>
@@ -1443,58 +1443,58 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
         maxWidth="3xl"
       >
         {isLoadingDetail || !leadDetail || !leadDraft ? (
-          <div className="py-12 text-center text-slate-400">Loading lead details...</div>
+          <div className="py-12 text-center text-stone-400">Loading lead details...</div>
         ) : (
-          <div className="space-y-5 text-xs">
+          <div className="space-y-6" style={{ fontFamily: "'Poppins', sans-serif" }}>
             {/* Editable 2-column form */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block font-medium text-slate-700 mb-1">Contact Person</label>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Contact Person</label>
                 <input
                   type="text"
                   value={leadDraft.name}
                   onChange={e => updateDraft('name', e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-sky-600 text-slate-800"
+                  className="w-full px-3 py-2.5 border border-stone-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-600/30 focus:border-teal-600 text-stone-800"
                 />
               </div>
               <div>
-                <label className="block font-medium text-slate-700 mb-1">Company</label>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Company</label>
                 <input
                   type="text"
                   value={leadDraft.company}
                   onChange={e => updateDraft('company', e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-sky-600 text-slate-800"
+                  className="w-full px-3 py-2.5 border border-stone-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-600/30 focus:border-teal-600 text-stone-800"
                 />
               </div>
               <div>
-                <label className="block font-medium text-slate-700 mb-1">Email</label>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Email</label>
                 <input
                   type="email"
                   value={leadDraft.email}
                   onChange={e => updateDraft('email', e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-sky-600 text-slate-800"
+                  className="w-full px-3 py-2.5 border border-stone-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-600/30 focus:border-teal-600 text-stone-800"
                 />
               </div>
               <div>
-                <label className="block font-medium text-slate-700 mb-1">Phone</label>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Phone</label>
                 <input
                   type="text"
                   value={leadDraft.phoneNumber}
                   onChange={e => updateDraft('phoneNumber', e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-sky-600 text-slate-800"
+                  className="w-full px-3 py-2.5 border border-stone-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-600/30 focus:border-teal-600 text-stone-800"
                 />
               </div>
               <div>
-                <label className="block font-medium text-slate-700 mb-1">WhatsApp</label>
+                <label className="block text-sm font-medium text-stone-700 mb-1">WhatsApp</label>
                 <input
                   type="text"
                   value={leadDraft.whatsAppNumber}
                   onChange={e => updateDraft('whatsAppNumber', e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-sky-600 text-slate-800"
+                  className="w-full px-3 py-2.5 border border-stone-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-600/30 focus:border-teal-600 text-stone-800"
                 />
               </div>
               <div>
-                <label className="block font-medium text-slate-700 mb-1">Country</label>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Country</label>
                 <SearchableSelect
                   options={countryOptions}
                   value={leadDraft.country}
@@ -1504,16 +1504,16 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
                 />
               </div>
               <div className="sm:col-span-2">
-                <label className="block font-medium text-slate-700 mb-1">Product Interest</label>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Product Interest</label>
                 <input
                   type="text"
                   value={leadDraft.productInterest}
                   onChange={e => updateDraft('productInterest', e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-sky-600 text-slate-800"
+                  className="w-full px-3 py-2.5 border border-stone-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-600/30 focus:border-teal-600 text-stone-800"
                 />
               </div>
               <div>
-                <label className="block font-medium text-slate-700 mb-1">Lead Source</label>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Lead Source</label>
                 <SearchableSelect
                   options={LEAD_SOURCES}
                   value={leadDraft.leadSource}
@@ -1522,7 +1522,7 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
                 />
               </div>
               <div>
-                <label className="block font-medium text-slate-700 mb-1">Status</label>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Status</label>
                 <SearchableSelect
                   options={statusOptions}
                   value={leadDraft.leadStatus}
@@ -1532,18 +1532,18 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
               </div>
               {leadDraft.leadStatus === 'Lost' && (
                 <div className="sm:col-span-2">
-                  <label className="block font-medium text-slate-700 mb-1">Lost Reason *</label>
+                  <label className="block text-sm font-medium text-stone-700 mb-1">Lost Reason *</label>
                   <input
                     type="text"
                     value={leadDraft.lostReason}
                     onChange={e => updateDraft('lostReason', e.target.value)}
                     placeholder="Why was this lead lost?"
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-sky-600 text-slate-800"
+                    className="w-full px-3 py-2.5 border border-stone-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-600/30 focus:border-teal-600 text-stone-800"
                   />
                 </div>
               )}
               {(leadDetail.lead.customerId || leadDetail.lead.convertedAt) && (
-                <div className="sm:col-span-2 p-3 bg-emerald-50 border border-emerald-100 rounded-lg text-xs text-emerald-800">
+                <div className="sm:col-span-2 p-3 bg-emerald-50 border border-emerald-100 rounded-lg text-sm text-emerald-800">
                   Converted
                   {leadDetail.lead.convertedAt
                     ? ` on ${new Date(leadDetail.lead.convertedAt).toLocaleDateString()}`
@@ -1559,7 +1559,7 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
                       type="button"
                       onClick={handleConvertLead}
                       disabled={isConverting}
-                      className="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-600 text-white text-xs font-medium rounded-lg hover:bg-emerald-700 disabled:opacity-50"
+                      className="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 disabled:opacity-50"
                     >
                       <CheckCircle2 className="w-3.5 h-3.5" />
                       {isConverting ? 'Converting…' : 'Convert to Customer'}
@@ -1567,7 +1567,7 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
                   </div>
                 )}
               <div>
-                <label className="block font-medium text-slate-700 mb-1">Priority</label>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Priority</label>
                 <SearchableSelect
                   options={PRIORITY_OPTIONS}
                   value={leadDraft.priority}
@@ -1576,7 +1576,7 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
                 />
               </div>
               <div>
-                <label className="block font-medium text-slate-700 mb-1">Assigned Member</label>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Assigned Member</label>
                 <SearchableSelect
                   options={[{ value: '', label: 'Unassigned' }, ...memberOptions]}
                   value={leadDraft.assignedMemberId}
@@ -1587,7 +1587,7 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
                 />
               </div>
               <div>
-                <label className="block font-medium text-slate-700 mb-1">Department</label>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Department</label>
                 <SearchableSelect
                   options={departmentOptions}
                   value={leadDraft.departmentId}
@@ -1597,7 +1597,7 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
                 />
               </div>
               <div>
-                <label className="block font-medium text-slate-700 mb-1">Next Follow-up</label>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Next Follow-up</label>
                 <DateTimePicker
                   value={leadDraft.nextFollowUp}
                   onChange={v => updateDraft('nextFollowUp', v)}
@@ -1605,27 +1605,27 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
                 />
               </div>
               <div className="sm:col-span-2">
-                <label className="block font-medium text-slate-700 mb-1">Notes (summary)</label>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Notes (summary)</label>
                 <textarea
                   rows={2}
                   value={leadDraft.notes}
                   onChange={e => updateDraft('notes', e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-sky-600 text-slate-800"
+                  className="w-full px-3 py-2.5 border border-stone-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-600/30 focus:border-teal-600 text-stone-800"
                 />
               </div>
             </div>
 
             {/* Log Call / Interaction — assigned member workflow */}
             {hasPermission('leads.edit') && (
-              <div className="border border-sky-100 rounded-xl p-4 bg-sky-50/40">
+              <div className="border border-teal-100 rounded-xl p-4 bg-teal-50/40">
                 <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-                  <h4 className="text-xs font-semibold text-slate-800 uppercase tracking-wider flex items-center gap-2">
-                    <PhoneCall className="w-3.5 h-3.5 text-sky-600" />
+                  <h4 className="text-sm font-semibold text-stone-800 flex items-center gap-2">
+                    <PhoneCall className="w-3.5 h-3.5 text-teal-600" />
                     Log Call / Interaction
                   </h4>
                   {leadDetail.lead.lastCallAt && (
                     <span
-                      className={`inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded border ${
+                      className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded border ${
                         leadDetail.lead.lastCallPickedUp
                           ? 'text-emerald-700 bg-emerald-50 border-emerald-100'
                           : 'text-amber-700 bg-amber-50 border-amber-100'
@@ -1644,17 +1644,17 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
 
                 <form onSubmit={handleLogCall} className="space-y-3">
                   <div>
-                    <label className="block font-medium text-slate-700 mb-1.5">
+                    <label className="block text-sm font-medium text-stone-700 mb-1.5">
                       Was the call picked up? *
                     </label>
                     <div className="flex flex-wrap gap-2">
                       <button
                         type="button"
                         onClick={() => updateCallForm('pickedUp', true)}
-                        className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border text-xs font-medium transition-colors ${
+                        className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${
                           callForm.pickedUp === true
                             ? 'bg-emerald-600 text-white border-emerald-600'
-                            : 'bg-white text-slate-700 border-slate-200 hover:border-emerald-300'
+                            : 'bg-white text-stone-700 border-stone-200 hover:border-emerald-300'
                         }`}
                       >
                         <PhoneCall className="w-3.5 h-3.5" />
@@ -1663,10 +1663,10 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
                       <button
                         type="button"
                         onClick={() => updateCallForm('pickedUp', false)}
-                        className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border text-xs font-medium transition-colors ${
+                        className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${
                           callForm.pickedUp === false
                             ? 'bg-amber-600 text-white border-amber-600'
-                            : 'bg-white text-slate-700 border-slate-200 hover:border-amber-300'
+                            : 'bg-white text-stone-700 border-stone-200 hover:border-amber-300'
                         }`}
                       >
                         <PhoneOff className="w-3.5 h-3.5" />
@@ -1677,7 +1677,7 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                     <div>
-                      <label className="block font-medium text-slate-700 mb-1">Channel</label>
+                      <label className="block text-sm font-medium text-stone-700 mb-1">Channel</label>
                       <SearchableSelect
                         options={CALL_CHANNEL_OPTIONS}
                         value={callForm.channel}
@@ -1686,7 +1686,7 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
                       />
                     </div>
                     <div>
-                      <label className="block font-medium text-slate-700 mb-1">Direction</label>
+                      <label className="block text-sm font-medium text-stone-700 mb-1">Direction</label>
                       <SearchableSelect
                         options={CALL_DIRECTION_OPTIONS}
                         value={callForm.direction}
@@ -1695,7 +1695,7 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
                       />
                     </div>
                     <div>
-                      <label className="block font-medium text-slate-700 mb-1">Outcome</label>
+                      <label className="block text-sm font-medium text-stone-700 mb-1">Outcome</label>
                       <SearchableSelect
                         options={CALL_OUTCOME_OPTIONS.map(o => ({ value: o.value, label: o.label }))}
                         value={callForm.outcome}
@@ -1704,28 +1704,28 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
                       />
                     </div>
                     <div>
-                      <label className="block font-medium text-slate-700 mb-1">Duration (min)</label>
+                      <label className="block text-sm font-medium text-stone-700 mb-1">Duration (min)</label>
                       <input
                         type="number"
                         min={0}
                         value={callForm.durationMinutes}
                         onChange={e => updateCallForm('durationMinutes', e.target.value)}
                         placeholder="e.g. 5"
-                        className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-sky-600 text-slate-800"
+                        className="w-full px-3 py-2.5 border border-stone-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-600/30 focus:border-teal-600 text-stone-800"
                       />
                     </div>
                     <div>
-                      <label className="block font-medium text-slate-700 mb-1">Spoke with</label>
+                      <label className="block text-sm font-medium text-stone-700 mb-1">Spoke with</label>
                       <input
                         type="text"
                         value={callForm.spokeWith}
                         onChange={e => updateCallForm('spokeWith', e.target.value)}
                         placeholder="Contact person name"
-                        className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-sky-600 text-slate-800"
+                        className="w-full px-3 py-2.5 border border-stone-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-600/30 focus:border-teal-600 text-stone-800"
                       />
                     </div>
                     <div>
-                      <label className="block font-medium text-slate-700 mb-1">Interest level</label>
+                      <label className="block text-sm font-medium text-stone-700 mb-1">Interest level</label>
                       <SearchableSelect
                         options={INTEREST_LEVEL_OPTIONS}
                         value={callForm.interestLevel}
@@ -1734,7 +1734,7 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
                       />
                     </div>
                     <div>
-                      <label className="block font-medium text-slate-700 mb-1">Next follow-up</label>
+                      <label className="block text-sm font-medium text-stone-700 mb-1">Next follow-up</label>
                       <DateTimePicker
                         value={callForm.nextFollowUp}
                         onChange={v => updateCallForm('nextFollowUp', v)}
@@ -1742,34 +1742,34 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
                       />
                     </div>
                     <div className="flex items-end">
-                      <label className="inline-flex items-center gap-2 text-xs text-slate-700 cursor-pointer pb-2">
+                      <label className="inline-flex items-center gap-2 text-sm text-stone-700 cursor-pointer pb-2">
                         <input
                           type="checkbox"
                           checked={callForm.followUpRequired}
                           onChange={e => updateCallForm('followUpRequired', e.target.checked)}
-                          className="rounded border-slate-300 text-sky-600 focus:ring-sky-600"
+                          className="rounded border-stone-300 text-teal-600 focus:ring-teal-600"
                         />
                         Follow-up required
                       </label>
                     </div>
                     <div className="sm:col-span-2">
-                      <label className="block font-medium text-slate-700 mb-1">Disposition / summary</label>
+                      <label className="block text-sm font-medium text-stone-700 mb-1">Disposition / summary</label>
                       <input
                         type="text"
                         value={callForm.disposition}
                         onChange={e => updateCallForm('disposition', e.target.value)}
                         placeholder="e.g. Sent CIF quote, requested sample, price negotiation"
-                        className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-sky-600 text-slate-800"
+                        className="w-full px-3 py-2.5 border border-stone-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-600/30 focus:border-teal-600 text-stone-800"
                       />
                     </div>
                     <div className="sm:col-span-2">
-                      <label className="block font-medium text-slate-700 mb-1">Call notes</label>
+                      <label className="block text-sm font-medium text-stone-700 mb-1">Call notes</label>
                       <textarea
                         rows={2}
                         value={callForm.notes}
                         onChange={e => updateCallForm('notes', e.target.value)}
                         placeholder="Detailed conversation notes, buyer objections, next steps…"
-                        className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-sky-600 text-slate-800"
+                        className="w-full px-3 py-2.5 border border-stone-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-600/30 focus:border-teal-600 text-stone-800"
                       />
                     </div>
                   </div>
@@ -1778,7 +1778,7 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
                     <button
                       type="submit"
                       disabled={isSubmittingCall || callForm.pickedUp === null}
-                      className="px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-xs font-medium disabled:opacity-40 transition-colors"
+                      className="px-4 py-2 rounded-lg bg-teal-700 hover:bg-teal-800 text-white text-sm font-medium disabled:opacity-40 transition-colors"
                     >
                       {isSubmittingCall ? 'Saving call log…' : 'Save call log'}
                     </button>
@@ -1786,15 +1786,15 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
                 </form>
 
                 {(leadDetail.callLogs?.length ?? 0) > 0 && (
-                  <div className="mt-4 pt-3 border-t border-sky-100">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-2">
+                  <div className="mt-4 pt-3 border-t border-teal-100">
+                    <p className="text-xs font-medium text-stone-500 mb-2">
                       Recent call history
                     </p>
                     <div className="space-y-2 max-h-32 overflow-y-auto pr-1">
                       {leadDetail.callLogs.slice(0, 8).map(log => (
                         <div
                           key={log.id}
-                          className="flex items-start justify-between gap-2 text-[11px] bg-white/80 border border-slate-100 rounded-lg px-2.5 py-2"
+                          className="flex items-start justify-between gap-2 text-xs bg-white/80 border border-stone-100 rounded-lg px-2.5 py-2"
                         >
                           <div>
                             <span
@@ -1809,14 +1809,14 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
                               )}
                               {OUTCOME_LABELS[log.outcome]}
                             </span>
-                            <span className="text-slate-500 ml-1">
+                            <span className="text-stone-500 ml-1">
                               · {log.channel} · {log.performedByName}
                             </span>
                             {log.notes && (
-                              <p className="text-slate-600 mt-0.5 line-clamp-2">{log.notes}</p>
+                              <p className="text-stone-600 mt-0.5 line-clamp-2">{log.notes}</p>
                             )}
                           </div>
-                          <span className="text-[10px] text-slate-400 shrink-0">
+                          <span className="text-xs text-stone-400 shrink-0">
                             {new Date(log.createdAt).toLocaleString()}
                           </span>
                         </div>
@@ -1829,8 +1829,8 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
 
             {/* Notes & Activity Timeline */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div className="border border-slate-200 rounded-xl p-4 bg-white flex flex-col h-80">
-                <h4 className="text-xs font-semibold text-slate-800 uppercase tracking-wider mb-3">
+              <div className="border border-stone-200 rounded-xl p-4 bg-white flex flex-col h-80">
+                <h4 className="text-sm font-semibold text-stone-800 mb-3">
                   Trade Notes & Remarks
                 </h4>
 
@@ -1840,12 +1840,12 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
                     value={newNoteContent}
                     onChange={e => setNewNoteContent(e.target.value)}
                     placeholder="Add export note, CIF rate quote, sample feedback..."
-                    className="flex-1 px-3 py-1.5 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-sky-600 text-slate-800"
+                    className="flex-1 px-3 py-2 border border-stone-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-600/30 focus:border-teal-600 text-stone-800"
                   />
                   <button
                     type="submit"
                     disabled={isSubmittingNote || !newNoteContent.trim()}
-                    className="px-3 py-1.5 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-xs font-medium disabled:opacity-40 transition-colors shadow-2xs"
+                    className="px-3 py-2 bg-teal-700 hover:bg-teal-800 text-white rounded-lg text-sm font-medium disabled:opacity-40 transition-colors"
                   >
                     <Send className="w-3.5 h-3.5" />
                   </button>
@@ -1853,15 +1853,15 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
 
                 <div className="flex-1 overflow-y-auto space-y-2 pr-1">
                   {leadDetail.notes.length === 0 ? (
-                    <p className="text-slate-400 text-center py-8">No notes logged yet.</p>
+                    <p className="text-stone-400 text-sm text-center py-8">No notes logged yet.</p>
                   ) : (
                     leadDetail.notes.map(note => (
                       <div
                         key={note.id}
-                        className="p-2.5 rounded-lg bg-slate-50 border border-slate-200 text-xs"
+                        className="p-2.5 rounded-lg bg-stone-50 border border-stone-200 text-sm"
                       >
-                        <p className="text-slate-800 leading-relaxed">{note.content}</p>
-                        <div className="flex items-center justify-between text-[10px] text-slate-400 mt-1.5">
+                        <p className="text-stone-800 leading-relaxed">{note.content}</p>
+                        <div className="flex items-center justify-between text-xs text-stone-400 mt-1.5">
                           <span>{note.authorName}</span>
                           <span>{new Date(note.createdAt).toLocaleString()}</span>
                         </div>
@@ -1871,14 +1871,14 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
                 </div>
               </div>
 
-              <div className="border border-slate-200 rounded-xl p-4 bg-white flex flex-col h-80">
-                <h4 className="text-xs font-semibold text-slate-800 uppercase tracking-wider mb-3 flex items-center justify-between">
+              <div className="border border-stone-200 rounded-xl p-4 bg-white flex flex-col h-80">
+                <h4 className="text-sm font-semibold text-stone-800 mb-3 flex items-center justify-between">
                   <span>Activity Timeline</span>
-                  <Clock className="w-3.5 h-3.5 text-slate-400" />
+                  <Clock className="w-3.5 h-3.5 text-stone-400" />
                 </h4>
                 <div className="flex-1 overflow-y-auto space-y-3 pr-1">
                   {leadDetail.activities.map(act => (
-                    <div key={act.id} className="relative pl-4 border-l-2 border-slate-200">
+                    <div key={act.id} className="relative pl-4 border-l-2 border-stone-200">
                       <div
                         className={`absolute -left-[5px] top-1 w-2 h-2 rounded-full ${
                           act.type === 'call_logged'
@@ -1887,12 +1887,12 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
                               : 'bg-amber-500'
                             : act.type === 'followup_scheduled'
                               ? 'bg-violet-500'
-                              : 'bg-sky-600'
+                              : 'bg-teal-600'
                         }`}
                       />
-                      <p className="text-xs font-medium text-slate-800">{act.title}</p>
-                      <p className="text-[11px] text-slate-500 mt-0.5">{act.description}</p>
-                      <span className="text-[10px] text-slate-400 mt-1 block">
+                      <p className="text-sm font-medium text-stone-800">{act.title}</p>
+                      <p className="text-xs text-stone-500 mt-0.5">{act.description}</p>
+                      <span className="text-xs text-stone-400 mt-1 block">
                         {act.performedByName} · {new Date(act.createdAt).toLocaleString()}
                       </span>
                     </div>
@@ -1901,11 +1901,11 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
               </div>
             </div>
 
-            <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+            <div className="flex justify-end gap-2 pt-3 border-t border-stone-100">
               <button
                 type="button"
                 onClick={closeDetail}
-                className="px-4 py-2 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 font-medium"
+                className="px-4 py-2 rounded-lg border border-stone-200 text-stone-700 hover:bg-stone-50 font-medium text-sm"
               >
                 Cancel
               </button>
@@ -1913,7 +1913,7 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
                 type="button"
                 onClick={handleSaveDetail}
                 disabled={!detailDirty || isSavingDetail}
-                className="px-5 py-2 rounded-lg bg-sky-600 hover:bg-sky-700 text-white font-medium disabled:opacity-40 transition-colors shadow-2xs"
+                className="px-5 py-2 rounded-lg bg-teal-700 hover:bg-teal-800 text-white font-medium text-sm disabled:opacity-40 transition-colors shadow-sm"
               >
                 {isSavingDetail ? 'Saving…' : 'Save changes'}
               </button>
@@ -1943,12 +1943,13 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
               e.preventDefault();
               submitCallLog(quickCallLead.id, callForm);
             }}
-            className="space-y-4 text-xs"
+            className="space-y-4"
+            style={{ fontFamily: "'Poppins', sans-serif" }}
           >
             {quickCallLead.phoneNumber && (
               <a
                 href={`tel:${quickCallLead.phoneNumber}`}
-                className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-sky-200 bg-sky-50 text-sky-800 font-medium hover:bg-sky-100"
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-teal-200 bg-teal-50 text-teal-800 font-medium text-sm hover:bg-teal-100"
               >
                 <Phone className="w-4 h-4" />
                 Dial {quickCallLead.phoneNumber}
@@ -1956,15 +1957,15 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
             )}
 
             <div>
-              <label className="block font-medium text-slate-700 mb-1.5">Was the call picked up? *</label>
+              <label className="block text-sm font-medium text-stone-700 mb-1.5">Was the call picked up? *</label>
               <div className="flex gap-2">
                 <button
                   type="button"
                   onClick={() => updateCallForm('pickedUp', true)}
-                  className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border text-xs font-medium ${
+                  className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border text-sm font-medium ${
                     callForm.pickedUp === true
                       ? 'bg-emerald-600 text-white border-emerald-600'
-                      : 'bg-white text-slate-700 border-slate-200'
+                      : 'bg-white text-stone-700 border-stone-200'
                   }`}
                 >
                   <PhoneCall className="w-3.5 h-3.5" />
@@ -1973,10 +1974,10 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
                 <button
                   type="button"
                   onClick={() => updateCallForm('pickedUp', false)}
-                  className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border text-xs font-medium ${
+                  className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border text-sm font-medium ${
                     callForm.pickedUp === false
                       ? 'bg-amber-600 text-white border-amber-600'
-                      : 'bg-white text-slate-700 border-slate-200'
+                      : 'bg-white text-stone-700 border-stone-200'
                   }`}
                 >
                   <PhoneOff className="w-3.5 h-3.5" />
@@ -1987,7 +1988,7 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block font-medium text-slate-700 mb-1">Outcome</label>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Outcome</label>
                 <SearchableSelect
                   options={CALL_OUTCOME_OPTIONS.map(o => ({ value: o.value, label: o.label }))}
                   value={callForm.outcome}
@@ -1996,7 +1997,7 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
                 />
               </div>
               <div>
-                <label className="block font-medium text-slate-700 mb-1">Next follow-up</label>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Next follow-up</label>
                 <DateTimePicker
                   value={callForm.nextFollowUp}
                   onChange={v => updateCallForm('nextFollowUp', v)}
@@ -2004,13 +2005,13 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
                 />
               </div>
               <div className="sm:col-span-2">
-                <label className="block font-medium text-slate-700 mb-1">Notes</label>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Notes</label>
                 <textarea
                   rows={2}
                   value={callForm.notes}
                   onChange={e => updateCallForm('notes', e.target.value)}
                   placeholder="Quick call notes…"
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-sky-600"
+                  className="w-full px-3 py-2.5 border border-stone-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-600/30 focus:border-teal-600"
                 />
               </div>
             </div>
@@ -2022,14 +2023,14 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
                   setQuickCallLead(null);
                   setCallForm(emptyCallForm());
                 }}
-                className="px-4 py-2 rounded-lg border border-slate-200 text-slate-700"
+                className="px-4 py-2 rounded-lg border border-stone-200 text-stone-700 text-sm font-medium"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={isSubmittingCall || callForm.pickedUp === null}
-                className="px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-700 text-white font-medium disabled:opacity-40"
+                className="px-4 py-2 rounded-lg bg-teal-700 hover:bg-teal-800 text-white text-sm font-medium disabled:opacity-40"
               >
                 {isSubmittingCall ? 'Saving…' : 'Save call log'}
               </button>

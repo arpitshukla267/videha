@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { Sidebar, NavigationTab } from './components/layout/Sidebar';
 import { Topbar } from './components/layout/Topbar';
 import { DashboardPage } from './features/dashboard/DashboardPage';
 import { LeadsPage } from './features/leads/LeadsPage';
@@ -18,6 +17,7 @@ import { ShipmentsPage } from './features/shipments/ShipmentsPage';
 import { PublicOrderTrackingPage } from './features/tracking/PublicOrderTrackingPage';
 import { LoginPage } from './features/auth/LoginPage';
 import { ProfileModal } from './components/ui/ProfileModal';
+import { Sidebar, NavigationTab, SIDEBAR_COLLAPSED_WIDTH } from './components/layout/Sidebar';
 
 const CrmApp: React.FC = () => {
   const { user, isLoading, hasPermission, permissions } = useAuth();
@@ -256,7 +256,7 @@ const CrmApp: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex">
+    <div className="min-h-screen bg-slate-50">
       {/* Sidebar */}
       <Sidebar
         currentTab={currentTab}
@@ -269,18 +269,21 @@ const CrmApp: React.FC = () => {
         }}
         unreadCount={0}
       />
-
+  
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto">
+      <div
+        className="flex flex-col min-w-0 h-screen overflow-y-auto"
+        style={{ marginLeft: SIDEBAR_COLLAPSED_WIDTH }}
+      >
         <Topbar
           currentTab={currentTab}
           onNavigate={handleNavigate}
           onOpenProfile={() => setIsProfileOpen(true)}
         />
-
+  
         <main className="flex-1 pb-12">{renderTabContent()}</main>
       </div>
-
+  
       {/* User Profile / Password Modal */}
       <ProfileModal isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} />
     </div>

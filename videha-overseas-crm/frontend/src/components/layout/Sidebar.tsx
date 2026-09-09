@@ -12,8 +12,6 @@ import {
   Settings,
   Compass,
   LogOut,
-  Building2,
-  ExternalLink,
   IndianRupee,
   Receipt,
   Ship
@@ -41,6 +39,11 @@ interface SidebarProps {
   onSelectTab: (tab: NavigationTab) => void;
   unreadCount: number;
 }
+
+// Width of the collapsed rail. Reuse this value for the main content's
+// left padding/margin in your layout shell so pages sit flush against it
+// (e.g. <main className="ml-[72px]"> or style={{ marginLeft: COLLAPSED_WIDTH }}).
+export const SIDEBAR_COLLAPSED_WIDTH = 72;
 
 export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onSelectTab, unreadCount }) => {
   const { user, role, logout, hasPermission } = useAuth();
@@ -72,27 +75,27 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onSelectTab, unrea
   });
 
   return (
-    <aside className="w-64 bg-white border-r border-slate-200 flex flex-col shrink-0 h-screen sticky top-0 z-30 select-none">
+    <aside
+      className="group fixed inset-y-0 left-0 z-40 flex flex-col bg-white border-r border-slate-200
+                 w-[72px] hover:w-60 transition-[width] duration-300 ease-out overflow-hidden select-none"
+    >
       {/* Brand Header */}
-      <div className="p-5 border-b border-slate-200/80 flex items-center gap-3 bg-white">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-600 to-teal-600 text-white flex items-center justify-center font-bold text-base shadow-xs shrink-0">
-          VO
+      <div className="h-16 flex items-center border-b border-slate-200/80 shrink-0 overflow-hidden">
+        {/* Collapsed mark: fixed square, always visible */}
+        <div className="w-[72px] h-20 flex items-center justify-center shrink-0">
+          <img src="/logo.png" alt="Videha Overseas" className="w-16 h-16 rounded-lg object-cover" />
         </div>
-        <div className="min-w-0">
-          <h1 className="text-xs font-bold text-slate-800 tracking-wider leading-none uppercase">
-            VIDEHA OVERSEAS
-          </h1>
-          <p className="text-[10px] text-slate-500 font-medium tracking-tight mt-1 truncate">
-            Export CRM & Operations Portal
-          </p>
-        </div>
+        {/* Wordmark: revealed on hover */}
+        <span
+          className="text-sm font-semibold text-slate-800 whitespace-nowrap opacity-0 -translate-x-2
+                     group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200 delay-75"
+        >
+          Videha Overseas
+        </span>
       </div>
 
       {/* Main Navigation */}
-      <nav className="flex-1 px-3 py-4 space-y-1.5 overflow-y-auto">
-        <div className="px-3 pb-2 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-          Main Navigation
-        </div>
+      <nav className="flex-1 py-4 space-y-1.5 overflow-y-auto overflow-x-hidden">
         {filteredNav.map(item => {
           const Icon = item.icon;
           const isActive = currentTab === item.id;
@@ -100,64 +103,74 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onSelectTab, unrea
             <button
               key={item.id}
               onClick={() => onSelectTab(item.id)}
-              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-medium transition-all ${
-                isActive
-                  ? 'bg-sky-50 text-sky-800 font-semibold border-l-3 border-sky-600 shadow-2xs'
-                  : 'text-slate-600 hover:text-slate-800 hover:bg-slate-100/70'
-              }`}
+              title={item.label}
+              className="w-full flex items-center px-[22px] group-hover:px-3 py-2.5 transition-[padding] duration-200"
             >
-              <div className="flex items-center gap-3">
-                <Icon
-                  className={`w-4 h-4 ${
-                    isActive ? 'text-sky-600' : 'text-slate-400'
-                  }`}
-                />
-                <span>{item.label}</span>
+              <div
+                className={`flex items-center justify-center w-7 h-7 rounded-lg shrink-0 transition-colors ${
+                  isActive ? 'bg-sky-600' : 'group-hover:hover:bg-slate-100'
+                }`}
+              >
+                <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-500'}`} />
               </div>
+              <span
+                className={`ml-3 text-xs whitespace-nowrap overflow-hidden max-w-0 opacity-0
+                            group-hover:max-w-[160px] group-hover:opacity-100 transition-all duration-200
+                            ${isActive ? 'font-semibold text-sky-800' : 'font-medium text-slate-600'}`}
+              >
+                {item.label}
+              </span>
             </button>
           );
         })}
 
         {/* Public Portal Divider */}
-        <div className="pt-5 pb-2 px-3 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+        <div
+          className="h-4 mt-4 mb-2 flex items-center overflow-hidden whitespace-nowrap
+                     opacity-0 group-hover:opacity-100 transition-opacity duration-200 delay-100
+                     px-3 text-[10px] font-semibold text-slate-400 uppercase tracking-wider"
+        >
           External Services
         </div>
         <button
           onClick={() => onSelectTab('public-tracking')}
-          className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-medium transition-all ${
-            currentTab === 'public-tracking'
-              ? 'bg-teal-50 text-teal-900 border border-teal-200 font-semibold shadow-2xs'
-              : 'text-slate-600 hover:text-slate-800 hover:bg-slate-100/70'
-          }`}
+          title="Public Order Tracking"
+          className="w-full flex items-center px-[22px] group-hover:px-3 py-2.5 transition-[padding] duration-200"
         >
-          <div className="flex items-center gap-3">
-            <Compass className="w-4 h-4 text-teal-600" />
-            <span>Public Order Tracking</span>
+          <div
+            className={`flex items-center justify-center w-7 h-7 rounded-lg shrink-0 transition-colors ${
+              currentTab === 'public-tracking' ? 'bg-teal-600' : 'group-hover:hover:bg-slate-100'
+            }`}
+          >
+            <Compass className={`w-4 h-4 ${currentTab === 'public-tracking' ? 'text-white' : 'text-teal-600'}`} />
           </div>
-          <span className="text-[10px] bg-teal-100 text-teal-800 font-medium px-2 py-0.5 rounded border border-teal-200/60">
-            Public
+          <span
+            className={`ml-3 text-xs whitespace-nowrap overflow-hidden max-w-0 opacity-0
+                        group-hover:max-w-[160px] group-hover:opacity-100 transition-all duration-200
+                        ${currentTab === 'public-tracking' ? 'font-semibold text-teal-900' : 'font-medium text-slate-600'}`}
+          >
+            Public Order Tracking
           </span>
         </button>
       </nav>
 
       {/* User Footer */}
-      <div className="p-3 border-t border-slate-200/80 bg-slate-50/50">
-        <div className="flex items-center justify-between p-2.5 rounded-lg bg-white border border-slate-200 shadow-2xs">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-sky-500 to-teal-600 text-white flex items-center justify-center text-xs font-semibold shrink-0">
-              {user?.name ? user.name.slice(0, 2).toUpperCase() : 'VO'}
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-xs font-medium text-slate-800 truncate">{user?.name}</p>
-              <p className="text-[10px] text-slate-500 truncate font-medium">
-                {role?.displayName || user?.roleName}
-              </p>
-            </div>
+      <div className="border-t border-slate-200/80 bg-slate-50/50 shrink-0 py-3">
+        <div className="flex items-center px-[22px] group-hover:px-3 transition-[padding] duration-200">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-sky-500 to-teal-600 text-white flex items-center justify-center text-xs font-semibold shrink-0">
+            {user?.name ? user.name.slice(0, 2).toUpperCase() : 'VO'}
+          </div>
+          <div className="ml-2.5 min-w-0 flex-1 overflow-hidden max-w-0 opacity-0 group-hover:max-w-[130px] group-hover:opacity-100 transition-all duration-200 whitespace-nowrap">
+            <p className="text-xs font-medium text-slate-800 truncate">{user?.name}</p>
+            <p className="text-[10px] text-slate-500 truncate font-medium">
+              {role?.displayName || user?.roleName}
+            </p>
           </div>
           <button
             onClick={logout}
             title="Sign Out"
-            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors"
+            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors
+                       shrink-0 opacity-0 max-w-0 overflow-hidden group-hover:opacity-100 group-hover:max-w-[32px] transition-all duration-200"
           >
             <LogOut className="w-4 h-4" />
           </button>
