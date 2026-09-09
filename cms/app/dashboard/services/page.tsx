@@ -8,7 +8,7 @@ export default function ServicesPage() {
   return (
     <ContentManager<Service>
       title="Services & Capabilities"
-      description="Controls the 6 items in the website Services page → CORE SUPPLY CAPABILITIES section (/services). Field “Detail” maps to the tagline shown under each service title."
+      description="Manage the 6 core capabilities of Videha Overseas, displayed on the Services page."
       gridCols="grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
       api={servicesApi}
       emptyDefaults={{ num: "", title: "", copy: "", detail: "", isActive: true, order: 0 }}

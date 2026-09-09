@@ -72,14 +72,14 @@ export default function DashboardPage() {
       href: "/dashboard/process-steps",
       color: "bg-emerald-50 text-emerald-600 border-emerald-100",
     },
-    {
-      label: "API Connectivity",
-      value: health ? "100%" : "Offline",
-      sub: health ? "Backend operational" : "Check local server",
-      icon: Activity,
-      href: "/dashboard/site-settings",
-      color: health ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-rose-50 text-rose-600 border-rose-100",
-    },
+    // {
+    //   label: "API Connectivity",
+    //   value: health ? "100%" : "Offline",
+    //   sub: health ? "Backend operational" : "Check local server",
+    //   icon: Activity,
+    //   href: "/dashboard/site-settings",
+    //   color: health ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-rose-50 text-rose-600 border-rose-100",
+    // },
   ];
 
   const quickTiles = [
@@ -89,7 +89,7 @@ export default function DashboardPage() {
     { label: "Process Steps", desc: "7 Export steps", icon: Footprints, href: "/dashboard/process-steps", bg: "hover:border-emerald-300" },
     { label: "Quality Points", desc: "4 Assurance factors", icon: Star, href: "/dashboard/quality-points", bg: "hover:border-amber-300" },
     { label: "Services", desc: "6 Core capabilities", icon: Wrench, href: "/dashboard/services", bg: "hover:border-blue-300" },
-    { label: "Buyer Expectations", desc: "Why Videha points", icon: Users, href: "/dashboard/buyer-expectations", bg: "hover:border-purple-300" },
+    // { label: "Buyer Expectations", desc: "Why Videha points", icon: Users, href: "/dashboard/buyer-expectations", bg: "hover:border-purple-300" },
     { label: "Intro Facts", desc: "3 Key statistics", icon: BarChart3, href: "/dashboard/intro-facts", bg: "hover:border-indigo-300" },
   ];
 

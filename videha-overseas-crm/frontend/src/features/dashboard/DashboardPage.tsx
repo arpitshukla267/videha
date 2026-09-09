@@ -33,10 +33,9 @@ const LEAD_STATUS_BAR: Record<string, string> = {
   'Sample Sent': 'bg-fuchsia-500',
   Negotiation: 'bg-amber-500',
   'Quotation Sent': 'bg-orange-500',
-  Won: 'bg-emerald-600',
+  Converted: 'bg-emerald-600',
   Interested: 'bg-teal-500',
   'Follow-up': 'bg-sky-500',
-  Converted: 'bg-emerald-500',
   'Not Interested': 'bg-rose-400',
   Lost: 'bg-rose-500'
 };
@@ -132,7 +131,7 @@ export const DashboardPage: React.FC<DashboardProps> = ({ onNavigate }) => {
       highlight: (kpi.followUpsOverdue ?? 0) > 0
     },
     {
-      label: 'Won Leads',
+      label: 'Converted Leads',
       value: kpi.wonLeads ?? 0,
       icon: CheckCircle2,
       accent: 'border-emerald-200',

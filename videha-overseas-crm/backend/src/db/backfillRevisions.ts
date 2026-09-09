@@ -50,6 +50,16 @@ export async function backfillNullClientRequestIds(): Promise<void> {
 }
 
 export async function backfillLeadPipelineFields(): Promise<void> {
+  const wonToConverted = await Lead.updateMany(
+    { status: "Won" },
+    { $set: { status: "Converted" } },
+  );
+  if (wonToConverted.modifiedCount > 0) {
+    console.log(
+      `[CRM] Migrated ${wonToConverted.modifiedCount} Lead(s) from Won → Converted`,
+    );
+  }
+
   const leadResult = await Lead.updateMany(
     {
       $or: [{ lostReason: { $exists: false } }, { convertedAt: { $exists: false } }],

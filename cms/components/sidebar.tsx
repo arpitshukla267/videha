@@ -19,6 +19,7 @@ import {
   ExternalLink,
   Sparkles,
 } from "lucide-react";
+import Image from "next/image";
 
 const NAV = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -32,7 +33,7 @@ const NAV = [
       { label: "Process Steps", href: "/dashboard/process-steps", icon: Footprints },
       { label: "Quality Points", href: "/dashboard/quality-points", icon: Star },
       { label: "Services", href: "/dashboard/services", icon: Wrench },
-      { label: "Buyer Expectations", href: "/dashboard/buyer-expectations", icon: Users },
+      // { label: "Buyer Expectations", href: "/dashboard/buyer-expectations", icon: Users },
       { label: "Intro Facts", href: "/dashboard/intro-facts", icon: BarChart3 },
     ],
   },
@@ -43,27 +44,25 @@ export function Sidebar() {
   const quotationBuilderUrl = process.env.NEXT_PUBLIC_QUOTATION_BUILDER_URL?.trim();
 
   return (
-    <aside className="w-72 shrink-0 bg-[#0e1626] h-full flex flex-col border-r border-slate-800/60 text-slate-300">
+    <aside className="w-64 shrink-0 bg-[#0e1626] h-full flex flex-col border-r border-slate-800/60 text-slate-300">
       {/* Brand Header */}
 
       <div className="px-6 py-6 border-b border-slate-800/70">
-        <div className="flex items-center gap-3.5">
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white font-bold text-base shadow-lg shadow-purple-500/25 ring-1 ring-white/20">
-            V
-          </div>
-          <div>
+        <div className="flex flex-col items-center gap-3.5">
+          <Image 
+            src="/logo.png" 
+            alt="Videha Overseas" 
+            width={92} 
+            height={92} 
+            className="w-full h-20 object-cover"
+          />
+          {/* <div>
             <div className="flex items-center gap-1.5">
               <p className="text-white font-bold text-sm tracking-tight">
                 Videha Overseas
               </p>
-              <span className="bg-purple-500/20 text-purple-300 text-[10px] font-semibold px-1.5 py-0.5 rounded-full border border-purple-400/30">
-                CMS
-              </span>
             </div>
-            <p className="text-slate-400 text-xs font-medium tracking-wide">
-              SaaS Control Panel
-            </p>
-          </div>
+          </div> */}
         </div>
       </div>
 

@@ -109,7 +109,7 @@ export async function getAdvancedReports(
     mergeVisibility(orderBase, actor, "assignedToId", "createdById"),
   ]);
 
-  const closedWon = ["Won", "Converted"];
+  const closedWon = ["Converted"];
   const closedLost = ["Lost", "Not Interested"];
 
   const [

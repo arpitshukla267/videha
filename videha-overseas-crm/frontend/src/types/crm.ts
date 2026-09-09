@@ -63,12 +63,11 @@ export type LeadStatus =
   | 'Sample Sent'
   | 'Negotiation'
   | 'Quotation Sent'
-  | 'Won'
+  | 'Converted'
   | 'Lost'
   | 'Interested'
   | 'Follow-up'
-  | 'Not Interested'
-  | 'Converted';
+  | 'Not Interested';
 export type Priority = 'Low' | 'Medium' | 'High' | 'Urgent';
 
 export interface LeadPipelineMeta {

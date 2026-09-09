@@ -49,7 +49,7 @@ export async function getOverview(actor: AuthUser) {
   const overdueTaskMatch = { ...activeTaskMatch, dueDate: { $lt: now } };
   const activeOrderMatch = { status: { $nin: ["Delivered", "Cancelled"] } };
 
-  const closedStatuses = ["Won", "Converted", "Lost", "Not Interested"];
+  const closedStatuses = ["Converted", "Lost", "Not Interested"];
 
   const [
     totalLeads,
@@ -83,7 +83,7 @@ export async function getOverview(actor: AuthUser) {
     Lead.countDocuments(leadFilter),
     Lead.countDocuments({ ...leadFilter, status: "New" }),
     Lead.countDocuments({ ...leadFilter, status: { $in: ["Qualified", "Interested", "Negotiation"] } }),
-    Lead.countDocuments({ ...leadFilter, status: { $in: ["Won", "Converted"] } }),
+    Lead.countDocuments({ ...leadFilter, status: "Converted" }),
     Lead.countDocuments({ ...leadFilter, status: { $in: ["Lost", "Not Interested"] } }),
     FollowUp.countDocuments({ ...followUpFilter, dueAt: { $gte: start, $lt: end } }),
     FollowUp.countDocuments({ ...followUpFilter, dueAt: { $gte: end } }),
@@ -124,7 +124,7 @@ export async function getOverview(actor: AuthUser) {
           assigned: { $sum: 1 },
           won: {
             $sum: {
-              $cond: [{ $in: ["$status", ["Won", "Converted"]] }, 1, 0],
+              $cond: [{ $eq: ["$status", "Converted"] }, 1, 0],
             },
           },
           lost: {

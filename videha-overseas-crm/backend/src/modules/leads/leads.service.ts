@@ -38,7 +38,7 @@ import {
   isClosedLeadStatus,
   isConvertibleLeadStatus,
   isLostLeadStatus,
-  isWonLeadStatus,
+  isConvertedLeadStatus,
 } from "../../constants/leadPipeline";
 import { exportFilename } from "../../utils/csv";
 import { streamCsvExport } from "../../utils/csvExport";
@@ -536,11 +536,11 @@ export async function updateLead(id: string, body: Record<string, unknown>, acto
 
   const nextStatus = input.status ?? existing.status;
   if (input.status !== undefined && input.status !== existing.status) {
-    if (input.status === "Won" && !isWonLeadStatus(existing.status)) {
+    if (input.status === "Converted" && !isConvertedLeadStatus(existing.status)) {
       throw new AppError(
-        "Use POST /api/leads/:id/convert to mark a lead as Won.",
+        "Use Convert to Customer to mark a lead as Converted.",
         400,
-        "WON_REQUIRES_CONVERT",
+        "CONVERTED_REQUIRES_CONVERT",
       );
     }
     if (
@@ -638,13 +638,13 @@ export async function updateLead(id: string, body: Record<string, unknown>, acto
         userName: actor.name,
         userRole: actor.roleName,
         action:
-          !isWonLeadStatus(prevStatus) && isWonLeadStatus(updated.status)
-            ? "Lead Completed"
+          !isConvertedLeadStatus(prevStatus) && isConvertedLeadStatus(updated.status)
+            ? "Lead Converted"
             : "Lead Updated",
         entity: "Lead",
         entityId: id,
         details:
-          !isWonLeadStatus(prevStatus) && isWonLeadStatus(updated.status)
+          !isConvertedLeadStatus(prevStatus) && isConvertedLeadStatus(updated.status)
             ? `Lead ${updated.leadCode} (${updated.company}) converted successfully.`
             : `Updated details for ${updated.leadCode} (${updated.company}).`,
       },
@@ -913,7 +913,7 @@ export async function convertLeadToCustomer(
         id,
         expectedRevision,
         {
-          status: "Won",
+          status: "Converted",
           companyId: existingCustomer.companyId,
           customerId: existingCustomer._id,
           convertedAt: fresh.convertedAt ?? new Date(),
@@ -975,7 +975,7 @@ export async function convertLeadToCustomer(
       id,
       expectedRevision,
       {
-        status: "Won",
+        status: "Converted",
         companyId: company._id,
         customerId: customer._id,
         convertedAt: new Date(),

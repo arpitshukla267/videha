@@ -258,9 +258,12 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
   const [quickCallLead, setQuickCallLead] = useState<Lead | null>(null);
 
   const countryOptions = CRM_COUNTRIES.map(c => ({ value: c, label: c }));
-  const manualStatuses = (pipelineMeta?.allStatuses || ['New', 'Contacted', 'Qualified', 'Lost']).filter(
-    s => s !== 'Won'
-  );
+  const manualStatuses = (pipelineMeta?.allStatuses || [
+    'New',
+    'Contacted',
+    'Qualified',
+    'Lost'
+  ]).filter(s => s !== 'Converted');
   const statusOptions = manualStatuses.map(s => ({ value: s, label: s }));
   const memberOptions = teamMembers.map(m => ({
     value: m.id,
@@ -277,7 +280,8 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
   ];
   const statusFilterOptions = [
     { value: 'all', label: 'All Statuses' },
-    ...statusOptions
+    ...statusOptions,
+    { value: 'Converted', label: 'Converted' }
   ];
   const priorityFilterOptions = [
     { value: 'all', label: 'All Priorities' },
@@ -447,7 +451,7 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
 
   const handleConvertLead = async () => {
     if (!leadDetail) return;
-    if (!window.confirm('Convert this lead to a customer account? Status will be set to Won.')) return;
+    if (!window.confirm('Convert this lead to a customer account? Status will be set to Converted.')) return;
     setIsConverting(true);
     try {
       const res = await api.leads.convertLead(leadDetail.lead.id, leadDetail.lead.revision);
@@ -1549,7 +1553,7 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
               )}
               {hasPermission('leads.convert') &&
                 !leadDetail.lead.customerId &&
-                !['Won', 'Converted'].includes(leadDetail.lead.leadStatus) && (
+                leadDetail.lead.leadStatus !== 'Converted' && (
                   <div className="sm:col-span-2">
                     <button
                       type="button"

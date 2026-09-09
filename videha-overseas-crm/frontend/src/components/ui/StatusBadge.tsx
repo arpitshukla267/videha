@@ -72,7 +72,6 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, className = ''
     <span
       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${colorClass} whitespace-nowrap ${className}`}
     >
-      <span className="w-1.5 h-1.5 rounded-full mr-1.5 bg-current opacity-70" />
       {status}
     </span>
   );

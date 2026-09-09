@@ -149,9 +149,9 @@ export default function ProductsPage() {
                   )}
 
                   {/* Index badge top left */}
-                  <div className="absolute top-3 left-3 bg-slate-900/80 backdrop-blur-md text-white text-[11px] font-mono px-2.5 py-1 rounded-full font-semibold">
-                    #{p.index || "00"}
-                  </div>
+                  {/* <div className="absolute top-3 left-3 bg-slate-900/80 backdrop-blur-md text-white text-[11px] px-2.5 py-1 rounded-full font-semibold">
+                    {p.index || "00"}
+                  </div> */}
 
                   {/* Active / Hidden status top right */}
                   <div className="absolute top-3 right-3">

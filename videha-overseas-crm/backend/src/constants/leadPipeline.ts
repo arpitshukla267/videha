@@ -7,7 +7,7 @@ export const PIPELINE_LEAD_STATUSES = [
   "Sample Sent",
   "Negotiation",
   "Quotation Sent",
-  "Won",
+  "Converted",
   "Lost",
 ] as const;
 
@@ -16,7 +16,6 @@ export const LEGACY_LEAD_STATUSES = [
   "Interested",
   "Follow-up",
   "Not Interested",
-  "Converted",
 ] as const;
 
 export const LEAD_STATUSES = [...PIPELINE_LEAD_STATUSES, ...LEGACY_LEAD_STATUSES] as const;
@@ -26,13 +25,13 @@ export type LegacyLeadStatus = (typeof LEGACY_LEAD_STATUSES)[number];
 export type LeadStatus = (typeof LEAD_STATUSES)[number];
 
 export const CLOSED_LEAD_STATUSES: LeadStatus[] = [
-  "Won",
-  "Lost",
   "Converted",
+  "Lost",
   "Not Interested",
 ];
 
-export const WON_LEAD_STATUSES: LeadStatus[] = ["Won", "Converted"];
+/** Converted means the lead is now a customer (set only via convert flow). */
+export const CONVERTED_LEAD_STATUSES: LeadStatus[] = ["Converted"];
 
 export const LOST_LEAD_STATUSES: LeadStatus[] = ["Lost", "Not Interested"];
 
@@ -44,7 +43,6 @@ export const CONVERTIBLE_LEAD_STATUSES: LeadStatus[] = [
   "Negotiation",
   "Quotation Sent",
   "Interested",
-  "Converted",
 ];
 
 /** Suggested mapping when migrating legacy records (informational; not auto-applied). */
@@ -52,15 +50,19 @@ export const LEGACY_STATUS_MIGRATION_MAP: Partial<Record<LegacyLeadStatus, Pipel
   Interested: "Qualified",
   "Follow-up": "Contacted",
   "Not Interested": "Lost",
-  Converted: "Won",
 };
 
 export function isClosedLeadStatus(status: string): boolean {
   return CLOSED_LEAD_STATUSES.includes(status as LeadStatus);
 }
 
+export function isConvertedLeadStatus(status: string): boolean {
+  return CONVERTED_LEAD_STATUSES.includes(status as LeadStatus) || status === "Won";
+}
+
+/** @deprecated Use isConvertedLeadStatus — Won was removed in favor of Converted. */
 export function isWonLeadStatus(status: string): boolean {
-  return WON_LEAD_STATUSES.includes(status as LeadStatus);
+  return isConvertedLeadStatus(status);
 }
 
 export function isLostLeadStatus(status: string): boolean {
@@ -71,14 +73,14 @@ export function isConvertibleLeadStatus(status: string): boolean {
   return CONVERTIBLE_LEAD_STATUSES.includes(status as LeadStatus);
 }
 
-/** Won is set by conversion — block manual status changes to Won via regular update. */
+/** Converted is set by convert-to-customer — block manual status changes to Converted via regular update. */
 export function assertManualStatusChange(
   currentStatus: LeadStatus,
   nextStatus: LeadStatus,
   expectedRevision: number | undefined,
 ): void {
-  if (nextStatus === "Won" && !isWonLeadStatus(currentStatus)) {
-    throw new Error("WON_REQUIRES_CONVERT");
+  if (nextStatus === "Converted" && !isConvertedLeadStatus(currentStatus)) {
+    throw new Error("CONVERTED_REQUIRES_CONVERT");
   }
   if (isClosedLeadStatus(currentStatus) && !isClosedLeadStatus(nextStatus)) {
     if (expectedRevision === undefined) {

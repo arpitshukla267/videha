@@ -517,7 +517,7 @@ export async function updateQuotationStatus(
 
     if (updated.leadId && nextStatus === "Sent") {
       await Lead.updateOne(
-        { _id: updated.leadId, status: { $nin: ["Won", "Lost", "Converted"] } },
+        { _id: updated.leadId, status: { $nin: ["Converted", "Lost"] } },
         { $set: { status: "Quotation Sent" } },
         { session },
       );
