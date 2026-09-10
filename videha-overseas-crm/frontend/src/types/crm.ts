@@ -125,8 +125,12 @@ export interface Customer {
   whatsAppNumber?: string;
   designation?: string;
   isPrimaryContact?: boolean;
+  notes?: string;
   relatedLeadId?: string | null;
   status: string;
+  createdById?: string;
+  createdAt?: string;
+  updatedAt?: string;
   revision?: number;
 }
 

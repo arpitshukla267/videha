@@ -352,7 +352,12 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
         limit
       });
       if (res.success) {
-        setLeads(res.items);
+        const sorted = [...res.items].sort((a, b) => {
+          const aConv = a.leadStatus === 'Converted' || Boolean(a.customerId || a.convertedAt) ? 1 : 0;
+          const bConv = b.leadStatus === 'Converted' || Boolean(b.customerId || b.convertedAt) ? 1 : 0;
+          return aConv - bConv;
+        });
+        setLeads(sorted);
         setTotalLeads(res.total);
         setCurrentPage(res.page);
         setTotalPages(res.totalPages);

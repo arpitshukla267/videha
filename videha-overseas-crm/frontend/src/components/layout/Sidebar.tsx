@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   CalendarClock,
+  Contact,
   FileText,
   FolderOpen,
   LayoutDashboard,
@@ -21,6 +22,7 @@ import { useAuth } from '../../context/AuthContext';
 export type NavigationTab =
   | 'dashboard'
   | 'leads'
+  | 'customers'
   | 'followups'
   | 'quotations'
   | 'documents'
@@ -56,6 +58,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onSelectTab, unrea
   }> = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, permission: 'dashboard.view' },
     { id: 'leads', label: 'Leads', icon: Users, permission: 'leads.view' },
+    { id: 'customers', label: 'Customers', icon: Contact, permission: 'customers.view' },
     { id: 'followups', label: 'Follow-ups', icon: CalendarClock, permission: 'followups.view' },
     { id: 'quotations', label: 'Quotations', icon: FileText, permission: 'quotations.view' },
     { id: 'documents', label: 'Documents', icon: FolderOpen, permission: 'documents.view' },
@@ -70,6 +73,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onSelectTab, unrea
   ];
 
   const filteredNav = navItems.filter(item => {
+    if (item.id === 'customers') {
+      return hasPermission('customers.view') || hasPermission('leads.view');
+    }
     if (!item.permission) return true;
     return hasPermission(item.permission);
   });

@@ -885,13 +885,33 @@ export const api = {
   },
 
   customers: {
-    getCustomers: (params?: { search?: string; page?: number; limit?: number }) => {
+    getCustomers: (params?: {
+      search?: string;
+      status?: string;
+      companyId?: string;
+      page?: number;
+      limit?: number;
+    }) => {
       const query = new URLSearchParams();
       if (params?.search) query.set('search', params.search);
+      if (params?.status && params.status !== 'all') query.set('status', params.status);
+      if (params?.companyId && params.companyId !== 'all') query.set('companyId', params.companyId);
       if (params?.page) query.set('page', params.page.toString());
-      query.set('limit', String(params?.limit ?? 100));
+      if (params?.limit) query.set('limit', params.limit.toString());
       return request<PaginatedListResponse<Customer>>(`/api/customers?${query.toString()}`);
     },
+    getCustomer: (id: string) =>
+      request<{ success: boolean; data: Customer }>(`/api/customers/${id}`),
+    createCustomer: (data: Partial<Customer>) =>
+      request<{ success: boolean; data: Customer }>('/api/customers', {
+        method: 'POST',
+        body: JSON.stringify(data)
+      }),
+    updateCustomer: (id: string, data: UpdatePayload<Customer>) =>
+      request<{ success: boolean; data: Customer }>(`/api/customers/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data)
+      }),
     exportCsv: (params?: { search?: string; status?: string; companyId?: string }) =>
       exportCsvDownload('/api/customers/export', params ?? {}, 'videha_customers.csv')
   },

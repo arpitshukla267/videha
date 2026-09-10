@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { Topbar } from './components/layout/Topbar';
 import { DashboardPage } from './features/dashboard/DashboardPage';
 import { LeadsPage } from './features/leads/LeadsPage';
+import { CustomersPage } from './features/customers/CustomersPage';
 import { TasksPage } from './features/tasks/TasksPage';
 import { OrdersPage } from './features/orders/OrdersPage';
 import { FinancePage } from './features/finance/FinancePage';
@@ -48,6 +49,7 @@ const CrmApp: React.FC = () => {
 
     const fallbacks: Array<{ tab: NavigationTab; perm: string }> = [
       { tab: 'leads', perm: 'leads.view' },
+      { tab: 'customers', perm: 'customers.view' },
       { tab: 'followups', perm: 'followups.view' },
       { tab: 'quotations', perm: 'quotations.view' },
       { tab: 'documents', perm: 'documents.view' },
@@ -129,6 +131,21 @@ const CrmApp: React.FC = () => {
         }
         return (
           <LeadsPage focusLeadId={focusEntityId} onFocusConsumed={clearFocusEntity} />
+        );
+      case 'customers':
+        if (!hasPermission('customers.view') && !hasPermission('leads.view')) {
+          return (
+            <div className="p-8 text-center text-xs text-slate-500">
+              You do not have permission to view Customers.
+            </div>
+          );
+        }
+        return (
+          <CustomersPage
+            onNavigate={handleNavigate}
+            focusCustomerId={focusEntityId}
+            onFocusConsumed={clearFocusEntity}
+          />
         );
       case 'followups':
         if (!hasPermission('followups.view')) {

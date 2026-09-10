@@ -266,16 +266,26 @@ export async function listFollowUps(
   const { page, limit, skip } = parsePagination(filters);
   const query = await buildFollowUpsQuery(filters, actor);
 
-  const [total, docs] = await Promise.all([
-    FollowUp.countDocuments(query),
-    FollowUp.find(query)
-      .populate(POPULATE)
-      .sort({ dueAt: 1, createdAt: -1 })
-      .skip(skip)
-      .limit(limit),
-  ]);
+  const total = await FollowUp.countDocuments(query);
 
-  const items = docs.map((d) => serializeFollowUp(d.toObject() as unknown as Record<string, unknown>));
+  // Aggregation pipeline: add statusOrder (0 = Pending, 1 = others) so completed items appear last across pages
+  const pipeline: import("mongoose").PipelineStage[] = [
+    { $match: query },
+    {
+      $addFields: {
+        _statusOrder: { $cond: [{ $eq: ["$status", "Pending"] }, 0, 1] },
+      },
+    },
+    { $sort: { _statusOrder: 1, dueAt: 1, createdAt: -1 } },
+    { $skip: skip },
+    { $limit: limit },
+  ];
+
+  const rawDocs = await FollowUp.aggregate(pipeline);
+  // Populate after aggregation
+  const docs = await FollowUp.populate(rawDocs, POPULATE);
+
+  const items = docs.map((d) => serializeFollowUp(d as unknown as Record<string, unknown>));
   return paginatedResponse(items, total, page, limit);
 }
 

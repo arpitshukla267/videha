@@ -64,6 +64,16 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, className = ''
       colorClass = 'bg-emerald-50 text-emerald-700 border-emerald-200';
       break;
 
+    // Customer & Company statuses
+    case 'active':
+    case 'Active':
+      colorClass = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+      break;
+    case 'inactive':
+    case 'Inactive':
+      colorClass = 'bg-slate-100 text-slate-500 border-slate-200';
+      break;
+
     default:
       colorClass = 'bg-slate-100 text-slate-700 border-slate-200';
   }
