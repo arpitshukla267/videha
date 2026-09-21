@@ -47,6 +47,7 @@ import { handleConflictWithReload, alertSaveError } from '../../lib/apiErrors';
 import { createClientRequestId as generateClientRequestId } from '../../lib/clientRequestId';
 import { ImportWizard } from '../../components/import/ImportWizard';
 import { ListStatePanel, ownScopeEmptyCopy } from '../../components/ui/ListStatePanel';
+import { LIST_PAGE_SIZE } from '../../lib/pagination';
 
 const LEAD_SOURCES = [
   { value: 'Website', label: 'Website Form' },
@@ -206,7 +207,7 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
   const [loadError, setLoadError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [limit] = useState(12);
+  const [limit] = useState(LIST_PAGE_SIZE);
 
   // View Mode: Cards (default) or Table
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');

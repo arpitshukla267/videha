@@ -1,7 +1,9 @@
 import mongoose, { Schema, Document, Types } from "mongoose";
+import type { BillReportingAmountINR, ExchangeRateSnapshot } from "../utils/currency";
 
 export const BILL_STATUSES = [
   "draft",
+  "pending",
   "issued",
   "partially_paid",
   "paid",
@@ -22,6 +24,8 @@ export interface IBill extends Document {
   billCode: string;
   orderId: Types.ObjectId;
   orderCode: string;
+  customerId: Types.ObjectId | null;
+  companyId: Types.ObjectId | null;
   customerName: string;
   company: string;
   phone: string;
@@ -37,6 +41,8 @@ export interface IBill extends Document {
   amountPaid: number;
   amountDue: number;
   currency: string;
+  exchangeRateSnapshot: ExchangeRateSnapshot | null;
+  reportingAmountINR: BillReportingAmountINR | null;
   paymentTerms: string;
   status: BillStatus;
   dueDate: Date | null;
@@ -66,6 +72,8 @@ const billSchema = new Schema<IBill>(
     billCode: { type: String, required: true, unique: true, index: true },
     orderId: { type: Schema.Types.ObjectId, ref: "Order", required: true, unique: true, index: true },
     orderCode: { type: String, required: true, index: true },
+    customerId: { type: Schema.Types.ObjectId, ref: "Customer", default: null, index: true },
+    companyId: { type: Schema.Types.ObjectId, ref: "Company", default: null, index: true },
     customerName: { type: String, required: true },
     company: { type: String, required: true },
     phone: { type: String, default: "" },
@@ -81,8 +89,27 @@ const billSchema = new Schema<IBill>(
     amountPaid: { type: Number, default: 0 },
     amountDue: { type: Number, default: 0 },
     currency: { type: String, default: "USD" },
+    exchangeRateSnapshot: {
+      type: {
+        fromCurrency: { type: String, default: "" },
+        toCurrency: { type: String, default: "INR" },
+        rate: { type: Number, default: 1 },
+        capturedAt: { type: Date, default: null },
+      },
+      default: null,
+    },
+    reportingAmountINR: {
+      type: {
+        subtotal: { type: Number, default: 0 },
+        taxAmount: { type: Number, default: 0 },
+        totalAmount: { type: Number, default: 0 },
+        amountPaid: { type: Number, default: 0 },
+        amountDue: { type: Number, default: 0 },
+      },
+      default: null,
+    },
     paymentTerms: { type: String, default: "Net 30 days from invoice date" },
-    status: { type: String, enum: BILL_STATUSES, default: "issued", index: true },
+    status: { type: String, enum: BILL_STATUSES, default: "pending", index: true },
     dueDate: { type: Date, default: null, index: true },
     issuedAt: { type: Date, default: null },
     paidAt: { type: Date, default: null },
@@ -98,5 +125,9 @@ const billSchema = new Schema<IBill>(
   },
   { timestamps: true },
 );
+
+billSchema.index({ customerId: 1, createdAt: -1 });
+billSchema.index({ companyId: 1, createdAt: -1 });
+billSchema.index({ status: 1, createdAt: -1 });
 
 export const Bill = mongoose.model<IBill>("Bill", billSchema);

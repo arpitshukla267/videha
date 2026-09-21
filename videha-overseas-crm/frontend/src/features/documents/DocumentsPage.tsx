@@ -28,6 +28,7 @@ import { PaginationBar } from '../../components/ui/PaginationBar';
 import { useAuth } from '../../context/AuthContext';
 import { alertSaveError, handleConflictWithReload } from '../../lib/apiErrors';
 import { ownScopeEmptyCopy } from '../../components/ui/ListStatePanel';
+import { LIST_PAGE_SIZE } from '../../lib/pagination';
 
 const CATEGORY_OPTIONS: { value: DocumentCategory; label: string }[] = [
   { value: 'KYC', label: 'KYC' },
@@ -100,7 +101,7 @@ export const DocumentsPage: React.FC = () => {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [limit] = useState(15);
+  const [limit] = useState(LIST_PAGE_SIZE);
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [entityTypeFilter, setEntityTypeFilter] = useState('all');
@@ -174,24 +175,33 @@ export const DocumentsPage: React.FC = () => {
     fetchDocuments(1);
   }, [search, categoryFilter, entityTypeFilter, fileKindFilter]);
 
-  useEffect(() => {
-    Promise.all([
+  const ensureUploadEntities = async () => {
+    if (
+      leads.length > 0 ||
+      companies.length > 0 ||
+      customers.length > 0 ||
+      quotations.length > 0 ||
+      orders.length > 0
+    ) {
+      return;
+    }
+    const [leadRes, companyRes, customerRes, quotationRes, orderRes] = await Promise.all([
       api.leads.getLeads({ limit: 100, sortBy: 'createdAt', sortOrder: 'desc' }),
       api.companies.getCompanies({ limit: 100 }),
       api.customers.getCustomers({ limit: 100 }),
       api.quotations.getQuotations({ limit: 100 }),
       api.orders.getOrders({ limit: 100 })
-    ]).then(([leadRes, companyRes, customerRes, quotationRes, orderRes]) => {
-      if (leadRes.success) setLeads(leadRes.items);
-      if (companyRes.success) setCompanies(companyRes.data);
-      if (customerRes.success) setCustomers(customerRes.data);
-      if (quotationRes.success) setQuotations(quotationRes.data);
-      if (orderRes.success) setOrders(orderRes.data);
-    });
-  }, []);
+    ]);
+    if (leadRes.success) setLeads(leadRes.items);
+    if (companyRes.success) setCompanies(companyRes.data);
+    if (customerRes.success) setCustomers(customerRes.data);
+    if (quotationRes.success) setQuotations(quotationRes.data);
+    if (orderRes.success) setOrders(orderRes.data);
+  };
 
   const openUpload = () => {
     setUploadForm(emptyUploadForm());
+    void ensureUploadEntities();
     setIsUploadOpen(true);
   };
 

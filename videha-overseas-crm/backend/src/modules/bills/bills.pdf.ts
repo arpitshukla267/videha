@@ -4,28 +4,30 @@ import path from "path";
 
 import type { IBill } from "../../models/Bill";
 
+// Monochrome palette — the only color on the page is the logo image itself.
+// A tighter, more restrained grayscale ramp reads as "printed letterhead"
+// rather than "UI screenshot".
 const COLORS = {
-  primary: "#3B2A23",
-  primaryLight: "#F4EEE9",
-  text: "#241E1A",
-  muted: "#756B64",
-  light: "#A49A92",
-  border: "#DDD5CF",
-  tableHeader: "#3B2A23",
-  white: "#FFFFFF",
-  success: "#3F6B4A",
-  warning: "#9A6A25",
+  text: "#111111",
+  muted: "#6B6B6B",
+  light: "#9A9A9A",
+  border: "#E3E3E3",
+  headerFill: "#111111",
+  headerText: "#FFFFFF",
+  rowLine: "#EAEAEA",
+  totalLine: "#111111",
 };
 
+// Helvetica (a PDF standard font) has no glyph for "₹", which is what was
+// rendering as a broken/garbled character in the old PDF. Using plain ASCII
+// prefixes avoids that entirely without needing to embed a custom font.
 function formatMoney(amount: number, currency: string) {
-  const symbol =
-    currency === "INR"
-      ? "₹"
-      : currency === "USD"
-        ? "$"
-        : `${currency} `;
+  const prefix =
+    currency === "INR" ? "Rs. " : currency === "USD" ? "$" : `${currency} `;
 
-  return `${symbol}${amount.toLocaleString("en-IN", {
+  const safeAmount = Number.isFinite(amount) ? amount : 0;
+
+  return `${prefix}${safeAmount.toLocaleString("en-IN", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
@@ -43,23 +45,11 @@ function formatDate(d: Date | null | undefined) {
 
 function getLogoPath(): string | null {
   const candidates = [
-    // backend/assets/logo.png
     path.resolve(__dirname, "../../../assets/logo.png"),
-
-    // backend/public/logo.png
     path.resolve(__dirname, "../../../public/logo.png"),
-
-    // project frontend public folder
     path.resolve(__dirname, "../../../../frontend/public/logo.png"),
-
-    // project crm/frontend/public folder
-    path.resolve(__dirname, "../../../../frontend/public/logo.png"),
-
-    // process working directory fallback
     path.resolve(process.cwd(), "public/logo.png"),
-
     path.resolve(process.cwd(), "../frontend/public/logo.png"),
-
     path.resolve(process.cwd(), "../crm/frontend/public/logo.png"),
   ];
 
@@ -72,6 +62,26 @@ function getLogoPath(): string | null {
   return null;
 }
 
+// Draws left-aligned text and returns the Y position immediately below it,
+// accounting for however many lines it actually wrapped to. This is the fix
+// for the overlapping-text bug: the old code always advanced by a fixed
+// 13px regardless of how many lines a field wrapped to.
+function drawWrappedLine(
+  doc: PDFKit.PDFDocument,
+  text: string,
+  x: number,
+  y: number,
+  width: number,
+  extraGap = 4,
+): number {
+  const height = doc.heightOfString(text, { width });
+  doc.text(text, x, y, { width });
+  return y + height + extraGap;
+}
+
+// Small tracked-out caps for section labels — this one detail (letter
+// spacing on a small bold label) does more for a "professional letterhead"
+// feel than any color or box ever did.
 function drawSectionLabel(
   doc: PDFKit.PDFDocument,
   text: string,
@@ -79,12 +89,12 @@ function drawSectionLabel(
   y: number,
 ) {
   doc
-    .fontSize(8)
+    .fontSize(7.5)
     .font("Helvetica-Bold")
-    .fillColor(COLORS.primary)
-    .text(text.toUpperCase(), x, y);
+    .fillColor(COLORS.muted)
+    .text(text.toUpperCase(), x, y, { characterSpacing: 0.8 });
 
-  return y + 14;
+  return y + 15;
 }
 
 export function buildBillPdfBuffer(bill: IBill): Promise<Buffer> {
@@ -101,7 +111,6 @@ export function buildBillPdfBuffer(bill: IBill): Promise<Buffer> {
     doc.on("end", () => resolve(Buffer.concat(chunks)));
     doc.on("error", reject);
 
-    const pageWidth = 595.28;
     const pageHeight = 841.89;
     const left = 48;
     const right = 547;
@@ -109,7 +118,7 @@ export function buildBillPdfBuffer(bill: IBill): Promise<Buffer> {
 
     /*
      * ---------------------------------------------------------
-     * HEADER
+     * HEADER (logo stays in full color — everything else is B/W)
      * ---------------------------------------------------------
      */
 
@@ -119,214 +128,255 @@ export function buildBillPdfBuffer(bill: IBill): Promise<Buffer> {
       try {
         doc.image(logoPath, left, 42, {
           fit: [145, 52],
-          align: "left",
           valign: "center",
         });
       } catch {
-        // Fallback to text branding if logo cannot be rendered.
         doc
           .font("Helvetica-Bold")
           .fontSize(20)
-          .fillColor(COLORS.primary)
+          .fillColor(COLORS.text)
           .text("VIDEHA OVERSEAS", left, 48);
       }
     } else {
       doc
         .font("Helvetica-Bold")
         .fontSize(20)
-        .fillColor(COLORS.primary)
+        .fillColor(COLORS.text)
         .text("VIDEHA OVERSEAS", left, 48);
     }
 
     doc
       .font("Helvetica")
-      .fontSize(8.5)
+      .fontSize(8)
       .fillColor(COLORS.muted)
-      .text("Export CRM · Commercial Invoice", left, 82);
+      .text("EXPORT CRM · COMMERCIAL INVOICE", left, 84, {
+        characterSpacing: 0.6,
+      });
 
-    // Invoice title
+    // Title, right-aligned, with the status as a small tracked-out label
+    // underneath it rather than a colored pill — reads as letterhead, not UI.
+    const statusLabel = (bill.status || "pending")
+      .replace(/_/g, " ")
+      .toUpperCase();
+
     doc
       .font("Helvetica-Bold")
-      .fontSize(18)
-      .fillColor(COLORS.primary)
-      .text("TAX INVOICE", 350, 45, {
-        width: 197,
-        align: "right",
-      });
+      .fontSize(19)
+      .fillColor(COLORS.text)
+      .text("TAX INVOICE", left, 42, { width: contentWidth, align: "right" });
 
     doc
-      .font("Helvetica")
-      .fontSize(9)
+      .font("Helvetica-Bold")
+      .fontSize(8)
       .fillColor(COLORS.muted)
-      .text(`Invoice No.  ${bill.billCode}`, 350, 72, {
-        width: 197,
+      .text(statusLabel, left, 66, {
+        width: contentWidth,
         align: "right",
-      })
-      .text(`Order Ref.  ${bill.orderCode}`, 350, 87, {
-        width: 197,
-        align: "right",
-      })
-      .text(`Issue Date  ${formatDate(bill.issuedAt)}`, 350, 102, {
-        width: 197,
-        align: "right",
-      })
-      .text(`Due Date  ${formatDate(bill.dueDate)}`, 350, 117, {
-        width: 197,
-        align: "right",
+        characterSpacing: 1,
       });
 
-    // Brand divider
+    // Meta block: label / value pairs, evenly spaced, right-aligned as a
+    // clean two-column grid instead of loose stacked lines.
+    const metaRows: [string, string][] = [
+      ["Invoice No.", String(bill.billCode || "—")],
+      ["Order Ref.", String(bill.orderCode || "—")],
+      ["Issue Date", formatDate(bill.issuedAt)],
+      ["Due Date", formatDate(bill.dueDate)],
+    ];
+
+    const metaLabelX = 300;
+    const metaLabelWidth = 130;
+    const metaValueX = 435;
+    const metaValueWidth = right - metaValueX;
+
+    let metaY = 92;
+    metaRows.forEach(([label, value]) => {
+      doc
+        .font("Helvetica")
+        .fontSize(8.5)
+        .fillColor(COLORS.light)
+        .text(label, metaLabelX, metaY, {
+          width: metaLabelWidth,
+          align: "right",
+        });
+      doc
+        .font("Helvetica-Bold")
+        .fontSize(8.5)
+        .fillColor(COLORS.text)
+        .text(value, metaValueX, metaY, {
+          width: metaValueWidth,
+          align: "right",
+        });
+      metaY += 13;
+    });
+
     doc
-      .moveTo(left, 135)
-      .lineTo(right, 135)
-      .lineWidth(1.2)
-      .strokeColor(COLORS.primary)
+      .moveTo(left, 152)
+      .lineTo(right, 152)
+      .lineWidth(1)
+      .strokeColor(COLORS.text)
       .stroke();
 
     /*
      * ---------------------------------------------------------
-     * BILL TO / FROM
+     * BILL TO / FROM — each line now advances by its real
+     * wrapped height so long addresses can never overlap.
      * ---------------------------------------------------------
      */
 
-    const infoTop = 155;
+    const infoTop = 174;
+    const colWidth = 225;
 
-    // Left block
+    // Left block: BILL TO
     doc
       .font("Helvetica-Bold")
-      .fontSize(8)
-      .fillColor(COLORS.primary)
-      .text("BILL TO", left, infoTop);
+      .fontSize(7.5)
+      .fillColor(COLORS.muted)
+      .text("BILL TO", left, infoTop, { characterSpacing: 0.8 });
 
     doc
       .font("Helvetica-Bold")
       .fontSize(11)
       .fillColor(COLORS.text)
-      .text(bill.company || "—", left, infoTop + 16, {
-        width: 225,
-      });
+      .text(bill.company || "—", left, infoTop + 16, { width: colWidth });
 
-    let billToY = infoTop + 32;
+    let billToY =
+      infoTop +
+      16 +
+      doc.heightOfString(bill.company || "—", { width: colWidth }) +
+      6;
 
-    doc
-      .font("Helvetica")
-      .fontSize(9)
-      .fillColor(COLORS.muted);
+    doc.font("Helvetica").fontSize(9).fillColor(COLORS.muted);
 
     if (bill.customerName) {
-      doc.text(bill.customerName, left, billToY, {
-        width: 225,
-      });
-      billToY += 13;
+      billToY = drawWrappedLine(
+        doc,
+        bill.customerName,
+        left,
+        billToY,
+        colWidth,
+        3,
+      );
     }
 
-    doc.text(bill.billingAddress || bill.country || "—", left, billToY, {
-      width: 225,
-    });
+    // billingAddress and country are two distinct facts — only print country
+    // again if it isn't already part of the address string, and give each
+    // its own properly-measured line so nothing overlaps.
+    const addressLine = bill.billingAddress || bill.country || "—";
+    billToY = drawWrappedLine(doc, addressLine, left, billToY, colWidth, 3);
 
-    billToY += 13;
-
-    if (bill.country && bill.billingAddress) {
-      doc.text(bill.country, left, billToY, {
-        width: 225,
-      });
-      billToY += 13;
+    if (
+      bill.country &&
+      bill.billingAddress &&
+      !bill.billingAddress.includes(bill.country)
+    ) {
+      billToY = drawWrappedLine(doc, bill.country, left, billToY, colWidth, 3);
     }
 
     if (bill.email) {
-      doc.text(bill.email, left, billToY, {
-        width: 225,
-      });
-      billToY += 13;
+      billToY = drawWrappedLine(doc, bill.email, left, billToY, colWidth, 3);
     }
 
     if (bill.phone) {
-      doc.text(bill.phone, left, billToY, {
-        width: 225,
-      });
-      billToY += 13;
+      billToY = drawWrappedLine(doc, bill.phone, left, billToY, colWidth, 3);
     }
 
-    // Right block
+    // Right block: FROM
     const fromX = 320;
+    const fromWidth = 227;
 
     doc
       .font("Helvetica-Bold")
-      .fontSize(8)
-      .fillColor(COLORS.primary)
-      .text("FROM", fromX, infoTop);
+      .fontSize(7.5)
+      .fillColor(COLORS.muted)
+      .text("FROM", fromX, infoTop, { characterSpacing: 0.8 });
 
     doc
       .font("Helvetica-Bold")
       .fontSize(11)
       .fillColor(COLORS.text)
       .text("Videha Overseas Pvt. Ltd.", fromX, infoTop + 16, {
-        width: 227,
+        width: fromWidth,
       });
 
-    let fromY = infoTop + 32;
+    let fromY =
+      infoTop +
+      16 +
+      doc.heightOfString("Videha Overseas Pvt. Ltd.", { width: fromWidth }) +
+      6;
 
-    doc
-      .font("Helvetica")
-      .fontSize(9)
-      .fillColor(COLORS.muted)
-      .text("New Delhi, India", fromX, fromY, {
-        width: 227,
-      });
+    doc.font("Helvetica").fontSize(9).fillColor(COLORS.muted);
 
-    fromY += 13;
+    fromY = drawWrappedLine(
+      doc,
+      "New Delhi, India",
+      fromX,
+      fromY,
+      fromWidth,
+      3,
+    );
 
     if (bill.gstNumber) {
-      doc.text(`GSTIN: ${bill.gstNumber}`, fromX, fromY, {
-        width: 227,
-      });
-      fromY += 13;
+      fromY = drawWrappedLine(
+        doc,
+        `GSTIN: ${bill.gstNumber}`,
+        fromX,
+        fromY,
+        fromWidth,
+        3,
+      );
     }
 
-    doc.text("Export & International Trade", fromX, fromY, {
-      width: 227,
-    });
+    fromY = drawWrappedLine(
+      doc,
+      "Export & International Trade",
+      fromX,
+      fromY,
+      fromWidth,
+      3,
+    );
 
     /*
      * ---------------------------------------------------------
-     * ITEMS TABLE
+     * ITEMS TABLE — plain header bar, thin row rules, no
+     * alternating row colors.
      * ---------------------------------------------------------
      */
 
-    const tableTop = Math.max(billToY, fromY) + 20;
+    const tableTop = Math.max(billToY, fromY) + 16;
 
     const descriptionX = left + 10;
     const qtyX = 290;
     const priceX = 350;
     const amountX = 465;
 
-    const headerHeight = 27;
+    const headerHeight = 24;
 
-    // Header background
     doc
-      .roundedRect(left, tableTop, contentWidth, headerHeight, 4)
-      .fill(COLORS.tableHeader);
+      .rect(left, tableTop, contentWidth, headerHeight)
+      .fill(COLORS.headerFill);
 
     doc
       .font("Helvetica-Bold")
-      .fontSize(8)
-      .fillColor(COLORS.white)
+      .fontSize(7.5)
+      .fillColor(COLORS.headerText)
       .text("DESCRIPTION", descriptionX, tableTop + 9, {
         width: 210,
+        characterSpacing: 0.6,
       })
-      .text("QTY", qtyX, tableTop + 9, {
-        width: 45,
-      })
+      .text("QTY", qtyX, tableTop + 9, { width: 45, characterSpacing: 0.6 })
       .text("UNIT PRICE", priceX, tableTop + 9, {
         width: 95,
+        characterSpacing: 0.6,
       })
       .text("AMOUNT", amountX, tableTop + 9, {
         width: 72,
         align: "right",
+        characterSpacing: 0.6,
       });
 
     let rowY = tableTop + headerHeight;
-    const rowHeight = 30;
+    const rowHeight = 28;
 
     const items = bill.lineItems?.length
       ? bill.lineItems
@@ -339,36 +389,26 @@ export function buildBillPdfBuffer(bill: IBill): Promise<Buffer> {
           },
         ];
 
-    items.forEach((item, index) => {
-      const background = index % 2 === 0 ? "#FBF9F7" : COLORS.white;
-
-      doc
-        .rect(left, rowY, contentWidth, rowHeight)
-        .fill(background);
-
+    items.forEach((item) => {
       doc
         .font("Helvetica")
         .fontSize(8.5)
         .fillColor(COLORS.text)
-        .text(item.description || "—", descriptionX, rowY + 9, {
+        .text(item.description || "—", descriptionX, rowY + 8, {
           width: 210,
           ellipsis: true,
         })
-        .text(String(item.quantity || "—"), qtyX, rowY + 9, {
-          width: 45,
-        })
+        .text(String(item.quantity || "—"), qtyX, rowY + 8, { width: 45 })
         .text(
           formatMoney(Number(item.unitPrice) || 0, bill.currency),
           priceX,
-          rowY + 9,
-          {
-            width: 95,
-          },
+          rowY + 8,
+          { width: 95 },
         )
         .text(
           formatMoney(Number(item.amount) || 0, bill.currency),
           amountX,
-          rowY + 9,
+          rowY + 8,
           {
             width: 72,
             align: "right",
@@ -379,7 +419,7 @@ export function buildBillPdfBuffer(bill: IBill): Promise<Buffer> {
         .moveTo(left, rowY + rowHeight)
         .lineTo(right, rowY + rowHeight)
         .lineWidth(0.5)
-        .strokeColor(COLORS.border)
+        .strokeColor(COLORS.rowLine)
         .stroke();
 
       rowY += rowHeight;
@@ -387,11 +427,11 @@ export function buildBillPdfBuffer(bill: IBill): Promise<Buffer> {
 
     /*
      * ---------------------------------------------------------
-     * TOTALS
+     * TOTALS — no fill boxes, just a bold rule above the total.
      * ---------------------------------------------------------
      */
 
-    rowY += 18;
+    rowY += 16;
 
     const totalsX = 350;
     const valueX = 465;
@@ -400,106 +440,75 @@ export function buildBillPdfBuffer(bill: IBill): Promise<Buffer> {
       .font("Helvetica")
       .fontSize(9)
       .fillColor(COLORS.muted)
-      .text("Subtotal", totalsX, rowY, {
-        width: 100,
-      })
-      .text(
-        formatMoney(bill.subtotal, bill.currency),
-        valueX,
-        rowY,
-        {
-          width: 72,
-          align: "right",
-        },
-      );
+      .text("Subtotal", totalsX, rowY, { width: 100 })
+      .text(formatMoney(bill.subtotal, bill.currency), valueX, rowY, {
+        width: 72,
+        align: "right",
+      });
 
-    rowY += 17;
+    rowY += 16;
 
     if (bill.taxRate > 0) {
       doc
-        .text(`Tax (${bill.taxRate}%)`, totalsX, rowY, {
-          width: 100,
-        })
-        .text(
-          formatMoney(bill.taxAmount, bill.currency),
-          valueX,
-          rowY,
-          {
-            width: 72,
-            align: "right",
-          },
-        );
-
-      rowY += 17;
+        .text(`Tax (${bill.taxRate}%)`, totalsX, rowY, { width: 100 })
+        .text(formatMoney(bill.taxAmount, bill.currency), valueX, rowY, {
+          width: 72,
+          align: "right",
+        });
+      rowY += 16;
     }
 
-    // Total highlight
     doc
-      .roundedRect(totalsX - 10, rowY - 5, 187, 30, 4)
-      .fill(COLORS.primaryLight);
+      .moveTo(totalsX - 10, rowY)
+      .lineTo(right, rowY)
+      .lineWidth(1)
+      .strokeColor(COLORS.totalLine)
+      .stroke();
+
+    rowY += 6;
 
     doc
       .font("Helvetica-Bold")
       .fontSize(10)
-      .fillColor(COLORS.primary)
-      .text("TOTAL", totalsX, rowY + 4, {
-        width: 100,
-      })
-      .text(
-        formatMoney(bill.totalAmount, bill.currency),
-        valueX,
-        rowY + 4,
-        {
-          width: 72,
-          align: "right",
-        },
-      );
+      .fillColor(COLORS.text)
+      .text("TOTAL", totalsX, rowY, { width: 100 })
+      .text(formatMoney(bill.totalAmount, bill.currency), valueX, rowY, {
+        width: 72,
+        align: "right",
+      });
 
-    rowY += 39;
+    rowY += 26;
 
     doc
       .font("Helvetica")
       .fontSize(9)
-      .fillColor(COLORS.success)
-      .text("Amount Paid", totalsX, rowY, {
-        width: 100,
-      })
-      .text(
-        formatMoney(bill.amountPaid, bill.currency),
-        valueX,
-        rowY,
-        {
-          width: 72,
-          align: "right",
-        },
-      );
+      .fillColor(COLORS.muted)
+      .text("Amount Paid", totalsX, rowY, { width: 100 })
+      .text(formatMoney(bill.amountPaid, bill.currency), valueX, rowY, {
+        width: 72,
+        align: "right",
+      });
 
-    rowY += 17;
+    rowY += 16;
 
     doc
       .font("Helvetica-Bold")
       .fontSize(9)
-      .fillColor(bill.amountDue > 0 ? COLORS.warning : COLORS.success)
-      .text("Amount Due", totalsX, rowY, {
-        width: 100,
-      })
-      .text(
-        formatMoney(bill.amountDue, bill.currency),
-        valueX,
-        rowY,
-        {
-          width: 72,
-          align: "right",
-        },
-      );
+      .fillColor(COLORS.text)
+      .text("Amount Due", totalsX, rowY, { width: 100 })
+      .text(formatMoney(bill.amountDue, bill.currency), valueX, rowY, {
+        width: 72,
+        align: "right",
+      });
 
     /*
      * ---------------------------------------------------------
-     * PAYMENT TERMS
+     * PAYMENT TERMS / NOTES / BANK DETAILS — each section now
+     * measures its own text height before the next one starts.
      * ---------------------------------------------------------
      */
 
-    const lowerTop = rowY + 38;
+    const lowerTop = rowY + 34;
 
     doc
       .moveTo(left, lowerTop)
@@ -510,83 +519,52 @@ export function buildBillPdfBuffer(bill: IBill): Promise<Buffer> {
 
     let sectionY = lowerTop + 16;
 
-    sectionY = drawSectionLabel(
+    sectionY = drawSectionLabel(doc, "Payment Terms", left, sectionY);
+
+    doc.font("Helvetica").fontSize(9).fillColor(COLORS.muted);
+    sectionY = drawWrappedLine(
       doc,
-      "Payment Terms",
+      bill.paymentTerms || "—",
       left,
       sectionY,
+      499,
+      18,
     );
 
-    doc
-      .font("Helvetica")
-      .fontSize(9)
-      .fillColor(COLORS.muted)
-      .text(bill.paymentTerms || "—", left, sectionY, {
-        width: 499,
-      });
-
-    sectionY += 27;
-
-    /*
-     * ---------------------------------------------------------
-     * NOTES
-     * ---------------------------------------------------------
-     */
-
     if (bill.invoiceNotes) {
-      sectionY = drawSectionLabel(
+      sectionY = drawSectionLabel(doc, "Notes", left, sectionY);
+      doc.font("Helvetica").fontSize(9).fillColor(COLORS.muted);
+      sectionY = drawWrappedLine(
         doc,
-        "Notes",
+        bill.invoiceNotes,
         left,
         sectionY,
+        499,
+        18,
       );
-
-      doc
-        .font("Helvetica")
-        .fontSize(9)
-        .fillColor(COLORS.muted)
-        .text(bill.invoiceNotes, left, sectionY, {
-          width: 499,
-          lineGap: 2,
-        });
-
-      sectionY += 35;
     }
 
-    /*
-     * ---------------------------------------------------------
-     * BANK DETAILS
-     * ---------------------------------------------------------
-     */
-
     if (bill.bankDetails) {
-      sectionY = drawSectionLabel(
-        doc,
-        "Bank Details",
-        left,
-        sectionY,
-      );
+      sectionY = drawSectionLabel(doc, "Bank Details", left, sectionY);
 
-      // Light background for bank details
-      const bankHeight = Math.max(
-        48,
-        doc.heightOfString(bill.bankDetails, {
-          width: 475,
-          fontSize: 8.5,
-        }) + 22,
-      );
+      // A thin left rule instead of a full box — reads as a quiet aside,
+      // not another card competing for attention.
+      const bankHeight = doc.heightOfString(bill.bankDetails, { width: 475 });
 
       doc
-        .roundedRect(left, sectionY - 5, contentWidth, bankHeight, 4)
-        .fill("#FAF7F4");
+        .moveTo(left, sectionY - 2)
+        .lineTo(left, sectionY + bankHeight + 2)
+        .lineWidth(1.5)
+        .strokeColor(COLORS.border)
+        .stroke();
 
       doc
         .font("Helvetica")
         .fontSize(8.5)
         .fillColor(COLORS.muted)
-        .text(bill.bankDetails, left + 11, sectionY + 5, {
+        .text(bill.bankDetails, left + 12, sectionY, {
           width: 475,
-          lineGap: 2,
+          lineGap: 2.5,
         });
     }
 
@@ -609,15 +587,11 @@ export function buildBillPdfBuffer(bill: IBill): Promise<Buffer> {
       .font("Helvetica")
       .fontSize(7.5)
       .fillColor(COLORS.light)
-      .text(
-        "Videha Overseas Pvt. Ltd. · Export CRM",
-        left,
-        footerY,
-        {
-          width: 250,
-          align: "left",
-        },
-      )
+      .text("VIDEHA OVERSEAS PVT. LTD. · EXPORT CRM", left, footerY, {
+        width: 250,
+        align: "left",
+        characterSpacing: 0.4,
+      })
       .text(
         "This is a computer-generated invoice. No signature is required.",
         295,

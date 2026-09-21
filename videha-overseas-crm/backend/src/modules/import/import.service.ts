@@ -6,8 +6,9 @@ import { Customer, CUSTOMER_STATUSES } from "../../models/Customer";
 import { FollowUp, FOLLOWUP_TYPES, FOLLOWUP_STATUSES } from "../../models/FollowUp";
 import { Quotation, QUOTATION_STATUSES } from "../../models/Quotation";
 import { Order, ORDER_STATUSES } from "../../models/Order";
+import { SUPPLIER_STATUSES } from "../../models/Supplier";
 import { User } from "../../models/User";
-import { ImportSession, type ImportSessionRow } from "../../models/ImportSession";
+import { ImportSession, type ImportSessionRow, type ImportCustomerMatch, type ImportSupplierMatch } from "../../models/ImportSession";
 import {
   IMPORT_ENTITY_PERMISSION,
   IMPORT_ENTITY_TYPES,
@@ -38,6 +39,21 @@ import {
   nextQuotationCode,
 } from "../../utils/codes";
 import { writeAudit } from "../../services/audit.service";
+import {
+  resolveOrCreateCustomerForOrder,
+  dryRunResolveCustomer,
+  normalizePhone,
+} from "../../services/customerResolution.service";
+import {
+  dryRunResolveSupplier,
+  resolveOrCreateSupplierForImport,
+  matchSupplierAmongPriorCandidates,
+  supplierInputFromMapped,
+  toSupplierMatchCandidate,
+  type SupplierMatchCandidate,
+} from "../../services/supplierResolution.service";
+import { createBillFromOrder } from "../bills/bills.service";
+import { buildOrderReportingAmounts } from "../../utils/currency";
 import type { AuthUser } from "../../middleware/auth";
 import type { Response } from "express";
 import { safeLower, safeRegexExact, safeString } from "../../utils/importSafe";
@@ -168,6 +184,8 @@ function plainSessionRow(row: ImportSessionRow): ImportSessionRow {
     warnings: [...row.warnings],
     isDuplicate: row.isDuplicate,
     valid: row.valid,
+    customerMatch: row.customerMatch ? { ...row.customerMatch } : undefined,
+    supplierMatch: row.supplierMatch ? { ...row.supplierMatch } : undefined,
   };
 }
 
@@ -180,6 +198,54 @@ function formatImportError(error: unknown): string {
     return "Duplicate record detected during import.";
   }
   return error instanceof Error ? error.message : "Import failed.";
+}
+
+function applySupplierCsvDuplicateCheck(
+  mapped: Record<string, unknown>,
+  batchCandidates: SupplierMatchCandidate[],
+  errors: string[],
+  warnings: string[],
+  supplierMatch: ImportSupplierMatch | undefined,
+): {
+  errors: string[];
+  warnings: string[];
+  isDuplicate: boolean;
+  supplierMatch?: ImportSupplierMatch;
+} {
+  if (errors.length > 0) {
+    return { errors, warnings, isDuplicate: false, supplierMatch };
+  }
+
+  const input = supplierInputFromMapped(mapped);
+  const priorMatch = matchSupplierAmongPriorCandidates(input, batchCandidates);
+  if (priorMatch.type === "match") {
+    return {
+      errors: [...errors, "Duplicate in CSV"],
+      warnings,
+      isDuplicate: true,
+      supplierMatch: {
+        type: "duplicate_in_csv",
+        matchedBy: priorMatch.matchedBy,
+        supplierName: priorMatch.candidate.supplierName,
+        companyName: priorMatch.candidate.companyName,
+        supplierCode: priorMatch.candidate.supplierCode || undefined,
+        details: `Matches earlier CSV row${priorMatch.candidate.rowKey ? ` ${priorMatch.candidate.rowKey}` : ""}.`,
+      },
+    };
+  }
+  if (priorMatch.type === "ambiguous") {
+    return {
+      errors: [...errors, priorMatch.error],
+      warnings,
+      isDuplicate: true,
+      supplierMatch: {
+        type: "ambiguous",
+        details: priorMatch.error,
+      },
+    };
+  }
+
+  return { errors, warnings, isDuplicate: false, supplierMatch };
 }
 
 async function validateLeadRow(
@@ -413,7 +479,13 @@ async function validateQuotationRow(
 async function validateOrderRow(
   mapped: Record<string, string>,
   users: UserLookup,
-): Promise<{ mapped: Record<string, unknown>; errors: string[]; warnings: string[]; isDuplicate: boolean }> {
+): Promise<{
+  mapped: Record<string, unknown>;
+  errors: string[];
+  warnings: string[];
+  isDuplicate: boolean;
+  customerMatch?: ImportCustomerMatch;
+}> {
   const errors = validateRequired(IMPORT_FIELDS_BY_ENTITY.orders, mapped);
   const output: Record<string, unknown> = { ...mapped };
 
@@ -440,6 +512,7 @@ async function validateOrderRow(
   const companyRegex = safeRegexExact(company);
   const productsRegex = safeRegexExact(products);
 
+  const warnings: string[] = [];
   let isDuplicate = false;
   if (customerRegex && companyRegex && productsRegex) {
     const existing = await Order.findOne({
@@ -451,7 +524,99 @@ async function validateOrderRow(
     if (existing) errors.push(`Duplicate order already exists (${existing.orderCode}).`);
   }
 
-  return { mapped: output, errors, warnings: [], isDuplicate };
+  let customerMatch: ImportCustomerMatch | undefined;
+  if (customerName && company) {
+    const matchResult = await dryRunResolveCustomer({
+      customerName,
+      company,
+      email: safeLower(mapped.email) || null,
+      phone: safeString(mapped.phone) || null,
+      country: safeString(mapped.country) || null,
+    });
+
+    if (matchResult.type === "existing") {
+      customerMatch = {
+        type: "existing",
+        matchedBy: matchResult.matchedBy,
+        customerCode: matchResult.customerCode,
+        customerName: matchResult.customerName,
+        companyName: matchResult.companyName,
+      };
+      warnings.push(
+        `Matches existing customer ${matchResult.customerCode} (${matchResult.customerName} - ${matchResult.companyName}) via ${matchResult.matchedBy}`,
+      );
+    } else if (matchResult.type === "new") {
+      customerMatch = {
+        type: "new",
+        customerName,
+        companyName: company,
+      };
+    } else if (matchResult.type === "ambiguous") {
+      customerMatch = {
+        type: "ambiguous",
+        details: matchResult.error,
+      };
+      errors.push(matchResult.error || "Ambiguous customer match. Manual resolution required.");
+    } else if (matchResult.type === "error" && matchResult.error) {
+      errors.push(matchResult.error);
+    }
+  }
+
+  return { mapped: output, errors, warnings, isDuplicate, customerMatch };
+}
+
+async function validateSupplierRow(
+  mapped: Record<string, string>,
+): Promise<{
+  mapped: Record<string, unknown>;
+  errors: string[];
+  warnings: string[];
+  isDuplicate: boolean;
+  supplierMatch?: ImportSupplierMatch;
+}> {
+  const errors = validateRequired(IMPORT_FIELDS_BY_ENTITY.suppliers, mapped);
+  const output: Record<string, unknown> = { ...mapped };
+  const warnings: string[] = [];
+  let isDuplicate = false;
+
+  const status = safeString(mapped.status);
+  if (status && !SUPPLIER_STATUSES.includes(status as (typeof SUPPLIER_STATUSES)[number])) {
+    errors.push(`Invalid supplier status: ${status}`);
+  }
+
+  const matchResult = await dryRunResolveSupplier(supplierInputFromMapped(mapped));
+
+  let supplierMatch: ImportSupplierMatch | undefined;
+  if (matchResult.type === "existing") {
+    supplierMatch = {
+      type: "existing",
+      matchedBy: matchResult.matchedBy,
+      supplierCode: matchResult.supplierCode,
+      supplierName: matchResult.supplierName,
+      companyName: matchResult.companyName,
+    };
+    warnings.push(
+      matchResult.supplierCode
+        ? `Existing Supplier — will reuse ${matchResult.supplierCode}.`
+        : "Existing Supplier — will reuse matched record.",
+    );
+  } else if (matchResult.type === "new") {
+    supplierMatch = {
+      type: "new",
+      supplierName: matchResult.supplierName,
+      companyName: matchResult.companyName,
+    };
+  } else if (matchResult.type === "ambiguous") {
+    supplierMatch = {
+      type: "ambiguous",
+      details: matchResult.error,
+    };
+    errors.push(matchResult.error || "Ambiguous supplier match. Manual resolution required.");
+  } else if (matchResult.type === "error" && matchResult.error) {
+    errors.push(matchResult.error);
+  }
+
+  return { mapped: output, errors, warnings, isDuplicate, supplierMatch };
 }
 
 async function validateRow(
@@ -472,6 +637,8 @@ async function validateRow(
       return validateQuotationRow(mapped, users);
     case "orders":
       return validateOrderRow(mapped, users);
+    case "suppliers":
+      return validateSupplierRow(mapped);
     default:
       throw new AppError("Unsupported import entity.", 400);
   }
@@ -523,6 +690,7 @@ async function importCustomerRow(mapped: Record<string, unknown>, actor: AuthUse
     name: safeString(mapped.name),
     email: safeLower(mapped.email),
     phone: safeString(mapped.phone),
+    normalizedPhone: normalizePhone(safeString(mapped.phone)),
     whatsAppNumber: safeString(mapped.whatsAppNumber),
     designation: safeString(mapped.designation),
     isPrimaryContact: Boolean(mapped.isPrimaryContact),
@@ -579,26 +747,70 @@ async function importQuotationRow(mapped: Record<string, unknown>, actor: AuthUs
 }
 
 async function importOrderRow(mapped: Record<string, unknown>, actor: AuthUser) {
+  const customerName = safeString(mapped.customerName);
+  const company = safeString(mapped.company);
+  const email = safeLower(mapped.email);
+  const phone = safeString(mapped.phone);
+  const country = safeString(mapped.country);
+  const orderValue = Number(mapped.orderValue) || 0;
+  const statusRaw = safeString(mapped.status) || "Order Confirmed";
+  const isDraft = statusRaw === "Draft";
+  const billingStatus = isDraft ? "draft" : "pending";
+
+  const resolved = await resolveOrCreateCustomerForOrder(
+    {
+      customerName,
+      company,
+      email: email || null,
+      phone: phone || null,
+      country: country || null,
+      notes: safeString(mapped.notes) || null,
+      assignedToId: mapped.assignedToId ? (mapped.assignedToId as Types.ObjectId) : null,
+    },
+    actor.id,
+  );
+
   const orderCode = await nextOrderCode();
-  await Order.create({
+  const currency = safeString(mapped.currency) || "USD";
+  const reporting = buildOrderReportingAmounts(
+    { orderValue, amountPaid: 0, amountDue: orderValue },
+    currency,
+  );
+  const order = await Order.create({
     orderCode,
-    customerName: safeString(mapped.customerName),
-    company: safeString(mapped.company),
-    phone: safeString(mapped.phone),
-    email: safeLower(mapped.email),
-    country: safeString(mapped.country),
+    customerName: resolved.customer.name,
+    company: resolved.company.name,
+    phone: phone || resolved.customer.phone || "",
+    email: email || resolved.customer.email || "",
+    country: country || resolved.company.country || "",
     products: safeString(mapped.products),
-    quantity: safeString(mapped.quantity),
-    orderValue: Number(mapped.orderValue) || 0,
-    currency: safeString(mapped.currency) || "USD",
-    status: safeString(mapped.status) || "Order Confirmed",
+    quantity: safeString(mapped.quantity) || "1",
+    orderValue,
+    currency,
+    exchangeRateSnapshot: reporting.exchangeRateSnapshot,
+    reportingAmountINR: reporting.reportingAmountINR,
+    status: statusRaw as (typeof ORDER_STATUSES)[number],
+    billingStatus,
+    amountPaid: 0,
+    amountDue: orderValue,
+    billId: null,
     destinationPort: safeString(mapped.destinationPort),
     shippingCarrier: safeString(mapped.shippingCarrier),
     trackingNumber: safeString(mapped.trackingNumber),
+    companyId: resolved.company._id,
+    customerId: resolved.customer._id,
     assignedToId: mapped.assignedToId ? (mapped.assignedToId as Types.ObjectId) : null,
     notes: safeString(mapped.notes),
     createdById: new Types.ObjectId(actor.id),
   });
+
+  if (!isDraft) {
+    await createBillFromOrder(String(order._id), actor.id);
+  }
+}
+
+async function importSupplierRow(mapped: Record<string, unknown>, actor: AuthUser) {
+  await resolveOrCreateSupplierForImport(supplierInputFromMapped(mapped), actor.id);
 }
 
 async function importRow(
@@ -619,6 +831,8 @@ async function importRow(
       return importQuotationRow(mapped, actor);
     case "orders":
       return importOrderRow(mapped, actor);
+    case "suppliers":
+      return importSupplierRow(mapped, actor);
     default:
       throw new AppError("Unsupported import entity.", 400);
   }
@@ -688,6 +902,7 @@ export async function previewImport(
 
   const rows: ImportSessionRow[] = [];
   const batchDuplicateKeys = new Set<string>();
+  const supplierBatchCandidates: SupplierMatchCandidate[] = [];
   for (let index = 0; index < rawRows.length; index++) {
     const raw = rawRows[index];
     const mappedStrings = applyMapping(raw, mapping);
@@ -695,6 +910,8 @@ export async function previewImport(
     let errors: string[] = [];
     let warnings: string[] = [];
     let isDuplicate = false;
+    let customerMatch: ImportCustomerMatch | undefined;
+    let supplierMatch: ImportSupplierMatch | undefined;
 
     try {
       const result = await validateRow(entityType, mappedStrings, users);
@@ -702,6 +919,12 @@ export async function previewImport(
       errors = result.errors;
       warnings = result.warnings;
       isDuplicate = result.isDuplicate;
+      if ("customerMatch" in result) {
+        customerMatch = (result as { customerMatch?: ImportCustomerMatch }).customerMatch;
+      }
+      if ("supplierMatch" in result) {
+        supplierMatch = (result as { supplierMatch?: ImportSupplierMatch }).supplierMatch;
+      }
     } catch (error) {
       errors = [error instanceof Error ? error.message : "Validation failed."];
     }
@@ -716,6 +939,26 @@ export async function previewImport(
       }
     }
 
+    if (entityType === "suppliers") {
+      const csvDuplicateCheck = applySupplierCsvDuplicateCheck(
+        mapped,
+        supplierBatchCandidates,
+        errors,
+        warnings,
+        supplierMatch,
+      );
+      errors = csvDuplicateCheck.errors;
+      warnings = csvDuplicateCheck.warnings;
+      isDuplicate = csvDuplicateCheck.isDuplicate;
+      supplierMatch = csvDuplicateCheck.supplierMatch;
+
+      if (errors.length === 0) {
+        supplierBatchCandidates.push(
+          toSupplierMatchCandidate(supplierInputFromMapped(mapped), String(index + 2)),
+        );
+      }
+    }
+
     rows.push({
       rowNumber: index + 2,
       raw,
@@ -724,6 +967,8 @@ export async function previewImport(
       warnings,
       isDuplicate,
       valid: errors.length === 0,
+      customerMatch,
+      supplierMatch,
     });
   }
 
@@ -770,6 +1015,7 @@ export async function confirmImport(sessionId: string, actor: AuthUser) {
   let imported = 0;
   const failed: ImportSessionRow[] = [];
   const batchImportedKeys = new Set<string>();
+  const supplierImportCandidates: SupplierMatchCandidate[] = [];
 
   for (const row of importable) {
     const plainRow = plainSessionRow(row);
@@ -787,11 +1033,41 @@ export async function confirmImport(sessionId: string, actor: AuthUser) {
         }
       }
 
+      if (session.entityType === "suppliers") {
+        const csvDuplicateCheck = applySupplierCsvDuplicateCheck(
+          plainRow.mapped,
+          supplierImportCandidates,
+          plainRow.errors,
+          plainRow.warnings,
+          plainRow.supplierMatch,
+        );
+        if (csvDuplicateCheck.isDuplicate) {
+          failed.push({
+            ...plainRow,
+            valid: false,
+            errors: csvDuplicateCheck.errors,
+            warnings: csvDuplicateCheck.warnings,
+            isDuplicate: true,
+            supplierMatch: csvDuplicateCheck.supplierMatch,
+          });
+          continue;
+        }
+      }
+
       await importRow(session.entityType, plainRow.mapped, actor);
 
       if (session.entityType === "leads") {
         const batchKey = getLeadDuplicateKeyFromMapped(plainRow.mapped);
         if (batchKey) batchImportedKeys.add(batchKey);
+      }
+
+      if (session.entityType === "suppliers") {
+        supplierImportCandidates.push(
+          toSupplierMatchCandidate(
+            supplierInputFromMapped(plainRow.mapped),
+            String(plainRow.rowNumber),
+          ),
+        );
       }
 
       imported++;

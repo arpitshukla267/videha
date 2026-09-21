@@ -1,5 +1,11 @@
 import { Types } from "mongoose";
-import { Order, ORDER_STATUSES, type OrderStatus } from "../../models/Order";
+import {
+  Order,
+  ORDER_STATUSES,
+  ORDER_BILLING_STATUSES,
+  type OrderStatus,
+  type OrderBillingStatus,
+} from "../../models/Order";
 import { OrderStatusHistory } from "../../models/OrderStatusHistory";
 import { Shipment } from "../../models/Shipment";
 import { User } from "../../models/User";
@@ -13,6 +19,8 @@ import { withTransaction } from "../../utils/transactions";
 import { writeAudit } from "../../services/audit.service";
 import { createNotification } from "../../services/notification.service";
 import { createBillFromOrder } from "../bills/bills.service";
+import { buildOrderReportingAmounts } from "../../utils/currency";
+import { resolveOrCreateCustomerForOrder } from "../../services/customerResolution.service";
 import type { AuthUser } from "../../middleware/auth";
 import { exportFilename } from "../../utils/csv";
 import { streamCsvExport } from "../../utils/csvExport";
@@ -21,7 +29,7 @@ import { ORDER_EXPORT_COLUMNS } from "../../constants/exportColumns";
 const POPULATE = [{ path: "assignedToId", select: "name email" }];
 
 const LIST_SELECT =
-  "orderCode customerName company phone email country products quantity orderValue currency assignedToId status expectedDelivery notes destinationPort shippingCarrier trackingNumber relatedLeadId createdById revision createdAt updatedAt";
+  "orderCode customerName company phone email country products quantity orderValue currency assignedToId status billingStatus amountPaid amountDue billId expectedDelivery notes destinationPort shippingCarrier trackingNumber relatedLeadId companyId customerId createdById revision createdAt updatedAt";
 
 async function historyFor(orderId: string) {
   const docs = await OrderStatusHistory.find({ orderId }).sort({ createdAt: 1 });
@@ -33,6 +41,8 @@ function buildOrdersQuery(filters: {
   status?: string;
   country?: string;
   assignedMemberId?: string;
+  customerId?: string;
+  companyId?: string;
   sortBy?: string;
   sortOrder?: "asc" | "desc";
 }) {
@@ -45,6 +55,14 @@ function buildOrdersQuery(filters: {
   if (filters.assignedMemberId && filters.assignedMemberId !== "all") {
     assertObjectId(filters.assignedMemberId, "assignedMemberId");
     query.assignedToId = filters.assignedMemberId;
+  }
+  if (filters.customerId && filters.customerId !== "all") {
+    assertObjectId(filters.customerId, "customerId");
+    query.customerId = filters.customerId;
+  }
+  if (filters.companyId && filters.companyId !== "all") {
+    assertObjectId(filters.companyId, "companyId");
+    query.companyId = filters.companyId;
   }
   if (filters.search?.trim()) {
     const s = filters.search.trim();
@@ -107,6 +125,8 @@ export async function listOrders(filters: {
   status?: string;
   country?: string;
   assignedMemberId?: string;
+  customerId?: string;
+  companyId?: string;
   page?: unknown;
   limit?: unknown;
   sortBy?: string;
@@ -180,58 +200,110 @@ export async function createOrder(body: Record<string, unknown>, actor: AuthUser
   const assignee = await User.findById(assignedMemberId);
   if (!assignee) throw new AppError("Assigned member not found.", 400);
 
-  const statusRaw = (body.orderStatus ?? body.status ?? "Order Confirmed") as string;
+  let statusRaw = (body.orderStatus ?? body.status ?? "Order Confirmed") as string;
+  if (statusRaw === "Confirmed") statusRaw = "Order Confirmed";
+  if (statusRaw === "Processing" || statusRaw === "In Progress") statusRaw = "Processing";
+
   if (!ORDER_STATUSES.includes(statusRaw as OrderStatus)) {
     throw new AppError(`Invalid order status: ${statusRaw}`, 400);
   }
 
-  const orderPayload = {
-    customerName: customerName.trim(),
-    company: company.trim(),
-    phone: (body.phone as string) || "",
-    email: (body.email as string) || "",
-    country: (body.country as string) || "United Arab Emirates",
-    products: products.trim(),
-    quantity: (body.quantity as string) || "Standard Container Batch",
-    orderValue: Number(body.orderValue) || 0,
-    currency: (body.currency as string) || "USD",
-    assignedToId: assignedMemberId,
-    status: statusRaw as OrderStatus,
-    expectedDelivery: new Date(expectedDelivery),
-    notes: (body.notes as string) || "",
-    destinationPort: (body.destinationPort as string) || "",
-    shippingCarrier: (body.shippingCarrier as string) || "",
-    trackingNumber: (body.trackingNumber as string) || "",
-    relatedLeadId: optionalObjectId((body.relatedLeadId as string) || null),
-    companyId: optionalObjectId((body.companyId as string) || null),
-    customerId: optionalObjectId((body.customerId as string) || null),
-    createdById: actor.id,
-    clientRequestId: clientRequestId ?? null,
-  };
+  const orderValue = Number(body.orderValue) || 0;
+  const isDraft = statusRaw === "Draft";
+  const initialBillingStatus = isDraft ? "draft" : "pending";
 
-  let order: InstanceType<typeof Order> | null = null;
-  for (let attempt = 0; attempt < 5; attempt++) {
-    try {
-      const orderCode = await nextOrderCode();
-      order = await Order.create({ ...orderPayload, orderCode });
-      break;
-    } catch (error: unknown) {
-      if (isDuplicateKeyError(error, "orderCode") && attempt < 4) continue;
-      throw error;
+  const order = await withTransaction(async (session) => {
+    // 1. Resolve or create customer & company safely without duplicates
+    const resolved = await resolveOrCreateCustomerForOrder(
+      {
+        customerId: optionalObjectId((body.customerId as string) || null),
+        customerCode: (body.customerCode as string) || null,
+        relatedLeadId: optionalObjectId((body.relatedLeadId as string) || null),
+        customerName,
+        company,
+        email: (body.email as string) || null,
+        phone: (body.phone as string) || null,
+        country: (body.country as string) || null,
+        notes: (body.notes as string) || null,
+        assignedToId: assignedMemberId,
+      },
+      actor.id,
+      session,
+    );
+
+    const currency = (body.currency as string) || "USD";
+    const reporting = buildOrderReportingAmounts(
+      { orderValue, amountPaid: 0, amountDue: orderValue },
+      currency,
+    );
+
+    const orderPayload = {
+      customerName: resolved.customer.name,
+      company: resolved.company.name,
+      phone: (body.phone as string) || resolved.customer.phone || "",
+      email: (body.email as string) || resolved.customer.email || "",
+      country: (body.country as string) || resolved.company.country || "United Arab Emirates",
+      products: products.trim(),
+      quantity: (body.quantity as string) || "Standard Container Batch",
+      orderValue,
+      currency,
+      exchangeRateSnapshot: reporting.exchangeRateSnapshot,
+      reportingAmountINR: reporting.reportingAmountINR,
+      assignedToId: assignedMemberId,
+      status: statusRaw as OrderStatus,
+      billingStatus: initialBillingStatus,
+      amountPaid: 0,
+      amountDue: orderValue,
+      billId: null,
+      expectedDelivery: new Date(expectedDelivery),
+      notes: (body.notes as string) || "",
+      destinationPort: (body.destinationPort as string) || "",
+      shippingCarrier: (body.shippingCarrier as string) || "",
+      trackingNumber: (body.trackingNumber as string) || "",
+      relatedLeadId: optionalObjectId((body.relatedLeadId as string) || null),
+      companyId: resolved.company._id,
+      customerId: resolved.customer._id,
+      createdById: new Types.ObjectId(actor.id),
+      clientRequestId: clientRequestId ?? null,
+    };
+
+    let createdOrder: InstanceType<typeof Order> | null = null;
+    for (let attempt = 0; attempt < 5; attempt++) {
+      try {
+        const orderCode = await nextOrderCode();
+        const docs = await Order.create([{ ...orderPayload, orderCode }], { session });
+        createdOrder = docs[0];
+        break;
+      } catch (error: unknown) {
+        if (isDuplicateKeyError(error, "orderCode") && attempt < 4) continue;
+        throw error;
+      }
     }
-  }
 
-  if (!order) {
-    throw new AppError("Failed to allocate a unique order code.", 500);
-  }
+    if (!createdOrder) {
+      throw new AppError("Failed to allocate a unique order code.", 500);
+    }
 
-  await OrderStatusHistory.create({
-    orderId: order._id,
-    previousStatus: null,
-    newStatus: order.status,
-    changedById: actor.id,
-    changedByName: actor.name,
-    notes: "Order created",
+    // 2. Automatically create exactly ONE linked Bill if confirmed
+    if (!isDraft) {
+      await createBillFromOrder(String(createdOrder._id), actor.id, session);
+    }
+
+    await OrderStatusHistory.create(
+      [
+        {
+          orderId: createdOrder._id,
+          previousStatus: null,
+          newStatus: createdOrder.status,
+          changedById: actor.id,
+          changedByName: actor.name,
+          notes: isDraft ? "Order created in draft" : "Order created & confirmed with billing pending",
+        },
+      ],
+      { session },
+    );
+
+    return createdOrder;
   });
 
   await writeAudit({
@@ -241,7 +313,7 @@ export async function createOrder(body: Record<string, unknown>, actor: AuthUser
     action: "Order Created",
     entity: "Order",
     entityId: String(order._id),
-    details: `Created order ${order.orderCode} for ${order.company} ($${order.orderValue}).`,
+    details: `Created order ${order.orderCode} for ${order.company} ($${order.orderValue}). Billing: ${order.billingStatus}.`,
   });
 
   await order.populate(POPULATE);
@@ -286,10 +358,72 @@ export async function updateOrder(id: string, body: Record<string, unknown>, act
     }
   }
 
+  if (body.billingStatus !== undefined) {
+    const billingStatus = String(body.billingStatus);
+    if (!ORDER_BILLING_STATUSES.includes(billingStatus as OrderBillingStatus)) {
+      throw new AppError("Invalid billing status.", 400);
+    }
+    setFields.billingStatus = billingStatus;
+  }
+
+  if (body.amountPaid !== undefined) {
+    const amountPaid = Math.max(0, Number(body.amountPaid) || 0);
+    setFields.amountPaid = amountPaid;
+  }
+
   if (Object.keys(setFields).length === 0) {
     const order = await Order.findById(id).populate(POPULATE);
     if (!order) throw new AppError("Order not found.", 404);
     return serializeOrder(order.toObject() as unknown as Record<string, unknown>);
+  }
+
+  const existing = await Order.findById(id);
+  if (!existing) throw new AppError("Order not found.", 404);
+
+  const nextOrderValue =
+    setFields.orderValue !== undefined ? Number(setFields.orderValue) || 0 : existing.orderValue;
+  const nextCurrency =
+    setFields.currency !== undefined ? String(setFields.currency) : existing.currency;
+  const nextAmountPaid =
+    setFields.amountPaid !== undefined ? Number(setFields.amountPaid) || 0 : existing.amountPaid;
+
+  if (setFields.amountPaid !== undefined) {
+    const due = Math.max(0, Math.round((nextOrderValue - nextAmountPaid) * 100) / 100);
+    setFields.amountDue = due;
+    if (body.billingStatus === undefined) {
+      if (due <= 0 && nextAmountPaid > 0) {
+        setFields.billingStatus = "paid";
+      } else if (nextAmountPaid > 0) {
+        setFields.billingStatus = "partially_paid";
+      } else if (existing.billingStatus !== "draft" && existing.billingStatus !== "void") {
+        setFields.billingStatus = "pending";
+      }
+    }
+  }
+
+  const nextAmountDue =
+    setFields.amountDue !== undefined ? Number(setFields.amountDue) || 0 : existing.amountDue;
+
+  if (
+    setFields.orderValue !== undefined ||
+    setFields.currency !== undefined ||
+    setFields.amountPaid !== undefined ||
+    setFields.amountDue !== undefined
+  ) {
+    const currencyChanged =
+      existing.exchangeRateSnapshot &&
+      existing.exchangeRateSnapshot.fromCurrency !== String(nextCurrency || "USD").trim().toUpperCase();
+    const reporting = buildOrderReportingAmounts(
+      {
+        orderValue: nextOrderValue,
+        amountPaid: nextAmountPaid,
+        amountDue: nextAmountDue,
+      },
+      nextCurrency,
+      currencyChanged ? null : existing.exchangeRateSnapshot,
+    );
+    setFields.exchangeRateSnapshot = reporting.exchangeRateSnapshot;
+    setFields.reportingAmountINR = reporting.reportingAmountINR;
   }
 
   const order = await applyOptimisticUpdate(Order, id, expectedRevision, setFields, {
@@ -378,11 +512,23 @@ export async function updateOrderStatus(
     details: `Transitioned status to ${status}. Notes: ${notes || "Standard progression"}`,
   });
 
-  if (result.status === "Delivered") {
+  // When an order is confirmed, if it doesn't have a linked bill yet, create initial Pending bill
+  if (result.status === "Order Confirmed" && !result.billId) {
     try {
       await createBillFromOrder(id, actor.id);
     } catch {
-      // Bill may already exist — safe to ignore
+      // Safe to ignore if exists
+    }
+  }
+
+  // NOTE: When an order is Delivered, the billing status must NOT be marked as Paid.
+  // Order status and Billing status are completely independent. Payment is user-controlled.
+  // If a bill does not exist for some legacy reason, ensure one is created as Pending (NOT Paid).
+  if (result.status === "Delivered" && !result.billId) {
+    try {
+      await createBillFromOrder(id, actor.id);
+    } catch {
+      // Safe to ignore if exists
     }
   }
 

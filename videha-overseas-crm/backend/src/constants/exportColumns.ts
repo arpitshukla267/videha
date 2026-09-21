@@ -113,8 +113,25 @@ export const ORDER_EXPORT_COLUMNS: ExportColumn<Row>[] = [
   col("Destination Port", "destinationPort"),
   col("Shipping Carrier", "shippingCarrier"),
   col("Tracking Number", "trackingNumber"),
-  col("Assigned To", "assignedMemberName"),
-  col("Notes", "notes"),
   dateCol("Created", "createdDate"),
+  dateCol("Updated", "updatedAt"),
+];
+
+export const SUPPLIER_EXPORT_COLUMNS: ExportColumn<Row>[] = [
+  col("Supplier Code", "supplierCode"),
+  col("Supplier Name", "supplierName"),
+  col("Company Name", "companyName"),
+  col("Contact Person", "contactPerson"),
+  col("Email", "email"),
+  col("Phone", "phone"),
+  col("Address", "address"),
+  col("Country", "country"),
+  col("Tax/GST/VAT", "taxId"),
+  col("Payment Terms", "paymentTerms"),
+  col("Products Supplied", "productsSupplied"),
+  col("Currency", "currency"),
+  col("Status", "status"),
+  col("Notes", "notes"),
+  dateCol("Created", "createdAt"),
   dateCol("Updated", "updatedAt"),
 ];

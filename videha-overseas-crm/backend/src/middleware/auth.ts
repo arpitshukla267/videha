@@ -6,7 +6,7 @@ import { User } from "../models/User";
 import { AppError } from "../utils/AppError";
 import { asyncHandler } from "../utils/asyncHandler";
 import { resolveRolePermissions } from "../constants/permissions";
-import type { RoleName } from "../models/Role";
+import type { RoleName, VisibilityScope } from "../models/Role";
 import type { IRole } from "../models/Role";
 
 export interface AuthUser {
@@ -16,6 +16,7 @@ export interface AuthUser {
   roleId: string;
   roleName: RoleName;
   departmentId: string | null;
+  visibilityScope: VisibilityScope;
   permissions: string[];
 }
 
@@ -101,6 +102,7 @@ export const authenticate = asyncHandler(async (req: Request, _res: Response, ne
     roleId,
     roleName: (role?.name || user.roleName) as RoleName,
     departmentId: user.departmentId ? String(user.departmentId) : null,
+    visibilityScope: (role?.visibilityScope || "own") as VisibilityScope,
     permissions: resolveRolePermissions(
       role?.name || user.roleName,
       role?.permissions,

@@ -6,23 +6,19 @@ import {
   ExternalLink,
   Eye,
   Clock,
-  CheckCircle2,
   Ship,
   Truck,
-  Building2,
   Calendar,
   DollarSign,
   ArrowRight,
-  Filter,
   LayoutGrid,
   List,
-  MapPin,
   UserCheck,
   Download,
   Upload
 } from 'lucide-react';
 import { api } from '../../api/client';
-import { Order, OrderStatus, OrderStatusHistory, User as CrmUser, Shipment } from '../../types/crm';
+import { Order, OrderStatus, OrderStatusHistory, User as CrmUser, Shipment, BillStatus } from '../../types/crm';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { Modal } from '../../components/ui/Modal';
 import { SearchableSelect } from '../../components/ui/SearchableSelect';
@@ -34,12 +30,45 @@ import { handleConflictWithReload, alertSaveError } from '../../lib/apiErrors';
 import { PaginationBar } from '../../components/ui/PaginationBar';
 import { createClientRequestId as generateClientRequestId } from '../../lib/clientRequestId';
 import { ImportWizard } from '../../components/import/ImportWizard';
+import { LIST_PAGE_SIZE } from '../../lib/pagination';
 
 interface OrdersPageProps {
   onNavigate: (tab: NavigationTab, entityId?: string) => void;
   onOpenPublicTracking: (orderCode: string) => void;
   focusOrderId?: string | null;
   onFocusConsumed?: () => void;
+}
+
+// Manifest palette — an ink/marine/brass system tied to freight paperwork,
+// deliberately not the generic emerald-SaaS or terracotta-AI defaults.
+const INK = '#182430';
+const INK_SOFT = '#4B5563';
+const INK_FAINT = '#8B8D85';
+const LINE = '#E2DED2';
+const PAPER = '#F6F4EE';
+const MARINE = '#155A52';
+const MARINE_DARK = '#0F4640';
+const RUST = '#A6402F';
+
+// Left-edge accent per order status, doubling as the milestone-history rail color.
+function orderStatusAccent(status: OrderStatus): string {
+  switch (status) {
+    case 'Delivered':
+      return 'bg-[#155A52]';
+    case 'Cancelled':
+      return 'bg-[#A6402F]';
+    case 'In Transit':
+    case 'Shipped':
+      return 'bg-[#2B6C8C]';
+    case 'Processing':
+    case 'Production':
+    case 'Packed':
+      return 'bg-[#9C6B25]';
+    case 'Order Confirmed':
+      return 'bg-[#3D7F76]';
+    default:
+      return 'bg-[#C9C2B2]';
+  }
 }
 
 export const OrdersPage: React.FC<OrdersPageProps> = ({
@@ -55,7 +84,7 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({
   const [currentPage, setCurrentPage] = useState(1);
   const [totalOrders, setTotalOrders] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
-  const [pageLimit] = useState(25);
+  const [pageLimit] = useState(LIST_PAGE_SIZE);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [countryFilter, setCountryFilter] = useState('all');
@@ -101,6 +130,18 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({
   const [nextStatus, setNextStatus] = useState<OrderStatus>('Processing');
   const [statusNotes, setStatusNotes] = useState('');
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [billingStatus, setBillingStatus] = useState<BillStatus>('pending');
+  const [amountPaid, setAmountPaid] = useState('0');
+  const [isUpdatingPayment, setIsUpdatingPayment] = useState(false);
+
+  const billingStatusOptions = [
+    { value: 'draft', label: 'Draft' },
+    { value: 'pending', label: 'Pending' },
+    { value: 'partially_paid', label: 'Partially Paid' },
+    { value: 'paid', label: 'Paid' },
+    { value: 'overdue', label: 'Overdue' },
+    { value: 'void', label: 'Void' }
+  ];
   const [isExporting, setIsExporting] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
 
@@ -167,6 +208,8 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({
       if (res.success) {
         setOrderDetail(res.data);
         setNextStatus(res.data.order.orderStatus);
+        setBillingStatus(res.data.order.billingStatus || 'pending');
+        setAmountPaid(String(res.data.order.amountPaid || 0));
       }
     } catch (err) {
       console.error('Failed to load order details:', err);
@@ -220,6 +263,37 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({
     }
   };
 
+  const handleUpdatePayment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!orderDetail) return;
+    const paid = Number(amountPaid) || 0;
+    const orderTotal = Number(orderDetail.order.totalAmount || orderDetail.order.orderValue) || 0;
+    if (paid > orderTotal) {
+      alert('Amount paid cannot exceed the order total.');
+      return;
+    }
+    setIsUpdatingPayment(true);
+    try {
+      const res = await api.orders.updateOrder(orderDetail.order.id, {
+        billingStatus,
+        amountPaid: paid,
+        revision: orderDetail.order.revision
+      });
+      if (res.success) {
+        await handleOpenDetail(orderDetail.order.id);
+        fetchOrders(currentPage);
+      }
+    } catch (err: unknown) {
+      await handleConflictWithReload(
+        err,
+        () => handleOpenDetail(orderDetail.order.id),
+        'Failed to update payment status'
+      );
+    } finally {
+      setIsUpdatingPayment(false);
+    }
+  };
+
   const handleUpdateStatus = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!orderDetail) return;
@@ -248,6 +322,7 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({
   };
 
   const orderStatuses: OrderStatus[] = [
+    'Draft',
     'Order Confirmed',
     'Processing',
     'Production',
@@ -266,99 +341,116 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({
     description: m.roleDisplayName || m.roleName
   }));
 
+  // Shared field styling for the create-order form — a plain underline
+  // rather than a boxed input, closer to filling out a shipping manifest.
+  const fieldClass =
+    'w-full px-0 py-2 bg-transparent border-0 border-b border-[#E2DED2] rounded-none text-sm text-[#182430] focus:outline-none focus:border-[#155A52] transition-colors placeholder:text-[#8B8D85]';
+  const labelClass = 'block text-xs text-[#4B5563] mb-1.5';
+
   return (
-    <div className="p-6 space-y-5 max-w-7xl mx-auto">
+    <div className="p-6 sm:p-8 space-y-6" style={{ backgroundColor: PAPER }}>
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h3 className="text-base font-semibold text-slate-800">Overseas Order Fulfillment</h3>
-          <p className="text-xs text-slate-500">
-            Export consignments, bills of lading, and international delivery status tracking
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {/* View Mode Toggle */}
-          <div className="flex items-center bg-slate-100 p-1 rounded-lg border border-slate-200">
-            <button
-              onClick={() => setViewMode('cards')}
-              className={`p-1.5 rounded-md text-xs font-medium flex items-center gap-1.5 transition-all ${
-                viewMode === 'cards'
-                  ? 'bg-white text-sky-700 shadow-2xs'
-                  : 'text-slate-600 hover:text-slate-800'
-              }`}
-              title="Card Form View"
-            >
-              <LayoutGrid className="w-3.5 h-3.5" />
-              <span className="hidden md:inline">Cards</span>
-            </button>
-            <button
-              onClick={() => setViewMode('table')}
-              className={`p-1.5 rounded-md text-xs font-medium flex items-center gap-1.5 transition-all ${
-                viewMode === 'table'
-                  ? 'bg-white text-sky-700 shadow-2xs'
-                  : 'text-slate-600 hover:text-slate-800'
-              }`}
-              title="Table View"
-            >
-              <List className="w-3.5 h-3.5" />
-              <span className="hidden md:inline">Table</span>
-            </button>
+      <div className="flex flex-col gap-5 pb-6 border-b" style={{ borderColor: LINE }}>
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight" style={{ color: INK }}>
+              Consignments
+            </h1>
+            <p className="text-sm mt-1.5 max-w-md" style={{ color: INK_SOFT }}>
+              Every overseas order, its shipping documents, and delivery milestones in one place.
+            </p>
           </div>
 
-          {hasPermission('orders.create') && (
-            <button
-              type="button"
-              onClick={() => setIsImportOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-2 bg-sky-50 text-sky-800 hover:bg-sky-100 border border-sky-200/80 rounded-lg text-xs font-medium transition-colors disabled:opacity-60"
-            >
-              <Upload className="w-3.5 h-3.5 text-sky-600" />
-              Import CSV
-            </button>
-          )}
+          <div className="flex flex-wrap items-center gap-2">
+            {/* View Mode Toggle */}
+            <div className="flex items-center gap-0.5 bg-white border rounded-md p-0.5" style={{ borderColor: LINE }}>
+              <button
+                onClick={() => setViewMode('cards')}
+                className="px-2.5 py-1.5 rounded text-sm font-medium flex items-center gap-1.5 transition-colors"
+                style={
+                  viewMode === 'cards'
+                    ? { backgroundColor: INK, color: '#fff' }
+                    : { color: INK_SOFT }
+                }
+                title="Card view"
+              >
+                <LayoutGrid className="w-4 h-4" />
+                <span className="hidden md:inline">Cards</span>
+              </button>
+              <button
+                onClick={() => setViewMode('table')}
+                className="px-2.5 py-1.5 rounded text-sm font-medium flex items-center gap-1.5 transition-colors"
+                style={
+                  viewMode === 'table'
+                    ? { backgroundColor: INK, color: '#fff' }
+                    : { color: INK_SOFT }
+                }
+                title="Table view"
+              >
+                <List className="w-4 h-4" />
+                <span className="hidden md:inline">Table</span>
+              </button>
+            </div>
 
-          {hasPermission('orders.view') && (
-            <button
-              type="button"
-              onClick={handleExportCsv}
-              disabled={isExporting}
-              className="inline-flex items-center gap-1.5 px-3 py-2 bg-teal-50 text-teal-800 hover:bg-teal-100 border border-teal-200/80 rounded-lg text-xs font-medium transition-colors disabled:opacity-60"
-            >
-              <Download className="w-3.5 h-3.5 text-teal-600" />
-              {isExporting ? 'Exporting…' : 'Export CSV'}
-            </button>
-          )}
+            {hasPermission('orders.create') && (
+              <button
+                type="button"
+                onClick={() => setIsImportOpen(true)}
+                className=" inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-white hover:bg-[#F6F4EE] border rounded-md text-sm font-medium transition-colors"
+                style={{ borderColor: LINE, color: INK }}
+              >
+                <Upload className="w-4 h-4" style={{ color: INK_SOFT }} />
+                Import
+              </button>
+            )}
 
-          {hasPermission('orders.create') && (
-            <button
-              onClick={() => {
-                setCreateRequestId(generateClientRequestId());
-                setIsCreateOpen(true);
-              }}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-xs font-medium transition-colors shadow-2xs"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Create New Order</span>
-            </button>
-          )}
+            {hasPermission('orders.view') && (
+              <button
+                type="button"
+                onClick={handleExportCsv}
+                disabled={isExporting}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-white hover:bg-[#F6F4EE] border rounded-md text-sm font-medium transition-colors disabled:opacity-60"
+                style={{ borderColor: LINE, color: INK }}
+              >
+                <Download className="w-4 h-4" style={{ color: INK_SOFT }} />
+                {isExporting ? 'Exporting…' : 'Export'}
+              </button>
+            )}
+
+            {hasPermission('orders.create') && (
+              <button
+                onClick={() => {
+                  setCreateRequestId(generateClientRequestId());
+                  setIsCreateOpen(true);
+                }}
+                className="inline-flex items-center gap-2 px-4 py-2.5 text-white rounded-md text-sm font-medium transition-colors"
+                style={{ backgroundColor: MARINE }}
+                onMouseEnter={e => (e.currentTarget.style.backgroundColor = MARINE_DARK)}
+                onMouseLeave={e => (e.currentTarget.style.backgroundColor = MARINE)}
+              >
+                <Plus className="w-4 h-4" />
+                <span>New order</span>
+              </button>
+            )}
+          </div>
         </div>
-      </div>
 
-      {/* Filter Row */}
-      <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-2xs">
+        {/* Filter Row */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="relative">
-            <Search className="w-3.5 h-3.5 absolute left-3 top-3 text-slate-400" />
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2" style={{ color: INK_FAINT }} />
             <input
               type="text"
-              placeholder="Search order code, company, products..."
+              placeholder="Search order code, company, products…"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="w-full pl-8 pr-3 py-1.5 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-sky-600 text-slate-800"
+              className="w-full pl-9 pr-3 py-2.5 bg-white border rounded-md text-sm focus:outline-none transition-shadow"
+              style={{ borderColor: LINE, color: INK }}
             />
           </div>
 
           <SearchableSelect
-            options={[{ value: 'all', label: 'All Order Statuses' }, ...statusOptions]}
+            options={[{ value: 'all', label: 'All order statuses' }, ...statusOptions]}
             value={statusFilter}
             onChange={setStatusFilter}
             placeholder="Status"
@@ -366,7 +458,7 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({
           />
 
           <SearchableSelect
-            options={[{ value: 'all', label: 'All Countries' }, ...countryOptions]}
+            options={[{ value: 'all', label: 'All countries' }, ...countryOptions]}
             value={countryFilter}
             onChange={setCountryFilter}
             placeholder="Country"
@@ -379,115 +471,139 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({
       {viewMode === 'cards' ? (
         <div>
           {isLoading ? (
-            <div className="py-16 text-center text-slate-400 bg-white border border-slate-200 rounded-xl">
-              Loading orders in card view...
+            <div className="py-16 text-center text-sm bg-white border rounded-lg" style={{ borderColor: LINE, color: INK_FAINT }}>
+              Loading consignments…
             </div>
           ) : orders.length === 0 ? (
-            <div className="py-16 text-center text-slate-400 bg-white border border-slate-200 rounded-xl">
-              No orders found matching the filter criteria.
+            <div className="py-16 text-center bg-white border rounded-lg" style={{ borderColor: LINE }}>
+              <Package className="w-8 h-8 mx-auto mb-3" style={{ color: INK_FAINT }} />
+              <p className="text-sm font-medium" style={{ color: INK }}>No orders match these filters</p>
+              <p className="text-xs mt-1" style={{ color: INK_FAINT }}>Try widening the search or clearing a filter.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4.5">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {orders.map(order => (
                 <div
                   key={order.id}
                   onClick={() => handleOpenDetail(order.id)}
-                  className="bg-white border border-slate-200 hover:border-sky-300 rounded-xl p-4 shadow-2xs hover:shadow-xs transition-all cursor-pointer flex flex-col justify-between group"
+                  className="group relative bg-white border rounded-lg cursor-pointer flex flex-col overflow-hidden transition-colors hover:border-[#182430]/30"
+                  style={{ borderColor: LINE }}
                 >
-                  <div>
-                    {/* Top Bar */}
-                    <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-slate-100">
-                      <span className="font-mono text-xs font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded">
-                        {order.orderCode}
-                      </span>
-                      <StatusBadge status={order.orderStatus} />
+                  {/* Milestone rail + tag punch-hole */}
+                  <div className={`h-[3px] w-full ${orderStatusAccent(order.orderStatus)}`} />
+                  {/* <span
+                    className="absolute left-4 top-0 -translate-y-1/2 w-2.5 h-2.5 rounded-full border"
+                    style={{ backgroundColor: PAPER, borderColor: LINE }}
+                  /> */}
+
+                  <div className="px-4 pt-4 pb-3.5 flex-1 flex flex-col gap-3">
+                    {/* Order code + status */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-[15px] font-medium tracking-tight" style={{ color: INK }}>
+                          {order.orderCode}
+                        </p>
+                        <p className="text-xs mt-0.5 truncate" style={{ color: INK_FAINT }}>
+                          {order.company}
+                        </p>
+                      </div>
+                      <div className="flex flex-col items-end gap-1 shrink-0">
+                        <StatusBadge status={order.orderStatus} />
+                        {order.billingStatus && <StatusBadge status={order.billingStatus} />}
+                      </div>
                     </div>
 
-                    {/* Buyer & Company */}
-                    <div className="mt-3">
-                      <h4 className="text-sm font-semibold text-slate-800 group-hover:text-sky-700 transition-colors leading-snug">
-                        {order.company}
-                      </h4>
-                      <p className="text-xs text-slate-600 mt-0.5 font-medium">
-                        {order.customerName}
-                      </p>
-                      <p className="text-[11px] text-slate-500 flex items-center gap-1 mt-1">
-                        <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
-                        <span className="truncate">
-                          {order.country}
-                          {order.destinationPort ? ` · ${order.destinationPort}` : ''}
-                        </span>
-                      </p>
+                    {/* Buyer */}
+                    <p className="text-[15px] font-semibold leading-snug truncate" style={{ color: INK }}>
+                      {order.customerName}
+                    </p>
+
+                    {/* Route */}
+                    <div className="flex items-center gap-1.5 text-sm min-w-0" style={{ color: INK_SOFT }}>
+                      <Truck className="w-3.5 h-3.5 shrink-0" style={{ color: INK_FAINT }} />
+                      <span className="truncate">{order.country}</span>
+                      {order.destinationPort && (
+                        <>
+                          <ArrowRight className="w-3 h-3 shrink-0" style={{ color: INK_FAINT }} />
+                          <span className="truncate">{order.destinationPort}</span>
+                        </>
+                      )}
                     </div>
 
-                    {/* Products Consignment Pill */}
-                    <div className="mt-3 bg-sky-50/70 border border-sky-100 rounded-lg p-2.5 text-xs">
-                      <div className="flex items-center justify-between text-[10px] text-sky-800 font-semibold mb-0.5 uppercase tracking-wider">
-                        <span>Consignment</span>
-                        <span className="bg-sky-100 text-sky-800 px-1.5 py-0.2 rounded font-normal">
+                    {/* Consignment line */}
+                    <div className="border-t border-dashed pt-3" style={{ borderColor: LINE }}>
+                      <div className="flex items-baseline justify-between gap-2">
+                        <p className="text-sm font-medium truncate" style={{ color: INK }} title={order.products}>
+                          {order.products}
+                        </p>
+                        <span className="text-xs shrink-0" style={{ color: INK_SOFT }}>
                           {order.quantity}
                         </span>
                       </div>
-                      <p className="text-slate-800 font-medium truncate" title={order.products}>
-                        {order.products}
-                      </p>
                     </div>
 
-                    {/* Order Metrics Grid */}
-                    <div className="grid grid-cols-2 gap-2 mt-2.5 text-[11px]">
-                      <div className="bg-slate-50 p-2 rounded-lg border border-slate-100">
-                        <span className="text-[10px] text-slate-400 block font-medium">Order Value</span>
-                        <span className="font-semibold text-emerald-700 text-xs">
-                          ${Number(order.orderValue).toLocaleString()} {order.currency}
-                        </span>
+                    {/* Ledger: total / paid / due */}
+                    <div className="grid grid-cols-3 border-t pt-3 text-sm" style={{ borderColor: LINE }}>
+                      <div>
+                        <p className="text-xs" style={{ color: INK_FAINT }}>Total</p>
+                        <p className="font-medium" style={{ color: INK }}>
+                          ${Number(order.totalAmount || order.orderValue).toLocaleString()}
+                        </p>
                       </div>
-                      <div className="bg-slate-50 p-2 rounded-lg border border-slate-100">
-                        <span className="text-[10px] text-slate-400 block font-medium">Expected Delivery</span>
-                        <span className="font-medium text-slate-700 flex items-center gap-1 mt-0.5">
-                          <Calendar className="w-3 h-3 text-slate-400 shrink-0" />
-                          {new Date(order.expectedDelivery).toLocaleDateString([], {
-                            month: 'short',
-                            day: 'numeric',
-                            year: 'numeric'
-                          })}
-                        </span>
+                      <div className="border-l pl-3" style={{ borderColor: LINE }}>
+                        <p className="text-xs" style={{ color: INK_FAINT }}>Paid</p>
+                        <p className="font-medium" style={{ color: MARINE }}>
+                          ${Number(order.amountPaid || 0).toLocaleString()}
+                        </p>
+                      </div>
+                      <div className="border-l pl-3" style={{ borderColor: LINE }}>
+                        <p className="text-xs" style={{ color: INK_FAINT }}>Due</p>
+                        <p className="font-medium" style={{ color: RUST }}>
+                          ${Number(order.amountDue ?? order.orderValue).toLocaleString()}
+                        </p>
                       </div>
                     </div>
 
-                    {/* Carrier & Tracking */}
-                    {order.trackingNumber && (
-                      <div className="mt-2.5 text-[11px] flex items-center justify-between bg-teal-50/60 border border-teal-100/80 px-2.5 py-1.5 rounded-lg text-teal-900">
-                        <div className="flex items-center gap-1.5 truncate">
-                          <Ship className="w-3.5 h-3.5 text-teal-600 shrink-0" />
-                          <span className="font-medium">{order.shippingCarrier || 'Carrier'}:</span>
-                          <span className="font-mono text-[10px] truncate">{order.trackingNumber}</span>
-                        </div>
-                      </div>
-                    )}
+                    {/* Delivery + carrier */}
+                    <div className="flex items-center justify-between gap-2 text-xs border-t pt-3" style={{ borderColor: LINE, color: INK_SOFT }}>
+                      <span className="flex items-center gap-1.5 shrink-0">
+                        <Calendar className="w-3.5 h-3.5" style={{ color: INK_FAINT }} />
+                        {new Date(order.expectedDelivery).toLocaleDateString([], {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric'
+                        })}
+                      </span>
+                      {order.trackingNumber && (
+                        <span className="flex items-center gap-1.5 truncate">
+                          <Ship className="w-3.5 h-3.5 shrink-0" style={{ color: INK_FAINT }} />
+                          {order.trackingNumber}
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   {/* Card Footer */}
-                  <div className="mt-4 pt-2.5 border-t border-slate-100 flex items-center justify-between">
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <div className="w-5 h-5 rounded-full bg-gradient-to-br from-sky-500 to-teal-600 text-white flex items-center justify-center text-[9px] font-bold shrink-0">
-                        {(order.assignedMemberName || 'VO').slice(0, 1).toUpperCase()}
-                      </div>
-                      <span className="text-[11px] text-slate-600 truncate max-w-[110px]" title={order.assignedMemberName}>
-                        {order.assignedMemberName || 'Unassigned'}
-                      </span>
-                    </div>
+                  <div className="flex items-center justify-between gap-2 px-4 py-3 border-t" style={{ borderColor: LINE }}>
+                    <span className="flex items-center gap-1.5 text-xs truncate min-w-0" style={{ color: INK_SOFT }}>
+                      <UserCheck className="w-3.5 h-3.5 shrink-0" style={{ color: INK_FAINT }} />
+                      <span className="truncate">{order.assignedMemberName || 'Unassigned'}</span>
+                    </span>
 
-                    <div className="flex items-center gap-1.5" onClick={e => e.stopPropagation()}>
+                    <div className="flex items-center gap-2 shrink-0" onClick={e => e.stopPropagation()}>
                       <button
                         onClick={() => handleOpenDetail(order.id)}
-                        className="px-2.5 py-1 bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200/80 rounded-lg text-[11px] font-medium transition-colors"
+                        className="text-xs font-medium transition-colors hover:underline"
+                        style={{ color: MARINE }}
                       >
-                        Manage Status
+                        Manage
                       </button>
+                      <span style={{ color: LINE }}>|</span>
                       <button
                         onClick={() => onOpenPublicTracking(order.orderCode)}
-                        className="p-1.5 text-teal-700 hover:text-teal-900 hover:bg-teal-50 rounded-lg border border-teal-200/70"
-                        title="Open Public Tracking Portal"
+                        className="p-1 transition-colors hover:text-[#182430]"
+                        style={{ color: INK_SOFT }}
+                        title="Open public tracking portal"
                       >
                         <ExternalLink className="w-3.5 h-3.5" />
                       </button>
@@ -500,96 +616,102 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({
         </div>
       ) : (
         /* Orders Table */
-        <div className="bg-white border border-slate-200 rounded-xl shadow-2xs overflow-hidden">
+        <div className="bg-white border rounded-lg overflow-hidden" style={{ borderColor: LINE }}>
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
+            <table className="w-full text-left text-sm border-collapse">
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-50/75 text-slate-600 font-semibold">
-                  <th className="py-3 px-4">Order Code</th>
-                  <th className="py-3 px-4">Buyer & Company</th>
-                  <th className="py-3 px-4">Consignment Products</th>
-                  <th className="py-3 px-4">Destination</th>
-                  <th className="py-3 px-4">Order Value</th>
-                  <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4">Expected Delivery</th>
-                  <th className="py-3 px-4">Assigned Member</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
+                <tr className="border-b" style={{ borderColor: LINE, color: INK_FAINT }}>
+                  <th className="py-3 px-4 font-medium text-xs">Order</th>
+                  <th className="py-3 px-4 font-medium text-xs">Buyer</th>
+                  <th className="py-3 px-4 font-medium text-xs">Consignment</th>
+                  <th className="py-3 px-4 font-medium text-xs">Destination</th>
+                  <th className="py-3 px-4 font-medium text-xs">Total</th>
+                  <th className="py-3 px-4 font-medium text-xs">Paid / due</th>
+                  <th className="py-3 px-4 font-medium text-xs">Status</th>
+                  <th className="py-3 px-4 font-medium text-xs">Billing</th>
+                  <th className="py-3 px-4 font-medium text-xs">Delivery</th>
+                  <th className="py-3 px-4 font-medium text-xs">Owner</th>
+                  <th className="py-3 px-4 font-medium text-xs text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y" style={{ borderColor: LINE }}>
                 {isLoading ? (
                   <tr>
-                    <td colSpan={9} className="py-12 text-center text-slate-400">
-                      Loading export orders...
+                    <td colSpan={11} className="py-14 text-center text-sm" style={{ color: INK_FAINT }}>
+                      Loading consignments…
                     </td>
                   </tr>
                 ) : orders.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="py-12 text-center text-slate-400">
-                      No orders found matching the filter criteria.
+                    <td colSpan={11} className="py-14 text-center text-sm" style={{ color: INK_FAINT }}>
+                      No orders match these filters.
                     </td>
                   </tr>
                 ) : (
                   orders.map(order => (
                     <tr
                       key={order.id}
-                      className="hover:bg-slate-50/70 transition-colors cursor-pointer group"
+                      className="cursor-pointer transition-colors hover:bg-[#F6F4EE]"
                       onClick={() => handleOpenDetail(order.id)}
                     >
-                      <td className="py-3 px-4 font-mono font-semibold text-slate-800 whitespace-nowrap">
+                      <td className="py-4 px-4 font-medium whitespace-nowrap text-sm" style={{ color: INK }}>
                         {order.orderCode}
                       </td>
-                      <td className="py-3 px-4 whitespace-nowrap">
-                        <p className="font-medium text-slate-800">{order.company}</p>
-                        <p className="text-[11px] text-slate-500">{order.customerName}</p>
+                      <td className="py-4 px-4 whitespace-nowrap">
+                        <p className="font-medium text-sm" style={{ color: INK }}>{order.company}</p>
+                        <p className="text-xs mt-0.5" style={{ color: INK_FAINT }}>{order.customerName}</p>
                       </td>
-                      <td className="py-3 px-4 max-w-xs truncate" title={order.products}>
-                        <span className="font-medium text-slate-700">{order.products}</span>
-                        <span className="text-[11px] text-slate-400 block">{order.quantity}</span>
+                      <td className="py-4 px-4 max-w-xs truncate" title={order.products}>
+                        <span className="font-medium text-sm" style={{ color: INK }}>{order.products}</span>
+                        <span className="text-xs block mt-0.5" style={{ color: INK_FAINT }}>{order.quantity}</span>
                       </td>
-                      <td className="py-3 px-4 whitespace-nowrap text-slate-700">
+                      <td className="py-4 px-4 whitespace-nowrap text-sm" style={{ color: INK_SOFT }}>
                         <span>{order.country}</span>
                         {order.destinationPort && (
-                          <span className="text-[10px] text-slate-400 block truncate max-w-[130px]">
+                          <span className="text-xs block truncate max-w-[130px] mt-0.5" style={{ color: INK_FAINT }}>
                             {order.destinationPort}
                           </span>
                         )}
                       </td>
-                      <td className="py-3 px-4 whitespace-nowrap font-semibold text-slate-800">
-                        ${Number(order.orderValue).toLocaleString()} {order.currency}
+                      <td className="py-4 px-4 whitespace-nowrap font-medium text-sm" style={{ color: INK }}>
+                        ${Number(order.totalAmount || order.orderValue).toLocaleString()}
                       </td>
-                      <td className="py-3 px-4 whitespace-nowrap">
+                      <td className="py-4 px-4 whitespace-nowrap text-sm">
+                        <span style={{ color: MARINE }}>${Number(order.amountPaid || 0).toLocaleString()}</span>
+                        <span style={{ color: LINE }}> / </span>
+                        <span style={{ color: RUST }}>${Number(order.amountDue ?? order.orderValue).toLocaleString()}</span>
+                      </td>
+                      <td className="py-4 px-4 whitespace-nowrap">
                         <StatusBadge status={order.orderStatus} />
                       </td>
-                      <td className="py-3 px-4 whitespace-nowrap text-slate-700">
-                        <span className="inline-flex items-center gap-1 font-medium">
-                          <Calendar className="w-3 h-3 text-slate-400" />
-                          {new Date(order.expectedDelivery).toLocaleDateString([], {
-                            month: 'short',
-                            day: 'numeric',
-                            year: 'numeric'
-                          })}
-                        </span>
+                      <td className="py-4 px-4 whitespace-nowrap">
+                        {order.billingStatus ? <StatusBadge status={order.billingStatus} /> : <span className="text-sm" style={{ color: INK_FAINT }}>—</span>}
                       </td>
-                      <td className="py-3 px-4 whitespace-nowrap text-slate-600">
+                      <td className="py-4 px-4 whitespace-nowrap text-sm" style={{ color: INK_SOFT }}>
+                        {new Date(order.expectedDelivery).toLocaleDateString([], {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric'
+                        })}
+                      </td>
+                      <td className="py-4 px-4 whitespace-nowrap text-sm" style={{ color: INK_SOFT }}>
                         {order.assignedMemberName || 'Unassigned'}
                       </td>
-                      <td
-                        className="py-3 px-4 text-right whitespace-nowrap"
-                        onClick={e => e.stopPropagation()}
-                      >
-                        <div className="flex items-center justify-end gap-1.5">
+                      <td className="py-4 px-4 text-right whitespace-nowrap" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-1">
                           <button
                             onClick={() => handleOpenDetail(order.id)}
-                            className="p-1.5 rounded-lg text-slate-500 hover:text-sky-700 hover:bg-sky-50"
-                            title="Manage Order Status & Timeline"
+                            className="p-2 rounded-md transition-colors hover:bg-[#F6F4EE]"
+                            style={{ color: INK_SOFT }}
+                            title="Manage order status and timeline"
                           >
                             <Eye className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => onOpenPublicTracking(order.orderCode)}
-                            className="p-1.5 rounded-lg text-teal-700 hover:text-teal-900 hover:bg-teal-50"
-                            title="Test Public Order Tracker"
+                            className="p-2 rounded-md transition-colors hover:bg-[#F6F4EE]"
+                            style={{ color: INK_SOFT }}
+                            title="Open public tracking portal"
                           >
                             <ExternalLink className="w-4 h-4" />
                           </button>
@@ -617,182 +739,189 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({
       <Modal
         isOpen={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}
-        title="Create New Consignment Order"
-        subtitle="Record buyer purchase order, delivery timeline, and shipping port"
+        title="Create new consignment order"
+        subtitle="Record the buyer's purchase order, delivery timeline, and shipping port"
         maxWidth="3xl"
       >
-        <form onSubmit={handleCreateOrder} className="space-y-4 text-xs">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block font-medium text-slate-700 mb-1">Company / Buyer *</label>
-              <input
-                type="text"
-                required
-                value={newOrderForm.company}
-                onChange={e => setNewOrderForm({ ...newOrderForm, company: e.target.value })}
-                placeholder="e.g. Al-Madina Hospitality Group"
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-sky-600 text-slate-800"
-              />
+        <form onSubmit={handleCreateOrder} className="space-y-6 text-sm">
+          {/* Section: buyer */}
+          <div className="space-y-4">
+            <p className="text-sm font-semibold pb-2 border-b" style={{ color: INK, borderColor: LINE }}>Buyer details</p>
+            <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+              <div>
+                <label className={labelClass}>Company / buyer</label>
+                <input
+                  type="text"
+                  required
+                  value={newOrderForm.company}
+                  onChange={e => setNewOrderForm({ ...newOrderForm, company: e.target.value })}
+                  placeholder="Al-Madina Hospitality Group"
+                  className={fieldClass}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Customer name</label>
+                <input
+                  type="text"
+                  required
+                  value={newOrderForm.customerName}
+                  onChange={e => setNewOrderForm({ ...newOrderForm, customerName: e.target.value })}
+                  placeholder="Sheikh Abdullah"
+                  className={fieldClass}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Phone</label>
+                <input
+                  type="text"
+                  value={newOrderForm.phone}
+                  onChange={e => setNewOrderForm({ ...newOrderForm, phone: e.target.value })}
+                  placeholder="+971 4 332 9900"
+                  className={fieldClass}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Email</label>
+                <input
+                  type="email"
+                  value={newOrderForm.email}
+                  onChange={e => setNewOrderForm({ ...newOrderForm, email: e.target.value })}
+                  placeholder="orders@company.com"
+                  className={fieldClass}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Destination country</label>
+                <SearchableSelect
+                  options={countryOptions}
+                  value={newOrderForm.country}
+                  onChange={country => setNewOrderForm({ ...newOrderForm, country })}
+                  placeholder="Select country"
+                  searchPlaceholder="Search countries…"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Section: consignment */}
+          <div className="space-y-4">
+            <p className="text-sm font-semibold pb-2 border-b" style={{ color: INK, borderColor: LINE }}>Consignment</p>
+            <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+              <div>
+                <label className={labelClass}>Products ordered</label>
+                <input
+                  type="text"
+                  required
+                  value={newOrderForm.products}
+                  onChange={e => setNewOrderForm({ ...newOrderForm, products: e.target.value })}
+                  placeholder="Handmade antique brass tableware, chafing dishes"
+                  className={fieldClass}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Quantity / volume</label>
+                <input
+                  type="text"
+                  value={newOrderForm.quantity}
+                  onChange={e => setNewOrderForm({ ...newOrderForm, quantity: e.target.value })}
+                  placeholder="1,200 sets or 2x 40ft containers"
+                  className={fieldClass}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Order value (USD)</label>
+                <input
+                  type="number"
+                  value={newOrderForm.orderValue}
+                  onChange={e => setNewOrderForm({ ...newOrderForm, orderValue: Number(e.target.value) })}
+                  className={`${fieldClass} font-mono`}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Expected delivery date</label>
+                <DateTimePicker
+                  value={newOrderForm.expectedDelivery}
+                  onChange={expectedDelivery => setNewOrderForm({ ...newOrderForm, expectedDelivery })}
+                  placeholder="Pick delivery date"
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Assigned member</label>
+                <SearchableSelect
+                  options={memberOptions}
+                  value={newOrderForm.assignedMemberId}
+                  onChange={assignedMemberId => setNewOrderForm({ ...newOrderForm, assignedMemberId })}
+                  placeholder="Select assignee"
+                  searchPlaceholder="Search members…"
+                  allowClear
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Section: shipping */}
+          <div className="space-y-4">
+            <p className="text-sm font-semibold pb-2 border-b" style={{ color: INK, borderColor: LINE }}>Shipping and logistics</p>
+            <div className="grid grid-cols-3 gap-x-6 gap-y-4">
+              <div>
+                <label className={labelClass}>Destination port</label>
+                <input
+                  type="text"
+                  value={newOrderForm.destinationPort}
+                  onChange={e => setNewOrderForm({ ...newOrderForm, destinationPort: e.target.value })}
+                  placeholder="Jebel Ali Port, Dubai"
+                  className={fieldClass}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Shipping carrier</label>
+                <input
+                  type="text"
+                  value={newOrderForm.shippingCarrier}
+                  onChange={e => setNewOrderForm({ ...newOrderForm, shippingCarrier: e.target.value })}
+                  placeholder="Maersk / MSC / DHL Global"
+                  className={fieldClass}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Bill of lading / tracking #</label>
+                <input
+                  type="text"
+                  value={newOrderForm.trackingNumber}
+                  onChange={e => setNewOrderForm({ ...newOrderForm, trackingNumber: e.target.value })}
+                  placeholder="MAEU7612093"
+                  className={`${fieldClass} font-mono`}
+                />
+              </div>
             </div>
             <div>
-              <label className="block font-medium text-slate-700 mb-1">Customer Name *</label>
-              <input
-                type="text"
-                required
-                value={newOrderForm.customerName}
-                onChange={e => setNewOrderForm({ ...newOrderForm, customerName: e.target.value })}
-                placeholder="e.g. Sheikh Abdullah"
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-sky-600 text-slate-800"
+              <label className={labelClass}>Internal order notes</label>
+              <textarea
+                rows={2}
+                value={newOrderForm.notes}
+                onChange={e => setNewOrderForm({ ...newOrderForm, notes: e.target.value })}
+                placeholder="Fumigation certifications, palletization instructions, etc."
+                className={`${fieldClass} resize-none`}
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <label className="block font-medium text-slate-700 mb-1">Phone</label>
-              <input
-                type="text"
-                value={newOrderForm.phone}
-                onChange={e => setNewOrderForm({ ...newOrderForm, phone: e.target.value })}
-                placeholder="+971 4 332 9900"
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-sky-600 text-slate-800"
-              />
-            </div>
-            <div>
-              <label className="block font-medium text-slate-700 mb-1">Email</label>
-              <input
-                type="email"
-                value={newOrderForm.email}
-                onChange={e => setNewOrderForm({ ...newOrderForm, email: e.target.value })}
-                placeholder="orders@company.com"
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-sky-600 text-slate-800"
-              />
-            </div>
-            <div>
-              <label className="block font-medium text-slate-700 mb-1">Destination Country</label>
-              <SearchableSelect
-                options={countryOptions}
-                value={newOrderForm.country}
-                onChange={country => setNewOrderForm({ ...newOrderForm, country })}
-                placeholder="Select country"
-                searchPlaceholder="Search countries…"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block font-medium text-slate-700 mb-1">Products Ordered *</label>
-              <input
-                type="text"
-                required
-                value={newOrderForm.products}
-                onChange={e => setNewOrderForm({ ...newOrderForm, products: e.target.value })}
-                placeholder="e.g. Handmade Antique Brass Tableware, Chafing Dishes"
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-sky-600 text-slate-800"
-              />
-            </div>
-            <div>
-              <label className="block font-medium text-slate-700 mb-1">Quantity / Volume</label>
-              <input
-                type="text"
-                value={newOrderForm.quantity}
-                onChange={e => setNewOrderForm({ ...newOrderForm, quantity: e.target.value })}
-                placeholder="e.g. 1,200 Sets or 2x 40ft Containers"
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-sky-600 text-slate-800"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <label className="block font-medium text-slate-700 mb-1">Order Value ($ USD)</label>
-              <input
-                type="number"
-                value={newOrderForm.orderValue}
-                onChange={e => setNewOrderForm({ ...newOrderForm, orderValue: Number(e.target.value) })}
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-sky-600 text-slate-800"
-              />
-            </div>
-            <div>
-              <label className="block font-medium text-slate-700 mb-1">Expected Delivery Date *</label>
-              <DateTimePicker
-                value={newOrderForm.expectedDelivery}
-                onChange={expectedDelivery => setNewOrderForm({ ...newOrderForm, expectedDelivery })}
-                placeholder="Pick delivery date"
-              />
-            </div>
-            <div>
-              <label className="block font-medium text-slate-700 mb-1">Assigned Member</label>
-              <SearchableSelect
-                options={memberOptions}
-                value={newOrderForm.assignedMemberId}
-                onChange={assignedMemberId => setNewOrderForm({ ...newOrderForm, assignedMemberId })}
-                placeholder="Select assignee"
-                searchPlaceholder="Search members…"
-                allowClear
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <label className="block font-medium text-slate-700 mb-1">Destination Port</label>
-              <input
-                type="text"
-                value={newOrderForm.destinationPort}
-                onChange={e => setNewOrderForm({ ...newOrderForm, destinationPort: e.target.value })}
-                placeholder="e.g. Jebel Ali Port, Dubai"
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-sky-600 text-slate-800"
-              />
-            </div>
-            <div>
-              <label className="block font-medium text-slate-700 mb-1">Shipping Carrier</label>
-              <input
-                type="text"
-                value={newOrderForm.shippingCarrier}
-                onChange={e => setNewOrderForm({ ...newOrderForm, shippingCarrier: e.target.value })}
-                placeholder="e.g. Maersk / MSC / DHL Global"
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-sky-600 text-slate-800"
-              />
-            </div>
-            <div>
-              <label className="block font-medium text-slate-700 mb-1">Bill of Lading / Tracking #</label>
-              <input
-                type="text"
-                value={newOrderForm.trackingNumber}
-                onChange={e => setNewOrderForm({ ...newOrderForm, trackingNumber: e.target.value })}
-                placeholder="e.g. MAEU7612093"
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-sky-600 text-slate-800"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block font-medium text-slate-700 mb-1">Internal Order Notes</label>
-            <textarea
-              rows={2}
-              value={newOrderForm.notes}
-              onChange={e => setNewOrderForm({ ...newOrderForm, notes: e.target.value })}
-              placeholder="Fumigation certifications, palletization instructions, etc."
-              className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-sky-600 text-slate-800"
-            />
-          </div>
-
-          <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+          <div className="flex justify-end gap-2 pt-3 border-t" style={{ borderColor: LINE }}>
             <button
               type="button"
               onClick={() => setIsCreateOpen(false)}
-              className="px-4 py-2 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 font-medium"
+              className="px-4 py-2.5 rounded-md border font-medium text-sm transition-colors hover:bg-[#F6F4EE]"
+              style={{ borderColor: LINE, color: INK }}
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmittingCreate}
-              className="px-5 py-2 rounded-lg bg-sky-600 hover:bg-sky-700 text-white font-medium disabled:opacity-50 transition-colors shadow-2xs"
+              className="px-5 py-2.5 rounded-md text-white font-medium text-sm disabled:opacity-50 transition-colors"
+              style={{ backgroundColor: MARINE }}
             >
-              {isSubmittingCreate ? 'Saving Order...' : 'Create Consignment Order'}
+              {isSubmittingCreate ? 'Saving order…' : 'Create consignment order'}
             </button>
           </div>
         </form>
@@ -805,75 +934,168 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({
           setSelectedOrderId(null);
           setOrderDetail(null);
         }}
-        title={orderDetail ? `${orderDetail.order.orderCode} · ${orderDetail.order.company}` : 'Order Details'}
-        subtitle={orderDetail ? `Destination: ${orderDetail.order.country} · Expected Delivery: ${new Date(orderDetail.order.expectedDelivery).toLocaleDateString()}` : ''}
+        title={orderDetail ? `${orderDetail.order.orderCode} · ${orderDetail.order.company}` : 'Order details'}
+        subtitle={orderDetail ? `Destination: ${orderDetail.order.country} · Expected delivery: ${new Date(orderDetail.order.expectedDelivery).toLocaleDateString()}` : ''}
         maxWidth="3xl"
       >
         {isLoadingDetail || !orderDetail ? (
-          <div className="py-12 text-center text-xs text-slate-400">Loading order timeline...</div>
+          <div className="py-12 text-center text-sm" style={{ color: INK_FAINT }}>Loading order timeline…</div>
         ) : (
-          <div className="space-y-6 text-xs">
+          <div className="space-y-5 text-sm">
             {/* Top Quick Actions Bar */}
-            <div className="flex flex-wrap items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl gap-2">
-              <div className="flex items-center gap-2">
-                <span className="text-slate-500 font-medium">Current Status:</span>
+            <div className="relative overflow-hidden flex flex-wrap items-center justify-between p-4 border rounded-lg gap-2" style={{ borderColor: LINE, backgroundColor: PAPER }}>
+              <span className={`absolute inset-y-0 left-0 w-1 ${orderStatusAccent(orderDetail.order.orderStatus)}`} />
+              <div className="flex items-center gap-2 flex-wrap pl-2">
+                <span className="font-medium text-sm" style={{ color: INK_SOFT }}>Order status:</span>
                 <StatusBadge status={orderDetail.order.orderStatus} />
+                <span className="font-medium ml-2 text-sm" style={{ color: INK_SOFT }}>Billing:</span>
+                {orderDetail.order.billingStatus ? (
+                  <StatusBadge status={orderDetail.order.billingStatus} />
+                ) : (
+                  <span className="text-sm" style={{ color: INK_FAINT }}>Pending</span>
+                )}
               </div>
-              <button
-                onClick={() => onOpenPublicTracking(orderDetail.order.orderCode)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-teal-50 text-teal-900 hover:bg-teal-100 border border-teal-200 rounded-lg font-medium transition-colors"
-              >
-                <ExternalLink className="w-3.5 h-3.5 text-teal-600" />
-                <span>Open in Public Order Tracker</span>
-              </button>
+              <div className="flex items-center gap-2">
+                {orderDetail.order.billId && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedOrderId(null);
+                      onNavigate('bills');
+                    }}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 bg-white border rounded-md font-medium text-sm transition-colors hover:bg-[#F6F4EE]"
+                    style={{ borderColor: LINE, color: INK }}
+                  >
+                    <DollarSign className="w-4 h-4" style={{ color: INK_SOFT }} />
+                    <span>View bill / invoice</span>
+                  </button>
+                )}
+                <button
+                  onClick={() => onOpenPublicTracking(orderDetail.order.orderCode)}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 bg-white border rounded-md font-medium text-sm transition-colors hover:bg-[#F6F4EE]"
+                  style={{ borderColor: LINE, color: INK }}
+                >
+                  <ExternalLink className="w-4 h-4" style={{ color: INK_SOFT }} />
+                  <span>Public tracker</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Financial Overview */}
+            <div className="grid grid-cols-3 p-4 border rounded-lg text-sm" style={{ borderColor: LINE }}>
+              <div>
+                <span className="text-xs block" style={{ color: INK_FAINT }}>Total order value</span>
+                <span className="text-base font-medium block mt-1" style={{ color: INK }}>
+                  ${Number(orderDetail.order.totalAmount || orderDetail.order.orderValue).toLocaleString()} {orderDetail.order.currency}
+                </span>
+              </div>
+              <div className="border-l pl-4" style={{ borderColor: LINE }}>
+                <span className="text-xs block" style={{ color: INK_FAINT }}>Amount paid</span>
+                <span className="text-base font-medium block mt-1" style={{ color: MARINE }}>
+                  ${Number(orderDetail.order.amountPaid || 0).toLocaleString()} {orderDetail.order.currency}
+                </span>
+              </div>
+              <div className="border-l pl-4" style={{ borderColor: LINE }}>
+                <span className="text-xs block" style={{ color: INK_FAINT }}>Amount due</span>
+                <span className="text-base font-medium block mt-1" style={{ color: RUST }}>
+                  ${Number(orderDetail.order.amountDue ?? orderDetail.order.orderValue).toLocaleString()} {orderDetail.order.currency}
+                </span>
+              </div>
             </div>
 
             {/* Consignment Profile */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 bg-white border border-slate-200 rounded-xl">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 border rounded-lg" style={{ borderColor: LINE }}>
               <div>
-                <span className="text-[10px] uppercase tracking-wider text-slate-400 block">Customer</span>
-                <span className="font-medium text-slate-800 block mt-0.5">{orderDetail.order.customerName}</span>
+                <span className="text-xs block" style={{ color: INK_FAINT }}>Customer</span>
+                <span className="font-medium block mt-1 text-sm" style={{ color: INK }}>{orderDetail.order.customerName}</span>
               </div>
               <div>
-                <span className="text-[10px] uppercase tracking-wider text-slate-400 block">Phone</span>
-                <span className="font-medium text-slate-800 block mt-0.5">{orderDetail.order.phone || '—'}</span>
+                <span className="text-xs block" style={{ color: INK_FAINT }}>Phone</span>
+                <span className="font-medium block mt-1 text-sm" style={{ color: INK }}>{orderDetail.order.phone || '—'}</span>
               </div>
               <div>
-                <span className="text-[10px] uppercase tracking-wider text-slate-400 block">Order Value</span>
-                <span className="font-semibold text-emerald-700 block mt-0.5">
-                  ${Number(orderDetail.order.orderValue).toLocaleString()} {orderDetail.order.currency}
-                </span>
+                <span className="text-xs block" style={{ color: INK_FAINT }}>Company</span>
+                <span className="font-semibold block mt-1 text-sm" style={{ color: INK }}>{orderDetail.order.company}</span>
               </div>
               <div>
-                <span className="text-[10px] uppercase tracking-wider text-slate-400 block">Assigned Member</span>
-                <span className="font-medium text-slate-800 block mt-0.5">{orderDetail.order.assignedMemberName}</span>
+                <span className="text-xs block" style={{ color: INK_FAINT }}>Assigned member</span>
+                <span className="font-medium block mt-1 text-sm" style={{ color: INK }}>{orderDetail.order.assignedMemberName}</span>
               </div>
               <div className="col-span-2">
-                <span className="text-[10px] uppercase tracking-wider text-slate-400 block">Products</span>
-                <span className="font-medium text-slate-800 block mt-0.5">{orderDetail.order.products}</span>
+                <span className="text-xs block" style={{ color: INK_FAINT }}>Products</span>
+                <span className="font-medium block mt-1 text-sm" style={{ color: INK }}>{orderDetail.order.products}</span>
               </div>
               <div>
-                <span className="text-[10px] uppercase tracking-wider text-slate-400 block">Carrier</span>
-                <span className="font-medium text-slate-800 block mt-0.5">{orderDetail.order.shippingCarrier || '—'}</span>
+                <span className="text-xs block" style={{ color: INK_FAINT }}>Carrier</span>
+                <span className="font-medium block mt-1 text-sm" style={{ color: INK }}>{orderDetail.order.shippingCarrier || '—'}</span>
               </div>
               <div>
-                <span className="text-[10px] uppercase tracking-wider text-slate-400 block">Port / BL #</span>
-                <span className="font-medium text-slate-800 block mt-0.5 truncate">
+                <span className="text-xs block" style={{ color: INK_FAINT }}>Port / BL #</span>
+                <span className="block mt-1 text-sm truncate" style={{ color: INK }}>
                   {orderDetail.order.trackingNumber || orderDetail.order.destinationPort || '—'}
                 </span>
               </div>
             </div>
 
+            {/* Payment / Billing Update */}
+            {hasPermission('orders.edit') && (
+              <form onSubmit={handleUpdatePayment} className="p-4 border rounded-lg space-y-3" style={{ borderColor: LINE, backgroundColor: PAPER }}>
+                <h4 className="text-sm font-semibold" style={{ color: INK }}>
+                  Update payment status
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs mb-1.5" style={{ color: INK_SOFT }}>
+                      Billing status
+                    </label>
+                    <SearchableSelect
+                      options={billingStatusOptions}
+                      value={billingStatus}
+                      onChange={v => setBillingStatus(v as BillStatus)}
+                      placeholder="Select billing status"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs mb-1.5" style={{ color: INK_SOFT }}>
+                      Amount paid ({orderDetail.order.currency})
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      step={0.01}
+                      value={amountPaid}
+                      onChange={e => setAmountPaid(e.target.value)}
+                      className="w-full px-3.5 py-2.5 border rounded-md text-sm bg-white focus:outline-none focus:border-[#155A52] transition-colors"
+                      style={{ borderColor: LINE, color: INK }}
+                    />
+                  </div>
+                </div>
+                <p className="text-xs" style={{ color: INK_FAINT }}>
+                  Amount due will be recalculated automatically from the order total minus amount paid.
+                </p>
+                <div className="flex justify-end pt-1">
+                  <button
+                    type="submit"
+                    disabled={isUpdatingPayment}
+                    className="px-4 py-2 text-white rounded-md text-sm font-medium disabled:opacity-40 transition-colors"
+                    style={{ backgroundColor: MARINE }}
+                  >
+                    {isUpdatingPayment ? 'Saving…' : 'Update payment'}
+                  </button>
+                </div>
+              </form>
+            )}
+
             {/* Status Transition Control */}
             {hasPermission('orders.update_status') && (
-              <form onSubmit={handleUpdateStatus} className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
-                <h4 className="text-xs font-semibold text-slate-800 uppercase tracking-wider">
-                  Update Consignment Status
+              <form onSubmit={handleUpdateStatus} className="p-4 border rounded-lg space-y-3" style={{ borderColor: LINE, backgroundColor: PAPER }}>
+                <h4 className="text-sm font-semibold" style={{ color: INK }}>
+                  Update consignment status
                 </h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-[11px] font-medium text-slate-600 mb-1">
-                      Target Milestone
+                    <label className="block text-xs mb-1.5" style={{ color: INK_SOFT }}>
+                      Target milestone
                     </label>
                     <SearchableSelect
                       options={statusOptions}
@@ -884,15 +1106,16 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] font-medium text-slate-600 mb-1">
-                      Status Change Remarks / Milestone Notes
+                    <label className="block text-xs mb-1.5" style={{ color: INK_SOFT }}>
+                      Status change remarks
                     </label>
                     <input
                       type="text"
                       value={statusNotes}
                       onChange={e => setStatusNotes(e.target.value)}
-                      placeholder="e.g. Vessel departed Nhava Sheva port on schedule"
-                      className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs bg-white focus:outline-none focus:ring-1 focus:ring-sky-600 text-slate-800"
+                      placeholder="Vessel departed Nhava Sheva port on schedule"
+                      className="w-full px-3.5 py-2.5 border rounded-md text-sm bg-white focus:outline-none focus:border-[#155A52] transition-colors"
+                      style={{ borderColor: LINE, color: INK }}
                     />
                   </div>
                 </div>
@@ -900,25 +1123,26 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({
                   <button
                     type="submit"
                     disabled={isUpdatingStatus || nextStatus === orderDetail.order.orderStatus}
-                    className="px-4 py-1.5 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-xs font-medium disabled:opacity-40 transition-colors shadow-2xs"
+                    className="px-4 py-2 text-white rounded-md text-sm font-medium disabled:opacity-40 transition-colors"
+                    style={{ backgroundColor: MARINE }}
                   >
-                    {isUpdatingStatus ? 'Transitioning...' : 'Transition Status'}
+                    {isUpdatingStatus ? 'Transitioning…' : 'Transition status'}
                   </button>
                 </div>
               </form>
             )}
 
             {orderDetail.shipments && orderDetail.shipments.length > 0 && (
-              <div className="border border-slate-200 rounded-xl p-4 bg-white">
-                <h4 className="text-xs font-semibold text-slate-800 uppercase tracking-wider mb-3">
-                  Linked Shipments
+              <div className="border rounded-lg p-4" style={{ borderColor: LINE }}>
+                <h4 className="text-sm font-semibold mb-3" style={{ color: INK }}>
+                  Linked shipments
                 </h4>
                 <div className="space-y-2">
                   {orderDetail.shipments.map(shipment => (
-                    <div key={shipment.id} className="flex items-center justify-between text-xs p-2 rounded-lg bg-slate-50 border border-slate-200">
+                    <div key={shipment.id} className="flex items-center justify-between text-sm p-3 rounded-md border" style={{ borderColor: LINE }}>
                       <div>
-                        <div className="font-medium text-slate-800">{shipment.shipmentCode}</div>
-                        <div className="text-[10px] text-slate-500">
+                        <div className=" font-medium" style={{ color: INK }}>{shipment.shipmentCode}</div>
+                        <div className="text-xs mt-0.5" style={{ color: INK_FAINT }}>
                           {shipment.shipmentReference || shipment.containerReference || shipment.trackingNumber || 'No reference'}
                         </div>
                       </div>
@@ -930,28 +1154,28 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({
             )}
 
             {/* Order Status History Audit Trail */}
-            <div className="border border-slate-200 rounded-xl p-4 bg-white">
-              <h4 className="text-xs font-semibold text-slate-800 uppercase tracking-wider mb-4 flex items-center justify-between">
-                <span>Milestone History & Audit Trail</span>
-                <Clock className="w-3.5 h-3.5 text-slate-400" />
+            <div className="border rounded-lg p-4" style={{ borderColor: LINE }}>
+              <h4 className="text-sm font-semibold mb-4 flex items-center justify-between" style={{ color: INK }}>
+                <span>Milestone history</span>
+                <Clock className="w-4 h-4" style={{ color: INK_FAINT }} />
               </h4>
 
-              <div className="space-y-3">
-                {orderDetail.history.map((h, i) => (
-                  <div key={h.id} className="relative pl-5 border-l-2 border-slate-200">
-                    <div className="absolute -left-[5px] top-1 w-2 h-2 rounded-full bg-sky-600" />
+              <div className="space-y-3.5">
+                {orderDetail.history.map(h => (
+                  <div key={h.id} className="relative pl-5 border-l-2" style={{ borderColor: LINE }}>
+                    <div className="absolute -left-[5px] top-1 w-2.5 h-2.5 rounded-full" style={{ backgroundColor: MARINE }} />
                     <div className="flex items-center gap-2">
                       <StatusBadge status={h.newStatus} />
                       {h.previousStatus && (
-                        <span className="text-[11px] text-slate-400">
+                        <span className="text-xs" style={{ color: INK_FAINT }}>
                           (previously {h.previousStatus})
                         </span>
                       )}
                     </div>
                     {h.notes && (
-                      <p className="text-[11px] text-slate-700 mt-1 italic">"{h.notes}"</p>
+                      <p className="text-sm mt-1.5 italic" style={{ color: INK_SOFT }}>"{h.notes}"</p>
                     )}
-                    <div className="flex items-center gap-2 text-[10px] text-slate-400 mt-1">
+                    <div className="flex items-center gap-2 text-xs mt-1.5" style={{ color: INK_FAINT }}>
                       <span>Changed by {h.changedByName}</span>
                       <span>•</span>
                       <span>{new Date(h.timestamp).toLocaleString()}</span>
@@ -961,14 +1185,15 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({
               </div>
             </div>
 
-            <div className="flex justify-end pt-2 border-t border-slate-100">
+            <div className="flex justify-end pt-2 border-t" style={{ borderColor: LINE }}>
               <button
                 type="button"
                 onClick={() => {
                   setSelectedOrderId(null);
                   setOrderDetail(null);
                 }}
-                className="px-4 py-2 rounded-lg bg-slate-800 text-white font-medium hover:bg-slate-700"
+                className="px-4 py-2.5 rounded-md text-white font-medium text-sm transition-colors"
+                style={{ backgroundColor: INK }}
               >
                 Done
               </button>

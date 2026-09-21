@@ -9,7 +9,11 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "seed": "tsx src/seed.ts",
-    "typecheck": "tsc --noEmit"
+    "seed2": "tsx src/seed2.ts",
+    "flush": "tsx src/flush.ts",
+    "db:flush": "tsx src/flush.ts",
+    "typecheck": "tsc --noEmit",
+    "test:suppliers": "tsx src/services/supplierResolution.test.ts"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

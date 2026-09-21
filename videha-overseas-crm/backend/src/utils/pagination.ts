@@ -1,5 +1,5 @@
 const DEFAULT_PAGE = 1;
-const DEFAULT_LIMIT = 25;
+const DEFAULT_LIMIT = 10;
 const MAX_LIMIT = 100;
 
 export type PaginationParams = {

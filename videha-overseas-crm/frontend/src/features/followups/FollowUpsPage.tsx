@@ -39,6 +39,7 @@ import { createClientRequestId as generateClientRequestId } from '../../lib/clie
 import { refreshNotifications } from '../../lib/notifications';
 import { ImportWizard } from '../../components/import/ImportWizard';
 import { ListStatePanel, ownScopeEmptyCopy } from '../../components/ui/ListStatePanel';
+import { LIST_PAGE_SIZE } from '../../lib/pagination';
 
 type ScheduleTab = 'today' | 'upcoming' | 'overdue' | 'all';
 
@@ -124,7 +125,7 @@ export const FollowUpsPage: React.FC = () => {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [limit] = useState(15);
+  const [limit] = useState(LIST_PAGE_SIZE);
   const [search, setSearch] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -156,6 +157,11 @@ export const FollowUpsPage: React.FC = () => {
   // Import / Export State
   const [isExporting, setIsExporting] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
+
+  // Lead view modal (read-only contact details)
+  const [leadViewFollowUp, setLeadViewFollowUp] = useState<FollowUp | null>(null);
+  const [viewLead, setViewLead] = useState<Lead | null>(null);
+  const [isLoadingLeadView, setIsLoadingLeadView] = useState(false);
 
   const memberOptions = useMemo(
     () => teamMembers.map(m => ({ value: m.id, label: m.name })),
@@ -227,10 +233,6 @@ export const FollowUpsPage: React.FC = () => {
         }
       });
 
-    api.leads.getLeads({ limit: 100 }).then(res => {
-      if (res.success) setLeads(res.items);
-    });
-
     api.meta
       .getLeadPipeline()
       .then(res => {
@@ -239,7 +241,15 @@ export const FollowUpsPage: React.FC = () => {
       .catch(() => {});
   }, [user]);
 
+  const ensureLeads = () => {
+    if (leads.length > 0) return;
+    api.leads.getLeads({ limit: 100 }).then(res => {
+      if (res.success) setLeads(res.items);
+    });
+  };
+
   const openCreate = () => {
+    ensureLeads();
     setEditing(null);
     setForm(emptyForm(user?.id));
     setCreateRequestId(generateClientRequestId());
@@ -247,6 +257,7 @@ export const FollowUpsPage: React.FC = () => {
   };
 
   const openEdit = (item: FollowUp) => {
+    ensureLeads();
     setEditing(item);
     setForm({
       leadId: item.leadId,
@@ -446,6 +457,30 @@ export const FollowUpsPage: React.FC = () => {
     setForm(prev => ({ ...prev, dueAt: target.toISOString().slice(0, 16) }));
   };
 
+  const openLeadView = async (item: FollowUp) => {
+    setLeadViewFollowUp(item);
+    setIsLoadingLeadView(true);
+    setViewLead(null);
+
+    const existing = leads.find(l => l.id === item.leadId);
+    if (existing) setViewLead(existing);
+
+    try {
+      const res = await api.leads.getLead(item.leadId);
+      if (res.success && res.data?.lead) {
+        setViewLead(res.data.lead);
+      }
+    } catch {
+      // keep cached lead if available
+    } finally {
+      setIsLoadingLeadView(false);
+    }
+  };
+
+  const closeLeadView = () => {
+    setLeadViewFollowUp(null);
+    setViewLead(null);
+  };
 
   const scheduleTabs: { id: ScheduleTab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
     { id: 'today', label: 'Today', icon: Calendar },
@@ -592,17 +627,26 @@ export const FollowUpsPage: React.FC = () => {
                     <tr key={item.id} className="hover:bg-slate-50/70 transition-colors">
                       {/* Lead Title & Code */}
                       <td className="px-5 py-4">
-                        <div className="text-base font-medium text-slate-900 leading-snug">
-                          {item.leadCompany || '—'}
-                        </div>
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                          <span className="font-mono text-xs text-slate-500">{item.leadCode}</span>
-                          {item.notes && (
-                            <span className="text-xs text-slate-400 truncate max-w-xs" title={item.notes}>
-                              • {item.notes}
+                        <button
+                          type="button"
+                          onClick={() => void openLeadView(item)}
+                          className="text-left group"
+                          title="View lead contact details"
+                        >
+                          <div className="text-base font-medium text-slate-900 leading-snug group-hover:text-sky-700 transition-colors">
+                            {item.leadCompany || '—'}
+                          </div>
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <span className="font-mono text-xs text-slate-500 group-hover:text-sky-600">
+                              {item.leadCode}
                             </span>
-                          )}
-                        </div>
+                            {item.notes && (
+                              <span className="text-xs text-slate-400 truncate max-w-xs" title={item.notes}>
+                                • {item.notes}
+                              </span>
+                            )}
+                          </div>
+                        </button>
                       </td>
 
                       {/* Type Badge */}
@@ -1076,6 +1120,101 @@ export const FollowUpsPage: React.FC = () => {
               </button>
             </div>
           </form>
+        )}
+      </Modal>
+
+      {/* Lead contact view modal (read-only) */}
+      <Modal
+        isOpen={!!leadViewFollowUp}
+        onClose={closeLeadView}
+        title={viewLead?.company || leadViewFollowUp?.leadCompany || 'Lead details'}
+        subtitle={
+          leadViewFollowUp
+            ? `${leadViewFollowUp.leadCode} · View contact details`
+            : 'View contact details'
+        }
+        maxWidth="lg"
+      >
+        {isLoadingLeadView ? (
+          <div className="py-10 text-center text-sm text-slate-500">Loading lead details…</div>
+        ) : viewLead ? (
+          <div className="space-y-5 pt-1">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <p className="text-lg font-semibold text-slate-900">{viewLead.company || '—'}</p>
+                <p className="text-sm text-slate-600 mt-0.5">{viewLead.name || 'No contact person'}</p>
+              </div>
+              <StatusBadge status={viewLead.leadStatus} />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/80">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-1">Phone</p>
+                <p className="text-sm font-medium text-slate-900">
+                  {viewLead.phoneNumber || viewLead.whatsAppNumber || '—'}
+                </p>
+              </div>
+              <div className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/80">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-1">Email</p>
+                <p className="text-sm font-medium text-slate-900 break-all">{viewLead.email || '—'}</p>
+              </div>
+              <div className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/80">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-1">WhatsApp</p>
+                <p className="text-sm font-medium text-slate-900">
+                  {viewLead.whatsAppNumber || '—'}
+                </p>
+              </div>
+              <div className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/80">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-1">Location</p>
+                <p className="text-sm font-medium text-slate-900">
+                  {[viewLead.city, viewLead.country].filter(Boolean).join(', ') || '—'}
+                </p>
+              </div>
+            </div>
+
+            {viewLead.productInterest && (
+              <div className="p-3.5 rounded-xl border border-sky-100 bg-sky-50/50">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-sky-700 mb-1">
+                  Product interest
+                </p>
+                <p className="text-sm text-slate-800">{viewLead.productInterest}</p>
+              </div>
+            )}
+
+            <div className="flex flex-wrap gap-2 pt-1 border-t border-slate-100">
+              {(viewLead.phoneNumber || viewLead.whatsAppNumber) && (
+                <a
+                  href={`tel:${viewLead.phoneNumber || viewLead.whatsAppNumber}`}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-sky-600 text-white text-sm font-medium hover:bg-sky-700 transition-colors shadow-xs"
+                >
+                  <Phone className="w-4 h-4" />
+                  Dial
+                </a>
+              )}
+              {viewLead.email && (
+                <a
+                  href={`mailto:${viewLead.email}`}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-violet-200 bg-violet-50 text-violet-800 text-sm font-medium hover:bg-violet-100 transition-colors"
+                >
+                  <Mail className="w-4 h-4" />
+                  Email
+                </a>
+              )}
+              {viewLead.whatsAppNumber && (
+                <a
+                  href={`https://wa.me/${viewLead.whatsAppNumber.replace(/\D/g, '')}?text=Hello%20${encodeURIComponent(viewLead.name || viewLead.company)},%20greetings%20from%20Videha%20Overseas.`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-800 text-sm font-medium hover:bg-emerald-100 transition-colors"
+                >
+                  <MessageSquare className="w-4 h-4" />
+                  WhatsApp
+                </a>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="py-10 text-center text-sm text-slate-500">Lead details could not be loaded.</div>
         )}
       </Modal>
 

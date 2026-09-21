@@ -11,6 +11,8 @@ export const list = asyncHandler(async (req: Request, res: Response) => {
     assignedMemberId: (req.query.assignedMemberId || req.query.assignedToId) as
       | string
       | undefined,
+    customerId: req.query.customerId as string | undefined,
+    companyId: req.query.companyId as string | undefined,
     page: req.query.page,
     limit: req.query.limit,
     sortBy: req.query.sortBy as string | undefined,

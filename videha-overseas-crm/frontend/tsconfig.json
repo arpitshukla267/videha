@@ -18,6 +18,9 @@
     "paths": {
       "@/*": [
         "./*"
+      ],
+      "@videha/quotation-builder/*": [
+        "../../quotation-builder/src/*"
       ]
     },
     "allowImportingTsExtensions": true,

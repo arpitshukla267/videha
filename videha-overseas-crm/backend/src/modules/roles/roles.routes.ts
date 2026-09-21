@@ -6,6 +6,11 @@ export const rolesRoutes = Router();
 
 rolesRoutes.use(authenticate);
 
+const manage = requirePermission("settings.manage");
+
 rolesRoutes.get("/permissions/catalog", requirePermission("users.view", "settings.manage"), ctrl.permissionsCatalog);
-rolesRoutes.get("/", requirePermission("users.view"), ctrl.list);
-rolesRoutes.put("/:id/permissions", requirePermission("settings.manage"), ctrl.updatePermissions);
+rolesRoutes.get("/", requirePermission("users.view", "settings.manage"), ctrl.list);
+rolesRoutes.post("/", manage, ctrl.create);
+rolesRoutes.put("/:id", manage, ctrl.update);
+rolesRoutes.delete("/:id", manage, ctrl.remove);
+rolesRoutes.put("/:id/permissions", manage, ctrl.updatePermissions);

@@ -10,7 +10,8 @@ import {
   Check,
   Pencil,
   PhoneCall,
-  PhoneOff
+  PhoneOff,
+  ListChecks
 } from 'lucide-react';
 import { api } from '../../api/client';
 import {
@@ -34,6 +35,7 @@ import { handleConflictWithReload, alertSaveError, isConflictError } from '../..
 import { PaginationBar } from '../../components/ui/PaginationBar';
 import { createClientRequestId as generateClientRequestId } from '../../lib/clientRequestId';
 import { ListStatePanel, ownScopeEmptyCopy } from '../../components/ui/ListStatePanel';
+import { LIST_PAGE_SIZE } from '../../lib/pagination';
 
 type TasksPageProps = {
   focusTaskId?: string | null;
@@ -144,7 +146,7 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
   const [currentPage, setCurrentPage] = useState(1);
   const [totalTasks, setTotalTasks] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
-  const [pageLimit] = useState(25);
+  const [pageLimit] = useState(LIST_PAGE_SIZE);
   const [activeView, setActiveView] = useState<
     'my' | 'all' | 'pending' | 'in_progress' | 'completed' | 'overdue'
   >('my');
@@ -166,6 +168,7 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
   const [editForm, setEditForm] = useState<TaskForm | null>(null);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [viewingTask, setViewingTask] = useState<Task | null>(null);
+  const [isLoadingTaskView, setIsLoadingTaskView] = useState(false);
   const [highlightedTaskId, setHighlightedTaskId] = useState<string | null>(null);
 
   const memberOptions = useMemo(
@@ -209,13 +212,31 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
           ]);
         }
       });
+  }, [user]);
+
+  const ensureLeadOptions = () => {
+    if (leadOptions.length > 0) return;
     api.leads
-      .getLeads({ limit: 200, page: 1 })
+      .getLeads({ limit: 100, page: 1 })
       .then(res => {
         if (res.success) setLeadOptions(res.items);
       })
       .catch(() => {});
-  }, [user]);
+  };
+
+  const openViewTask = async (task: Task) => {
+    setViewingTask(task);
+    setIsLoadingTaskView(true);
+    try {
+      const res = await api.tasks.getTask(task.id);
+      if (res.success) setViewingTask(res.data);
+    } catch (err: unknown) {
+      alertSaveError(err, 'Failed to load task details');
+      setViewingTask(null);
+    } finally {
+      setIsLoadingTaskView(false);
+    }
+  };
 
   const fetchTasks = async (page = currentPage) => {
     setIsLoading(true);
@@ -328,6 +349,7 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
   });
 
   const openEditTask = (task: Task) => {
+    ensureLeadOptions();
     setEditTaskId(task.id);
     setEditRevision(task.revision);
     setEditForm(taskToForm(task));
@@ -423,28 +445,28 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
   ) => (
     <>
       <div>
-        <label className="block font-medium text-slate-700 mb-1">Title *</label>
+        <label className="block text-sm font-medium text-slate-700 mb-1.5">Title *</label>
         <input
           type="text"
           required
           value={form.taskTitle}
           onChange={e => onChange({ taskTitle: e.target.value })}
           placeholder="e.g. Follow up with buyer on sample feedback"
-          className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-sky-600"
+          className="w-full px-3.5 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 transition-shadow"
         />
       </div>
       <div>
-        <label className="block font-medium text-slate-700 mb-1">Description</label>
+        <label className="block text-sm font-medium text-slate-700 mb-1.5">Description</label>
         <textarea
           rows={3}
           value={form.description}
           onChange={e => onChange({ description: e.target.value })}
-          className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-sky-600"
+          className="w-full px-3.5 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 transition-shadow"
         />
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label className="block font-medium text-slate-700 mb-1">Task type</label>
+          <label className="block text-sm font-medium text-slate-700 mb-1.5">Task type</label>
           <SearchableSelect
             options={TASK_TYPE_OPTIONS}
             value={form.taskType}
@@ -453,7 +475,7 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
           />
         </div>
         <div>
-          <label className="block font-medium text-slate-700 mb-1">Channel</label>
+          <label className="block text-sm font-medium text-slate-700 mb-1.5">Channel</label>
           <SearchableSelect
             options={TASK_CHANNEL_OPTIONS}
             value={form.channel}
@@ -462,7 +484,7 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
           />
         </div>
         <div>
-          <label className="block font-medium text-slate-700 mb-1">Assignee *</label>
+          <label className="block text-sm font-medium text-slate-700 mb-1.5">Assignee *</label>
           <SearchableSelect
             options={memberOptions}
             value={form.assignedToId}
@@ -472,7 +494,7 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
           />
         </div>
         <div>
-          <label className="block font-medium text-slate-700 mb-1">Linked lead</label>
+          <label className="block text-sm font-medium text-slate-700 mb-1.5">Linked lead</label>
           <SearchableSelect
             options={relatedLeadSelectOptions}
             value={form.relatedLeadId}
@@ -483,7 +505,7 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
           />
         </div>
         <div>
-          <label className="block font-medium text-slate-700 mb-1">Due date *</label>
+          <label className="block text-sm font-medium text-slate-700 mb-1.5">Due date *</label>
           <DateTimePicker
             includeTime
             value={form.dueDate}
@@ -492,7 +514,7 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
           />
         </div>
         <div>
-          <label className="block font-medium text-slate-700 mb-1">Priority</label>
+          <label className="block text-sm font-medium text-slate-700 mb-1.5">Priority</label>
           <SearchableSelect
             options={PRIORITY_OPTIONS}
             value={form.priority}
@@ -500,7 +522,7 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
           />
         </div>
         <div>
-          <label className="block font-medium text-slate-700 mb-1">Status</label>
+          <label className="block text-sm font-medium text-slate-700 mb-1.5">Status</label>
           <SearchableSelect
             options={STATUS_OPTIONS}
             value={form.status}
@@ -508,39 +530,39 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
           />
         </div>
         <div className="sm:col-span-2">
-          <label className="block font-medium text-slate-700 mb-1.5">Call picked up?</label>
+          <label className="block text-sm font-medium text-slate-700 mb-2">Call picked up?</label>
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
               onClick={() => onChange({ pickedUp: true, outcome: 'picked_up' })}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium ${
+              className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border text-sm font-medium transition-colors ${
                 form.pickedUp === true
                   ? 'bg-emerald-600 text-white border-emerald-600'
-                  : 'bg-white text-slate-700 border-slate-200'
+                  : 'bg-white text-slate-700 border-slate-200 hover:border-emerald-300'
               }`}
             >
-              <PhoneCall className="w-3.5 h-3.5" />
+              <PhoneCall className="w-4 h-4" />
               Picked up
             </button>
             <button
               type="button"
               onClick={() => onChange({ pickedUp: false, outcome: 'not_picked_up' })}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium ${
+              className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border text-sm font-medium transition-colors ${
                 form.pickedUp === false
                   ? 'bg-amber-600 text-white border-amber-600'
-                  : 'bg-white text-slate-700 border-slate-200'
+                  : 'bg-white text-slate-700 border-slate-200 hover:border-amber-300'
               }`}
             >
-              <PhoneOff className="w-3.5 h-3.5" />
+              <PhoneOff className="w-4 h-4" />
               Not picked up
             </button>
             <button
               type="button"
               onClick={() => onChange({ pickedUp: null })}
-              className={`px-3 py-1.5 rounded-lg border text-xs font-medium ${
+              className={`px-3.5 py-2 rounded-lg border text-sm font-medium transition-colors ${
                 form.pickedUp === null
                   ? 'bg-slate-700 text-white border-slate-700'
-                  : 'bg-white text-slate-700 border-slate-200'
+                  : 'bg-white text-slate-700 border-slate-200 hover:border-slate-400'
               }`}
             >
               N/A
@@ -548,23 +570,23 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
           </div>
         </div>
         <div>
-          <label className="block font-medium text-slate-700 mb-1">Outcome / result</label>
+          <label className="block text-sm font-medium text-slate-700 mb-1.5">Outcome / result</label>
           <input
             type="text"
             value={form.outcome}
             onChange={e => onChange({ outcome: e.target.value })}
             placeholder="e.g. Sent quotation, requested sample"
-            className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-sky-600"
+            className="w-full px-3.5 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 transition-shadow"
           />
         </div>
         <div className="sm:col-span-2">
-          <label className="block font-medium text-slate-700 mb-1">Completion notes</label>
+          <label className="block text-sm font-medium text-slate-700 mb-1.5">Completion notes</label>
           <textarea
             rows={2}
             value={form.completionNotes}
             onChange={e => onChange({ completionNotes: e.target.value })}
             placeholder="What was discussed, agreed next steps, blockers…"
-            className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-sky-600"
+            className="w-full px-3.5 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 transition-shadow"
           />
         </div>
       </div>
@@ -572,32 +594,38 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
   );
 
   return (
-    <div className="p-6 space-y-5 max-w-7xl mx-auto">
+    <div className="p-6 space-y-6 ">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h3 className="text-base font-semibold text-slate-800">Tasks</h3>
-          <p className="text-xs text-slate-500">Follow-ups, ops checkpoints, and assignments</p>
+        <div className="flex items-start gap-3">
+          <div className="hidden sm:flex items-center justify-center w-10 h-10 rounded-xl bg-emerald-50 ring-1 ring-emerald-100 text-emerald-600">
+            <ListChecks className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="text-lg font-semibold text-slate-900">Tasks</h3>
+            <p className="text-sm text-slate-500 mt-0.5">Follow-ups, ops checkpoints, and assignments</p>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <div className="flex items-center bg-slate-100 p-1 rounded-lg border border-slate-200">
             <button
               type="button"
               onClick={() => setViewMode('cards')}
-              className={`p-1.5 rounded-md text-xs font-medium flex items-center gap-1.5 ${
-                viewMode === 'cards' ? 'bg-white text-sky-700 shadow-2xs' : 'text-slate-600'
+              className={`px-2.5 py-1.5 rounded-md text-sm font-medium flex items-center gap-1.5 transition-colors ${
+                viewMode === 'cards' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-600'
               }`}
             >
-              <LayoutGrid className="w-3.5 h-3.5" />
+              <LayoutGrid className="w-4 h-4" />
               Cards
             </button>
             <button
               type="button"
               onClick={() => setViewMode('table')}
-              className={`p-1.5 rounded-md text-xs font-medium flex items-center gap-1.5 ${
-                viewMode === 'table' ? 'bg-white text-sky-700 shadow-2xs' : 'text-slate-600'
+              className={`px-2.5 py-1.5 rounded-md text-sm font-medium flex items-center gap-1.5 transition-colors ${
+                viewMode === 'table' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-600'
               }`}
             >
-              <List className="w-3.5 h-3.5" />
+              <List className="w-4 h-4" />
               Table
             </button>
           </div>
@@ -605,11 +633,12 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
             <button
               type="button"
               onClick={() => {
+                ensureLeadOptions();
                 setNewTaskForm(emptyTaskForm(user?.id));
                 setCreateRequestId(generateClientRequestId());
                 setIsCreateOpen(true);
               }}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-xs font-medium"
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium shadow-sm transition-colors"
             >
               <Plus className="w-4 h-4" />
               Create Task
@@ -618,36 +647,38 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
         </div>
       </div>
 
+      {/* View tabs */}
       <div className="flex border-b border-slate-200 overflow-x-auto">
         {views.map(v => (
           <button
             key={v.id}
             type="button"
             onClick={() => setActiveView(v.id as any)}
-            className={`px-4 py-2.5 text-xs font-medium border-b-2 whitespace-nowrap flex items-center gap-1.5 ${
+            className={`px-4 py-3 text-sm font-medium border-b-2 whitespace-nowrap flex items-center gap-1.5 transition-colors ${
               activeView === v.id
                 ? v.alert
                   ? 'border-rose-600 text-rose-700'
-                  : 'border-sky-600 text-sky-700'
+                  : 'border-emerald-600 text-emerald-700'
                 : 'border-transparent text-slate-500 hover:text-slate-700'
             }`}
           >
-            {v.alert && <AlertCircle className="w-3.5 h-3.5" />}
+            {v.alert && <AlertCircle className="w-4 h-4" />}
             {v.label}
           </button>
         ))}
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-2xs">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      {/* Filters */}
+      <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="relative">
-            <Search className="w-3.5 h-3.5 absolute left-3 top-3 text-slate-400" />
+            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
               placeholder="Search tasks…"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="w-full pl-8 pr-3 py-1.5 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-sky-600"
+              className="w-full pl-10 pr-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 transition-shadow"
             />
           </div>
           <SearchableSelect
@@ -691,7 +722,7 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
             }
           />
           {!isLoading && !loadError && tasks.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
               {tasks.map(task => {
                 const isDone = task.status === 'Completed' || task.status === 'Cancelled';
                 const channel = channelLabel(task.channel);
@@ -702,66 +733,68 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
                     key={task.id}
                     role="button"
                     tabIndex={0}
-                    onClick={() => setViewingTask(task)}
-                    onKeyDown={e => e.key === 'Enter' && setViewingTask(task)}
-                    className={`group rounded-xl border bg-white p-4 transition-all cursor-pointer ${
+                    onClick={() => openViewTask(task)}
+                    onKeyDown={e => e.key === 'Enter' && openViewTask(task)}
+                    className={`group rounded-xl border bg-white p-4 shadow-sm transition-all cursor-pointer ${
                       highlightedTaskId === task.id
-                        ? 'border-sky-400 ring-2 ring-sky-200 shadow-sm'
+                        ? 'border-emerald-400 ring-2 ring-emerald-200 shadow-md'
                         : isDone
                           ? 'border-slate-100 bg-slate-50/50'
-                          : 'border-slate-200 hover:border-sky-200 hover:shadow-sm'
+                          : 'border-slate-200 hover:border-emerald-200 hover:shadow-md'
                     }`}
                   >
                     <div className="flex items-start gap-3">
-                      <button
-                        type="button"
-                        onClick={e => {
-                          e.stopPropagation();
-                          toggleComplete(task);
-                        }}
-                        title={task.status === 'Completed' ? 'Mark pending' : 'Mark completed'}
-                        className={`mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
-                          task.status === 'Completed'
-                            ? 'bg-emerald-500 border-emerald-500 text-white'
-                            : 'border-slate-300 hover:border-sky-500 text-transparent hover:text-sky-500'
-                        }`}
-                      >
-                        <Check className="w-3 h-3" strokeWidth={3} />
-                      </button>
 
                       <div className="min-w-0 flex-1">
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0">
-                            <p className="text-[10px] font-mono text-slate-400 mb-0.5">{task.taskCode}</p>
-                            <div className="flex flex-wrap items-center gap-1.5 mb-1">
-                              <span className="inline-flex text-[10px] font-medium uppercase tracking-wide text-sky-700 bg-sky-50 px-1.5 py-0.5 rounded border border-sky-100">
+                            <div className="flex items-center gap-1 pb-4">
+                            <button
+                              type="button"
+                              onClick={e => {
+                                e.stopPropagation();
+                                toggleComplete(task);
+                              }}
+                              title={task.status === 'Completed' ? 'Mark pending' : 'Mark completed'}
+                              className={`mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
+                                task.status === 'Completed'
+                                  ? 'bg-emerald-500 border-emerald-500 text-white'
+                                  : 'border-slate-300 hover:border-emerald-500 text-transparent hover:text-emerald-500'
+                              }`}
+                            >
+                              <Check className="w-3 h-3" strokeWidth={3} />
+                            </button>
+                            <p className="text-xs text-slate-400">{task.taskCode}</p>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
+                              <span className="inline-flex text-xs font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">
                                 {taskTypeLabel(task.taskType || task.category)}
-                          </span>
+                              </span>
                               {channel && (
-                                <span className="inline-flex text-[10px] font-medium text-slate-600 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100">
+                                <span className="inline-flex text-xs font-medium text-slate-600 bg-slate-50 px-2 py-0.5 rounded border border-slate-100">
                                   {channel}
-                            </span>
-                          )}
-                        </div>
+                                </span>
+                              )}
+                            </div>
                             <h4
                               className={`text-sm font-semibold leading-snug ${
                                 isDone ? 'line-through text-slate-400' : 'text-slate-800'
-                            }`}
-                          >
-                            {task.taskTitle}
-                          </h4>
-                        </div>
+                              }`}
+                            >
+                              {task.taskTitle}
+                            </h4>
+                          </div>
                           <PriorityBadge priority={task.priority} />
-                      </div>
+                        </div>
 
                         {task.description ? (
-                          <p className="text-xs text-slate-500 mt-1.5 line-clamp-2">{task.description}</p>
+                          <p className="text-sm text-slate-500 mt-1.5 line-clamp-2">{task.description}</p>
                         ) : null}
 
-                        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                        <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
                           {task.relatedLeadName && (
                             <span
-                              className="inline-flex max-w-full text-[10px] text-slate-600 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100 truncate"
+                              className="inline-flex max-w-full text-xs text-slate-600 bg-slate-50 px-2 py-0.5 rounded border border-slate-100 truncate"
                               title={task.relatedLeadName}
                             >
                               Lead: {task.relatedLeadName}
@@ -769,7 +802,7 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
                           )}
                           {task.pickedUp !== null && task.pickedUp !== undefined && (
                             <span
-                              className={`inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded border ${
+                              className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded border ${
                                 task.pickedUp
                                   ? 'text-emerald-700 bg-emerald-50 border-emerald-100'
                                   : 'text-amber-700 bg-amber-50 border-amber-100'
@@ -785,16 +818,16 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
                           )}
                           {outcomeText && (
                             <span
-                              className="inline-flex max-w-full text-[10px] text-violet-700 bg-violet-50 px-1.5 py-0.5 rounded border border-violet-100 truncate"
+                              className="inline-flex max-w-full text-xs text-violet-700 bg-violet-50 px-2 py-0.5 rounded border border-violet-100 truncate"
                               title={outcomeText}
                             >
                               {outcomeText}
-                          </span>
-                        )}
-                      </div>
+                            </span>
+                          )}
+                        </div>
 
                         {task.completionNotes ? (
-                          <p className="text-[11px] text-slate-500 mt-2 line-clamp-2 italic">
+                          <p className="text-xs text-slate-500 mt-2 line-clamp-2 italic">
                             {task.completionNotes}
                           </p>
                         ) : null}
@@ -811,49 +844,49 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
 
                         <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
                           <div className="flex items-center gap-2 min-w-0">
-                            <div className="w-6 h-6 rounded-full bg-sky-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0">
+                            <div className="w-7 h-7 rounded-full bg-emerald-600 text-white text-xs font-bold flex items-center justify-center shrink-0">
                               {(task.assignedToName || '?').slice(0, 1).toUpperCase()}
                             </div>
                             <div className="min-w-0">
-                              <p className="text-[11px] text-slate-700 truncate">
+                              <p className="text-xs text-slate-700 truncate">
                                 {task.assignedToName || 'Unassigned'}
                               </p>
-                              <p className="text-[10px] text-slate-400 flex items-center gap-1">
+                              <p className="text-xs text-slate-400 flex items-center gap-1">
                                 <Clock className="w-3 h-3 shrink-0" />
                                 {new Date(task.dueDate).toLocaleString([], {
-                            month: 'short',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
+                                  month: 'short',
+                                  day: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
                               </p>
-                      </div>
-                    </div>
+                            </div>
+                          </div>
 
                           <div
                             className="flex items-center gap-0.5 opacity-70 group-hover:opacity-100"
                             onClick={e => e.stopPropagation()}
                           >
                             {hasPermission('tasks.edit') && (
-                          <button
+                              <button
                                 type="button"
                                 onClick={() => openEditTask(task)}
-                                className="p-1.5 rounded-lg text-slate-400 hover:text-sky-700 hover:bg-sky-50"
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 transition-colors"
                                 title="Edit task"
                               >
                                 <Pencil className="w-3.5 h-3.5" />
-                          </button>
-                        )}
+                              </button>
+                            )}
                             {hasPermission('tasks.edit') && (
-                          <button
+                              <button
                                 type="button"
-                            onClick={e => handleDeleteTask(task.id, e)}
-                                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50"
+                                onClick={e => handleDeleteTask(task.id, e)}
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
                                 title="Delete"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        )}
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -865,35 +898,37 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
           ) : null}
         </div>
       ) : (
-        <div className="bg-white border border-slate-200 rounded-xl shadow-2xs overflow-hidden">
+        <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+            <table className="w-full text-left text-sm">
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-50/75 text-slate-600 font-semibold">
-                  <th className="py-3 px-4 w-12" />
-                  <th className="py-3 px-4">Task</th>
-                  <th className="py-3 px-4">Assignee</th>
-                  <th className="py-3 px-4">Priority</th>
-                  <th className="py-3 px-4">Due</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
+                <tr className="border-b border-slate-200 bg-slate-50 text-slate-500">
+                  <th className="py-3.5 px-5 w-12" />
+                  <th className="py-3.5 px-5 font-semibold text-xs uppercase tracking-wide">Task</th>
+                  <th className="py-3.5 px-5 font-semibold text-xs uppercase tracking-wide">Assignee</th>
+                  <th className="py-3.5 px-5 font-semibold text-xs uppercase tracking-wide">Priority</th>
+                  <th className="py-3.5 px-5 font-semibold text-xs uppercase tracking-wide">Due</th>
+                  <th className="py-3.5 px-5 font-semibold text-xs uppercase tracking-wide text-right">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {isLoading ? (
                   <tr>
-                    <td colSpan={6} className="py-12 text-center text-slate-400 animate-pulse">
+                    <td colSpan={6} className="py-14 text-center text-slate-400 text-sm animate-pulse">
                       Loading tasks…
                     </td>
                   </tr>
                 ) : loadError ? (
                   <tr>
-                    <td colSpan={6} className="py-12 text-center text-rose-600 text-xs">
+                    <td colSpan={6} className="py-14 text-center text-rose-600 text-sm">
                       {loadError}
                     </td>
                   </tr>
                 ) : tasks.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="py-12 text-center text-slate-500 text-xs">
+                    <td colSpan={6} className="py-14 text-center text-slate-500 text-sm">
                       {activeView === 'my' || user?.roleName === 'SALES_MEMBER'
                         ? ownScopeEmptyCopy('tasks').title
                         : 'No tasks found.'}
@@ -901,37 +936,39 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
                   </tr>
                 ) : (
                   tasks.map(task => (
-                    <tr key={task.id} className="hover:bg-slate-50/70">
-                      <td className="py-3 px-4">
+                    <tr key={task.id} className="hover:bg-emerald-50/40 transition-colors">
+                      <td className="py-4 px-5">
                         <button
                           type="button"
                           onClick={() => toggleComplete(task)}
-                          className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                          className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
                             task.status === 'Completed'
                               ? 'bg-emerald-500 border-emerald-500 text-white'
-                              : 'border-slate-300'
+                              : 'border-slate-300 hover:border-emerald-500'
                           }`}
                         >
                           <Check className="w-3 h-3" strokeWidth={3} />
                         </button>
                       </td>
-                      <td className="py-3 px-4">
+                      <td className="py-4 px-5">
                         <p
-                          className={`font-semibold ${
+                          className={`font-medium text-sm ${
                             task.status === 'Completed' ? 'line-through text-slate-400' : 'text-slate-800'
-                            }`}
-                          >
-                            {task.taskTitle}
-                          </p>
-                        <p className="text-[10px] font-mono text-slate-400">{task.taskCode}</p>
+                          }`}
+                        >
+                          {task.taskTitle}
+                        </p>
+                        <p className="text-xs font-mono text-slate-400 mt-0.5">{task.taskCode}</p>
                       </td>
-                      <td className="py-3 px-4 text-slate-700">{task.assignedToName || '—'}</td>
-                      <td className="py-3 px-4">
+                      <td className="py-4 px-5 text-slate-700 text-sm">{task.assignedToName || '—'}</td>
+                      <td className="py-4 px-5">
                         <PriorityBadge priority={task.priority} />
                       </td>
-                      <td className="py-3 px-4">
-                        <div className="flex flex-col gap-1">
-                          <span>{new Date(task.dueDate).toLocaleDateString()}</span>
+                      <td className="py-4 px-5">
+                        <div className="flex flex-col gap-1.5">
+                          <span className="text-sm text-slate-700">
+                            {new Date(task.dueDate).toLocaleDateString()}
+                          </span>
                           <DueBadge
                             dueDate={task.dueDate}
                             status={task.status}
@@ -940,13 +977,13 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
                           />
                         </div>
                       </td>
-                      <td className="py-3 px-4 text-right">
+                      <td className="py-4 px-5 text-right">
                         <div className="inline-flex items-center gap-1">
                           {hasPermission('tasks.edit') && (
-                          <button
+                            <button
                               type="button"
                               onClick={() => openEditTask(task)}
-                              className="p-1 rounded text-slate-500 hover:text-sky-700"
+                              className="p-2 rounded-md text-slate-500 hover:text-emerald-700 hover:bg-emerald-50 transition-colors"
                               title="Edit"
                             >
                               <Pencil className="w-4 h-4" />
@@ -979,29 +1016,26 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
         subtitle="Assign a follow-up or operations action"
         maxWidth="lg"
       >
-        <form
-          onSubmit={handleCreateTask}
-          className="space-y-4 text-xs"
-        >
+        <form onSubmit={handleCreateTask} className="space-y-4 text-sm">
           {renderTaskFormBody(newTaskForm, patch =>
             setNewTaskForm(prev => ({ ...prev, ...patch }))
           )}
-          <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+          <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
             <button
               type="button"
               onClick={() => setIsCreateOpen(false)}
-              className="px-4 py-2 rounded-lg border border-slate-200 text-slate-600"
+              className="px-4 py-2.5 rounded-lg border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmittingCreate || !newTaskForm.assignedToId}
-              className="px-4 py-2 rounded-lg bg-sky-600 text-white font-medium disabled:opacity-50"
+              className="px-4 py-2.5 rounded-lg bg-emerald-600 text-white text-sm font-medium shadow-sm hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {isSubmittingCreate ? 'Creating…' : 'Create Task'}
             </button>
-            </div>
+          </div>
         </form>
       </Modal>
 
@@ -1016,30 +1050,30 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
         maxWidth="lg"
       >
         {editForm && (
-          <form onSubmit={handleSaveEdit} className="space-y-4 text-xs">
+          <form onSubmit={handleSaveEdit} className="space-y-4 text-sm">
             {renderTaskFormBody(editForm, patch =>
               setEditForm(prev => (prev ? { ...prev, ...patch } : prev))
             )}
-            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
-            <button
-              type="button"
+            <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+              <button
+                type="button"
                 onClick={() => {
                   setEditTaskId(null);
                   setEditForm(null);
                 }}
-                className="px-4 py-2 rounded-lg border border-slate-200 text-slate-600"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
+                className="px-4 py-2.5 rounded-lg border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
                 disabled={isSavingEdit || !editForm.assignedToId}
-                className="px-4 py-2 rounded-lg bg-sky-600 text-white font-medium disabled:opacity-50"
-            >
+                className="px-4 py-2.5 rounded-lg bg-emerald-600 text-white text-sm font-medium shadow-sm hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
                 {isSavingEdit ? 'Saving…' : 'Save changes'}
-            </button>
-          </div>
-        </form>
+              </button>
+            </div>
+          </form>
         )}
       </Modal>
 
@@ -1053,33 +1087,35 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
         subtitle={viewingTask ? taskTypeLabel(viewingTask.taskType || viewingTask.category) : ''}
         maxWidth="lg"
       >
-        {viewingTask && (
-        <div className="space-y-4 text-xs">
+        {isLoadingTaskView ? (
+          <div className="py-12 text-center text-slate-400 text-sm">Loading task details…</div>
+        ) : viewingTask ? (
+          <div className="space-y-4 text-sm">
             {viewingTask.description ? (
               <p className="text-slate-600 leading-relaxed">{viewingTask.description}</p>
             ) : null}
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              <div className="rounded-lg border border-slate-100 bg-slate-50/80 p-3">
-                <p className="text-[10px] uppercase tracking-wider text-slate-400">Status</p>
-                <div className="mt-1">
+              <div className="rounded-lg border border-slate-100 bg-slate-50/80 p-3.5">
+                <p className="text-xs uppercase tracking-wide text-slate-400">Status</p>
+                <div className="mt-1.5">
                   <StatusBadge status={viewingTask.status} />
                 </div>
               </div>
-              <div className="rounded-lg border border-slate-100 bg-slate-50/80 p-3">
-                <p className="text-[10px] uppercase tracking-wider text-slate-400">Priority</p>
-                <div className="mt-1">
+              <div className="rounded-lg border border-slate-100 bg-slate-50/80 p-3.5">
+                <p className="text-xs uppercase tracking-wide text-slate-400">Priority</p>
+                <div className="mt-1.5">
                   <PriorityBadge priority={viewingTask.priority} />
                 </div>
               </div>
-              <div className="rounded-lg border border-slate-100 bg-slate-50/80 p-3">
-                <p className="text-[10px] uppercase tracking-wider text-slate-400">Assignee</p>
-                <p className="mt-1 font-medium text-slate-800">
+              <div className="rounded-lg border border-slate-100 bg-slate-50/80 p-3.5">
+                <p className="text-xs uppercase tracking-wide text-slate-400">Assignee</p>
+                <p className="mt-1.5 font-medium text-slate-800">
                   {viewingTask.assignedToName || 'Unassigned'}
                 </p>
               </div>
-              <div className="rounded-lg border border-slate-100 bg-slate-50/80 p-3">
-                <p className="text-[10px] uppercase tracking-wider text-slate-400">Due</p>
-                <div className="mt-1">
+              <div className="rounded-lg border border-slate-100 bg-slate-50/80 p-3.5">
+                <p className="text-xs uppercase tracking-wide text-slate-400">Due</p>
+                <div className="mt-1.5">
                   <DueBadge
                     dueDate={viewingTask.dueDate}
                     status={viewingTask.status}
@@ -1088,15 +1124,15 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
                   />
                 </div>
               </div>
-              <div className="rounded-lg border border-slate-100 bg-slate-50/80 p-3">
-                <p className="text-[10px] uppercase tracking-wider text-slate-400">Channel</p>
-                <p className="mt-1 font-medium text-slate-800 capitalize">
+              <div className="rounded-lg border border-slate-100 bg-slate-50/80 p-3.5">
+                <p className="text-xs uppercase tracking-wide text-slate-400">Channel</p>
+                <p className="mt-1.5 font-medium text-slate-800 capitalize">
                   {viewingTask.channel?.replace('_', ' ') || '—'}
                 </p>
               </div>
-              <div className="rounded-lg border border-slate-100 bg-slate-50/80 p-3">
-                <p className="text-[10px] uppercase tracking-wider text-slate-400">Linked lead</p>
-                <p className="mt-1 font-medium text-slate-800 truncate">
+              <div className="rounded-lg border border-slate-100 bg-slate-50/80 p-3.5">
+                <p className="text-xs uppercase tracking-wide text-slate-400">Linked lead</p>
+                <p className="mt-1.5 font-medium text-slate-800 truncate">
                   {viewingTask.relatedLeadName || 'None'}
                 </p>
               </div>
@@ -1104,13 +1140,13 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
             {(viewingTask.pickedUp !== null && viewingTask.pickedUp !== undefined) ||
             viewingTask.outcome ||
             viewingTask.completionNotes ? (
-              <div className="rounded-xl border border-sky-100 bg-sky-50/40 p-4 space-y-2">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+              <div className="rounded-xl border border-emerald-100 bg-emerald-50/40 p-4 space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                   Call / outcome details
                 </p>
                 {viewingTask.pickedUp !== null && viewingTask.pickedUp !== undefined && (
                   <span
-                    className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded border ${
+                    className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded border ${
                       viewingTask.pickedUp
                         ? 'text-emerald-700 bg-emerald-50 border-emerald-100'
                         : 'text-amber-700 bg-amber-50 border-amber-100'
@@ -1132,34 +1168,34 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
                 {viewingTask.completionNotes ? (
                   <p className="text-slate-600 leading-relaxed">{viewingTask.completionNotes}</p>
                 ) : null}
-          </div>
+              </div>
             ) : null}
             <div className="flex justify-end gap-2 pt-1">
               {hasPermission('tasks.edit') && (
-            <button
-              type="button"
+                <button
+                  type="button"
                   onClick={() => {
                     openEditTask(viewingTask);
                     setViewingTask(null);
                   }}
-                  className="px-4 py-2 rounded-lg border border-slate-200 text-slate-700 font-medium"
+                  className="px-4 py-2.5 rounded-lg border border-slate-200 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
                 >
                   Edit
-            </button>
+                </button>
               )}
-            <button
-              type="button"
+              <button
+                type="button"
                 onClick={() => {
                   setViewingTask(null);
                   setHighlightedTaskId(null);
                 }}
-                className="px-4 py-2 rounded-lg bg-sky-600 text-white font-medium"
+                className="px-4 py-2.5 rounded-lg bg-emerald-600 text-white text-sm font-medium shadow-sm hover:bg-emerald-700 transition-colors"
               >
                 Close
-            </button>
+              </button>
+            </div>
           </div>
-        </div>
-        )}
+        ) : null}
       </Modal>
     </div>
   );

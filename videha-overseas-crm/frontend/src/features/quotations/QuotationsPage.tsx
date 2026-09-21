@@ -1,5 +1,17 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Plus, Search, Pencil, Trash2, FileText, Send, CheckCircle2, Package, MessageSquare, Download, Upload } from 'lucide-react';
+import {
+  Plus,
+  Search,
+  Pencil,
+  Trash2,
+  FileText,
+  Send,
+  CheckCircle2,
+  Package,
+  MessageSquare,
+  Download,
+  Upload,
+} from 'lucide-react';
 import { api } from '../../api/client';
 import {
   Quotation,
@@ -19,6 +31,16 @@ import { createClientRequestId as generateClientRequestId } from '../../lib/clie
 import { CRM_COUNTRIES } from '../../constants/countries';
 import { ImportWizard } from '../../components/import/ImportWizard';
 import { ListStatePanel, ownScopeEmptyCopy } from '../../components/ui/ListStatePanel';
+import { LIST_PAGE_SIZE } from '../../lib/pagination';
+import {
+  mapCrmQuotationToBuilder,
+  stashBuilderPayload,
+  type BuilderQuotationData
+} from '../../lib/crmToBuilderQuotation';
+
+type QuotationsPageProps = {
+  onOpenBuilder?: (payload: BuilderQuotationData) => void;
+};
 
 const STATUS_OPTIONS: { value: QuotationStatus | 'all'; label: string }[] = [
   { value: 'all', label: 'All Statuses' },
@@ -83,6 +105,29 @@ function calcLineAmount(item: QuotationLineItem): number {
   return Math.round(gross * (1 - (item.discountPercent || 0) / 100) * 100) / 100;
 }
 
+function quotationToForm(q: Quotation, assigneeFallback = ''): QuotationForm {
+  return {
+    title: q.title,
+    currency: q.currency,
+    leadId: q.leadId || '',
+    companyLabel: q.companyName || '',
+    customerLabel: q.customerName || '',
+    assignedToId: q.assignedToId || assigneeFallback,
+    validityDate: q.validityDate ? q.validityDate.slice(0, 16) : '',
+    paymentTerms: q.paymentTerms || '',
+    notes: q.notes || '',
+    discountAmount: String(q.discountAmount ?? 0),
+    taxRate: String(q.taxRate ?? 0),
+    lineItems: q.lineItems?.length ? q.lineItems : [emptyLineItem()]
+  };
+}
+
+async function fetchQuotationWithLines(q: Quotation): Promise<Quotation> {
+  if (q.lineItems?.length) return q;
+  const res = await api.quotations.getQuotation(q.id);
+  return res.success ? res.data : q;
+}
+
 function calcTotals(form: QuotationForm) {
   const lineItems = form.lineItems.map(item => ({
     ...item,
@@ -97,13 +142,13 @@ function calcTotals(form: QuotationForm) {
   return { lineItems, subtotal, taxAmount, totalAmount };
 }
 
-export const QuotationsPage: React.FC = () => {
+export const QuotationsPage: React.FC<QuotationsPageProps> = ({ onOpenBuilder }) => {
   const { user, hasPermission } = useAuth();
   const [quotations, setQuotations] = useState<Quotation[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [limit] = useState(12);
+  const [limit] = useState(LIST_PAGE_SIZE);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [isLoading, setIsLoading] = useState(true);
@@ -140,6 +185,7 @@ export const QuotationsPage: React.FC = () => {
   const [buildRequestId, setBuildRequestId] = useState(generateClientRequestId);
   const [isBuildingOrder, setIsBuildingOrder] = useState(false);
   const [isLoadingBuildDraft, setIsLoadingBuildDraft] = useState(false);
+  const [isOpeningBuilder, setIsOpeningBuilder] = useState(false);
 
   const totals = useMemo(() => calcTotals(form), [form]);
 
@@ -157,7 +203,7 @@ export const QuotationsPage: React.FC = () => {
   );
 
   const openView = async (q: Quotation) => {
-    setSelected(q);
+    setSelected({ ...q, lineItems: [] });
     setIsLoadingView(true);
     try {
       const res = await api.quotations.getQuotation(q.id);
@@ -306,12 +352,17 @@ export const QuotationsPage: React.FC = () => {
           ]);
         }
       });
+  }, [user]);
+
+  const ensureLeads = () => {
+    if (leads.length > 0) return;
     api.leads.getLeads({ limit: 100 }).then(res => {
       if (res.success) setLeads(res.items);
     });
-  }, [user]);
+  };
 
   const openCreate = () => {
+    ensureLeads();
     setEditing(null);
     setForm(emptyForm(user?.id));
     setCreateRequestId(generateClientRequestId());
@@ -319,6 +370,7 @@ export const QuotationsPage: React.FC = () => {
   };
 
   const openEdit = (q: Quotation) => {
+    ensureLeads();
     setEditing(q);
     setForm({
       title: q.title,
@@ -421,6 +473,77 @@ export const QuotationsPage: React.FC = () => {
       lineItems[index] = { ...lineItems[index], ...patch };
       return { ...prev, lineItems };
     });
+  };
+
+  const resolveLeadForBuilder = async (leadId: string) => {
+    const cached = leads.find(l => l.id === leadId);
+    if (cached?.email || cached?.phoneNumber) return cached;
+    try {
+      const res = await api.leads.getLead(leadId);
+      if (res.success) return res.data.lead;
+    } catch {
+      // fall through with cached lead
+    }
+    return cached ?? null;
+  };
+
+  const openQuotationBuilder = async (
+    sourceForm: QuotationForm,
+    options?: { quotation?: Quotation | null; saveDraftFirst?: boolean }
+  ) => {
+    if (!onOpenBuilder) {
+      alert('Quotation Builder is not available in this view.');
+      return;
+    }
+    if (!sourceForm.title.trim() || !sourceForm.leadId) {
+      alert('Add a title and select a lead before generating the quotation document.');
+      return;
+    }
+
+    setIsOpeningBuilder(true);
+    try {
+      let quotation = options?.quotation ?? editing;
+      if (quotation) {
+        quotation = await fetchQuotationWithLines(quotation);
+      }
+      if (options?.saveDraftFirst && !quotation) {
+        const payload = {
+          title: sourceForm.title.trim(),
+          currency: sourceForm.currency,
+          leadId: sourceForm.leadId,
+          assignedToId: sourceForm.assignedToId,
+          validityDate: sourceForm.validityDate ? new Date(sourceForm.validityDate).toISOString() : null,
+          paymentTerms: sourceForm.paymentTerms,
+          notes: sourceForm.notes,
+          discountAmount: parseFloat(sourceForm.discountAmount) || 0,
+          taxRate: parseFloat(sourceForm.taxRate) || 0,
+          lineItems: calcTotals(sourceForm).lineItems,
+          clientRequestId: createRequestId
+        };
+        const res = await api.quotations.createQuotation(
+          payload as Partial<Quotation> & { clientRequestId: string }
+        );
+        if (res.success) {
+          quotation = res.data;
+          setIsFormOpen(false);
+          fetchQuotations(page);
+        }
+      }
+
+      const resolvedForm = quotation ? quotationToForm(quotation, sourceForm.assignedToId) : sourceForm;
+      const lead = await resolveLeadForBuilder(resolvedForm.leadId);
+      const builderPayload = mapCrmQuotationToBuilder(resolvedForm, {
+        quotationCode: quotation?.quotationCode,
+        quotation,
+        lead
+      });
+      stashBuilderPayload(builderPayload);
+      onOpenBuilder(builderPayload);
+    } catch (err: unknown) {
+      alertSaveError(err, 'Failed to open Quotation Builder');
+    } finally {
+      setIsOpeningBuilder(false);
+    }
   };
 
   return (
@@ -550,6 +673,16 @@ export const QuotationsPage: React.FC = () => {
                   <FileText className="w-3.5 h-3.5" />
                   View
                 </button>
+                {onOpenBuilder && (
+                  <button
+                    onClick={() =>
+                      void openQuotationBuilder(quotationToForm(q), { quotation: q })
+                    }
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-violet-800 border border-violet-200 rounded-md hover:bg-violet-50 transition-colors"
+                  >
+                    Generate PDF
+                  </button>
+                )}
                 {hasPermission('quotations.edit') && q.status === 'Draft' && (
                   <button
                     onClick={() => openEdit(q)}
@@ -836,7 +969,7 @@ export const QuotationsPage: React.FC = () => {
           </div>
 
           {/* Fixed footer — never scrolls, always visible */}
-          <div className="flex justify-end gap-2.5 pt-4 mt-4 border-t border-slate-100 shrink-0">
+          <div className="flex flex-wrap justify-end gap-2.5 pt-4 mt-4 border-t border-slate-100 shrink-0">
             <button
               type="button"
               onClick={() => setIsFormOpen(false)}
@@ -844,6 +977,16 @@ export const QuotationsPage: React.FC = () => {
             >
               Cancel
             </button>
+            {onOpenBuilder && (
+              <button
+                type="button"
+                onClick={() => void openQuotationBuilder(form, { quotation: editing, saveDraftFirst: !editing })}
+                disabled={isOpeningBuilder || isSaving || !form.leadId || !form.title.trim()}
+                className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-violet-800 border border-violet-200 rounded-lg hover:bg-violet-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
+              >
+                {isOpeningBuilder ? 'Opening…' : 'Generate Quotation'}
+              </button>
+            )}
             <button
               type="submit"
               disabled={isSaving || !form.leadId}

@@ -7,6 +7,7 @@ import { Customer } from "../models/Customer";
 import { Quotation } from "../models/Quotation";
 import { Document } from "../models/Document";
 import { Shipment } from "../models/Shipment";
+import { Supplier } from "../models/Supplier";
 
 function extractTrailingNumber(code: string, prefix: string): number {
   if (!code.startsWith(prefix)) return 0;
@@ -101,4 +102,10 @@ export async function nextShipmentCode(): Promise<string> {
   const last = await Shipment.findOne().sort({ createdAt: -1 }).select("shipmentCode").lean();
   const current = last?.shipmentCode ? extractTrailingNumber(last.shipmentCode, "VO-SH-") : 100;
   return `VO-SH-${Math.max(100, current) + 1}`;
+}
+
+export async function nextSupplierCode(): Promise<string> {
+  const last = await Supplier.findOne().sort({ createdAt: -1 }).select("supplierCode").lean();
+  const current = last?.supplierCode ? extractTrailingNumber(last.supplierCode, "VO-SU-") : 100;
+  return `VO-SU-${Math.max(100, current) + 1}`;
 }

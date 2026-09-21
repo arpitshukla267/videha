@@ -17,6 +17,7 @@ import {
 import { AppError } from "../../utils/AppError";
 import { assertObjectId, optionalObjectId } from "../../utils/objectId";
 import { nextLeadCode, nextCompanyCode, nextCustomerCode } from "../../utils/codes";
+import { normalizePhone } from "../../services/customerResolution.service";
 import {
   serializeLead,
   serializeLeadSummary,
@@ -959,6 +960,7 @@ export async function convertLeadToCustomer(
           name: fresh.name.trim(),
           email: fresh.email,
           phone: fresh.phoneNumber,
+          normalizedPhone: normalizePhone(fresh.phoneNumber),
           whatsAppNumber: fresh.whatsAppNumber || fresh.phoneNumber,
           isPrimaryContact: true,
           notes: fresh.notes || "",

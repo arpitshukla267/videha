@@ -210,6 +210,29 @@ async function resolveDepartmentForCreate(
   return dept?._id ? (dept._id as Types.ObjectId) : null;
 }
 
+/** Role is always inherited from the member's department default. */
+async function resolveRoleFromDepartment(
+  departmentId?: string | null,
+): Promise<InstanceType<typeof Role>> {
+  if (!departmentId) {
+    throw new AppError("Select a department for this member.", 400);
+  }
+
+  assertObjectId(departmentId, "department id");
+  const dept = await Department.findById(departmentId).select("defaultRoleId").lean();
+  if (!dept) throw new AppError("Selected department does not exist.", 400);
+  if (!dept.defaultRoleId) {
+    throw new AppError(
+      "This department has no default role. Assign a role to the department in Settings first.",
+      400,
+    );
+  }
+
+  const role = await Role.findById(dept.defaultRoleId);
+  if (!role) throw new AppError("Department default role does not exist.", 400);
+  return role;
+}
+
 async function serializeSingleUser(user: InstanceType<typeof User>) {
   const stats = await workloadForUserIds([user._id as Types.ObjectId]);
   const workload = stats.get(String(user._id)) || {
@@ -225,7 +248,7 @@ export async function createUser(
     name: string;
     email: string;
     password: string;
-    roleId: string;
+    roleId?: string | null;
     phone?: string;
     departmentId?: string | null;
     department?: string | null;
@@ -233,24 +256,24 @@ export async function createUser(
   },
   actor: AuthUser,
 ) {
-  if (!data.name || !data.email || !data.password || !data.roleId) {
-    throw new AppError("Name, email, password, and role are required.", 400);
+  if (!data.name || !data.email || !data.password) {
+    throw new AppError("Name, email, and password are required.", 400);
+  }
+  if (data.roleId) {
+    throw new AppError("Role is assigned automatically from the selected department.", 400);
   }
 
-  assertObjectId(data.roleId, "role id");
-  const role = await Role.findById(data.roleId);
-  if (!role) throw new AppError("Selected role does not exist.", 400);
+  const resolvedDeptId = await resolveDepartmentId(data.departmentId, data.department);
+  if (!resolvedDeptId) {
+    throw new AppError("Select a department for this member.", 400);
+  }
+  const role = await resolveRoleFromDepartment(resolvedDeptId);
+  const departmentObjectId = new Types.ObjectId(resolvedDeptId);
 
   const existing = await User.findOne({ email: data.email.toLowerCase().trim() });
   if (existing) {
     throw new AppError("A team member with this email already exists.", 400);
   }
-
-  const departmentObjectId = await resolveDepartmentForCreate(
-    role.name as RoleName,
-    data.departmentId,
-    data.department,
-  );
 
   const passwordHash = await bcrypt.hash(data.password, 10);
   const user = await User.create({
@@ -303,38 +326,41 @@ export async function updateUser(
   const isSelf = actor.id === id;
   const isAdmin = actor.roleName === "SUPER_ADMIN" || actor.roleName === "ADMIN";
 
-  if (data.roleId && data.roleId !== String(user.roleId)) {
-    if (!isAdmin) {
-      throw new AppError("You cannot change user roles.", 403);
-    }
-    if (isSelf && actor.roleName !== "SUPER_ADMIN") {
-      throw new AppError("You cannot alter your own administrative role.", 403);
-    }
-    assertObjectId(data.roleId, "role id");
-    const role = await Role.findById(data.roleId);
-    if (!role) throw new AppError("Selected role does not exist.", 400);
-  }
-
   const expectedRevision = parseRevision(data as Record<string, unknown>);
   const setFields: Record<string, unknown> = {};
 
-  if (data.roleId && data.roleId !== String(user.roleId)) {
-    const role = await Role.findById(data.roleId);
-    if (!role) throw new AppError("Selected role does not exist.", 400);
-    setFields.roleId = role._id;
-    setFields.roleName = role.name;
-  }
   if (data.name !== undefined) setFields.name = data.name.trim() || user.name;
   if (data.phone !== undefined) setFields.phone = data.phone;
   if (data.designation !== undefined) setFields.designation = data.designation;
   if (data.status !== undefined) setFields.status = data.status;
+
+  let resolvedDepartmentId: string | null | undefined;
   if (data.departmentId !== undefined || data.department !== undefined) {
     const resolved = await resolveDepartmentId(
       data.departmentId === undefined ? null : data.departmentId,
       data.department,
     );
+    resolvedDepartmentId = resolved;
     if (data.departmentId !== undefined || resolved) {
       setFields.departmentId = resolved ? new Types.ObjectId(resolved) : null;
+    }
+  }
+
+  if (data.roleId) {
+    throw new AppError("Role is assigned automatically from the selected department.", 400);
+  }
+
+  if (resolvedDepartmentId !== undefined && resolvedDepartmentId !== null) {
+    const role = await resolveRoleFromDepartment(resolvedDepartmentId);
+    if (String(role._id) !== String(user.roleId)) {
+      if (!isAdmin) {
+        throw new AppError("You cannot change user roles.", 403);
+      }
+      if (isSelf && actor.roleName !== "SUPER_ADMIN") {
+        throw new AppError("You cannot alter your own administrative role.", 403);
+      }
+      setFields.roleId = role._id;
+      setFields.roleName = role.name;
     }
   }
 

@@ -46,6 +46,7 @@ import { PaginationBar } from '../../components/ui/PaginationBar';
 import { ListStatePanel } from '../../components/ui/ListStatePanel';
 import { useAuth } from '../../context/AuthContext';
 import { handleConflictWithReload, alertSaveError } from '../../lib/apiErrors';
+import { LIST_PAGE_SIZE } from '../../lib/pagination';
 import { NavigationTab } from '../../components/layout/Sidebar';
 
 type CustomerStatusFilter = 'all' | 'active' | 'inactive';
@@ -93,7 +94,7 @@ export const CustomersPage: React.FC<CustomersPageProps> = ({
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [limit] = useState(15);
+  const [limit] = useState(LIST_PAGE_SIZE);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<CustomerStatusFilter>('all');
   const [companyFilter, setCompanyFilter] = useState<string>('all');
@@ -119,6 +120,16 @@ export const CustomersPage: React.FC<CustomersPageProps> = ({
   const [linkedBills, setLinkedBills] = useState<Bill[]>([]);
   const [linkedShipments, setLinkedShipments] = useState<Shipment[]>([]);
   const [linkedDocuments, setLinkedDocuments] = useState<CrmDocument[]>([]);
+
+  // In-place modal viewing states
+  const [viewQuotation, setViewQuotation] = useState<Quotation | null>(null);
+  const [viewOrder, setViewOrder] = useState<Order | null>(null);
+  const [viewBill, setViewBill] = useState<Bill | null>(null);
+  const [viewShipment, setViewShipment] = useState<Shipment | null>(null);
+  const [paymentAmount, setPaymentAmount] = useState('');
+  const [paymentNotes, setPaymentNotes] = useState('');
+  const [isRecordingPayment, setIsRecordingPayment] = useState(false);
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
 
   // Add / Edit Modal State
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -229,90 +240,93 @@ export const CustomersPage: React.FC<CustomersPageProps> = ({
     }
   }, [focusCustomerId]);
 
-  // Open Details Modal and fetch related entities
-  const handleOpenDetail = async (customer: Customer) => {
-    setSelectedCustomer(customer);
-    setDetailTab('overview');
-    setIsLoadingDetail(true);
+  const [loadedDetailTabs, setLoadedDetailTabs] = useState<Set<DetailTab>>(new Set());
 
-    // Find linked company
-    const comp = companyMap.get(customer.companyId);
-    setLinkedCompany(comp || null);
-
-    // Reset linked records
+  const resetDetailLinkedData = () => {
+    setLoadedDetailTabs(new Set());
     setLinkedLead(null);
     setLinkedQuotations([]);
     setLinkedOrders([]);
     setLinkedBills([]);
     setLinkedShipments([]);
     setLinkedDocuments([]);
+  };
+
+  const loadCustomerDetailTab = async (customer: Customer, tab: DetailTab) => {
+    if (loadedDetailTabs.has(tab)) return;
 
     try {
-      // 1. Fetch original converted lead if exists
-      if (customer.relatedLeadId) {
-        api.leads
-          .getLead(customer.relatedLeadId)
-          .then(res => {
-            if (res.success && res.data) {
-              setLinkedLead(res.data);
-            }
-          })
-          .catch(() => {});
-      }
-
-      // 2. Fetch quotations linked to customer
-      api.quotations
-        .getQuotations({
-          customerId: customer.id,
-          limit: 20
-        })
-        .then(res => {
+      switch (tab) {
+        case 'overview':
+          if (customer.relatedLeadId) {
+            const leadRes = await api.leads.getLead(customer.relatedLeadId);
+            if (leadRes.success && leadRes.data) setLinkedLead(leadRes.data);
+          }
+          break;
+        case 'quotations': {
+          const res = await api.quotations.getQuotations({ customerId: customer.id, limit: 50 });
           if (res.success) setLinkedQuotations(res.data);
-        })
-        .catch(() => {});
-
-      // 3. Fetch orders matching customer code or name
-      api.orders
-        .getOrders({
-          search: customer.customerCode,
-          limit: 20
-        })
-        .then(res => {
+          break;
+        }
+        case 'orders': {
+          const res = await api.orders.getOrders({ customerId: customer.id, limit: 50 });
           if (res.success) setLinkedOrders(res.data);
-        })
-        .catch(() => {});
-
-      // 4. Fetch bills matching customer code
-      api.bills
-        .getBills({ search: customer.customerCode })
-        .then(res => {
+          break;
+        }
+        case 'bills': {
+          const res = await api.bills.getBills({ customerId: customer.id, limit: 50 });
           if (res.success) setLinkedBills(res.data);
-        })
-        .catch(() => {});
-
-      // 5. Fetch shipments matching customer code
-      api.shipments
-        .getShipments({ search: customer.customerCode, limit: 20 })
-        .then(res => {
+          break;
+        }
+        case 'shipments': {
+          const res = await api.shipments.getShipments({ customerId: customer.id, limit: 50 });
           if (res.success) setLinkedShipments(res.data);
-        })
-        .catch(() => {});
-
-      // 6. Fetch documents linked to customer
-      api.documents
-        .getDocuments({
-          entityId: customer.id,
-          entityType: 'Customer',
-          limit: 20
-        })
-        .then(res => {
+          break;
+        }
+        case 'documents': {
+          const res = await api.documents.getDocuments({
+            entityId: customer.id,
+            entityType: 'Customer',
+            limit: 50
+          });
           if (res.success) setLinkedDocuments(res.data);
-        })
-        .catch(() => {});
+          break;
+        }
+        default:
+          break;
+      }
+      setLoadedDetailTabs(prev => new Set(prev).add(tab));
+    } catch {
+      // Tab data is optional; keep the overview usable if a related fetch fails.
+    }
+  };
+
+  const handleOpenDetail = async (customer: Customer) => {
+    setDetailTab('overview');
+    resetDetailLinkedData();
+    setSelectedCustomer(customer);
+    setLinkedCompany(companyMap.get(customer.companyId) || null);
+    setIsLoadingDetail(true);
+
+    try {
+      const res = await api.customers.getCustomer(customer.id);
+      if (res.success) {
+        setSelectedCustomer(res.data);
+        setLinkedCompany(companyMap.get(res.data.companyId) || null);
+        await loadCustomerDetailTab(res.data, 'overview');
+      }
+    } catch (err: unknown) {
+      alertSaveError(err, 'Failed to load customer details');
+      setSelectedCustomer(null);
     } finally {
       setIsLoadingDetail(false);
     }
   };
+
+  useEffect(() => {
+    if (!selectedCustomer || isLoadingDetail) return;
+    void loadCustomerDetailTab(selectedCustomer, detailTab);
+  }, [selectedCustomer?.id, detailTab, isLoadingDetail]);
 
   // Open Create Modal
   const openCreate = () => {
@@ -1015,19 +1029,6 @@ export const CustomersPage: React.FC<CustomersPageProps> = ({
                   <h3 className="text-xs font-semibold text-slate-700 uppercase tracking-wider">
                     Quotations for this Customer
                   </h3>
-                  {onNavigate && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedCustomer(null);
-                        onNavigate('quotations');
-                      }}
-                      className="text-xs text-sky-600 hover:text-sky-800 font-medium inline-flex items-center gap-1"
-                    >
-                      Open Quotations Module
-                      <ExternalLink className="w-3 h-3" />
-                    </button>
-                  )}
                 </div>
 
                 {linkedQuotations.length === 0 ? (
@@ -1050,7 +1051,7 @@ export const CustomersPage: React.FC<CustomersPageProps> = ({
                       <tbody className="divide-y divide-slate-100">
                         {linkedQuotations.map(q => (
                           <tr key={q.id} className="hover:bg-slate-50/70">
-                            <td className="px-4 py-3 font-mono font-medium text-slate-800">{q.quoteCode}</td>
+                            <td className="px-4 py-3 font-mono font-medium text-slate-800">{q.quotationCode}</td>
                             <td className="px-4 py-3 text-slate-700">{q.title}</td>
                             <td className="px-4 py-3 font-semibold text-slate-900">
                               {q.currency} {q.totalAmount.toLocaleString()}
@@ -1062,18 +1063,14 @@ export const CustomersPage: React.FC<CustomersPageProps> = ({
                               {new Date(q.createdAt).toLocaleDateString()}
                             </td>
                             <td className="px-4 py-3 text-right">
-                              {onNavigate && (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setSelectedCustomer(null);
-                                    onNavigate('quotations', q.id);
-                                  }}
-                                  className="text-xs text-sky-600 hover:text-sky-800 font-medium"
-                                >
-                                  View
-                                </button>
-                              )}
+                              <button
+                                type="button"
+                                onClick={() => setViewQuotation(q)}
+                                className="text-xs text-sky-600 hover:text-sky-800 font-medium inline-flex items-center gap-1"
+                              >
+                                <Eye className="w-3.5 h-3.5" />
+                                View
+                              </button>
                             </td>
                           </tr>
                         ))}
@@ -1091,19 +1088,6 @@ export const CustomersPage: React.FC<CustomersPageProps> = ({
                   <h3 className="text-xs font-semibold text-slate-700 uppercase tracking-wider">
                     Orders for this Customer
                   </h3>
-                  {onNavigate && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedCustomer(null);
-                        onNavigate('orders');
-                      }}
-                      className="text-xs text-sky-600 hover:text-sky-800 font-medium inline-flex items-center gap-1"
-                    >
-                      Open Orders Module
-                      <ExternalLink className="w-3 h-3" />
-                    </button>
-                  )}
                 </div>
 
                 {linkedOrders.length === 0 ? (
@@ -1117,9 +1101,10 @@ export const CustomersPage: React.FC<CustomersPageProps> = ({
                         <tr>
                           <th className="text-left px-4 py-2.5 font-semibold">Order Code</th>
                           <th className="text-left px-4 py-2.5 font-semibold">Product</th>
-                          <th className="text-left px-4 py-2.5 font-semibold">Amount</th>
-                          <th className="text-left px-4 py-2.5 font-semibold">Destination Port</th>
-                          <th className="text-left px-4 py-2.5 font-semibold">Status</th>
+                          <th className="text-left px-4 py-2.5 font-semibold">Total Amount</th>
+                          <th className="text-left px-4 py-2.5 font-semibold">Paid / Due</th>
+                          <th className="text-left px-4 py-2.5 font-semibold">Order Status</th>
+                          <th className="text-left px-4 py-2.5 font-semibold">Billing Status</th>
                           <th className="text-right px-4 py-2.5 font-semibold">Action</th>
                         </tr>
                       </thead>
@@ -1127,27 +1112,30 @@ export const CustomersPage: React.FC<CustomersPageProps> = ({
                         {linkedOrders.map(o => (
                           <tr key={o.id} className="hover:bg-slate-50/70">
                             <td className="px-4 py-3 font-mono font-medium text-slate-800">{o.orderCode}</td>
-                            <td className="px-4 py-3 text-slate-700">{o.productName}</td>
+                            <td className="px-4 py-3 text-slate-700 max-w-[140px] truncate" title={o.products}>{o.products}</td>
                             <td className="px-4 py-3 font-semibold text-slate-900">
-                              {o.currency} {o.totalAmount.toLocaleString()}
+                              {o.currency} {Number(o.totalAmount || o.orderValue).toLocaleString()}
                             </td>
-                            <td className="px-4 py-3 text-slate-600">{o.destinationPort || '—'}</td>
+                            <td className="px-4 py-3 text-xs">
+                              <span className="text-emerald-700 font-medium">${Number(o.amountPaid || 0).toLocaleString()}</span>
+                              <span className="text-slate-300"> / </span>
+                              <span className="text-rose-600 font-medium">${Number(o.amountDue ?? o.orderValue).toLocaleString()}</span>
+                            </td>
                             <td className="px-4 py-3">
-                              <StatusBadge status={o.status} />
+                              <StatusBadge status={o.orderStatus} />
+                            </td>
+                            <td className="px-4 py-3">
+                              {o.billingStatus ? <StatusBadge status={o.billingStatus} /> : <span className="text-slate-400">—</span>}
                             </td>
                             <td className="px-4 py-3 text-right">
-                              {onNavigate && (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setSelectedCustomer(null);
-                                    onNavigate('orders', o.id);
-                                  }}
-                                  className="text-xs text-sky-600 hover:text-sky-800 font-medium"
-                                >
-                                  View
-                                </button>
-                              )}
+                              <button
+                                type="button"
+                                onClick={() => setViewOrder(o)}
+                                className="text-xs text-sky-600 hover:text-sky-800 font-medium inline-flex items-center gap-1"
+                              >
+                                <Eye className="w-3.5 h-3.5" />
+                                View
+                              </button>
                             </td>
                           </tr>
                         ))}
@@ -1165,19 +1153,6 @@ export const CustomersPage: React.FC<CustomersPageProps> = ({
                   <h3 className="text-xs font-semibold text-slate-700 uppercase tracking-wider">
                     Bills & Invoices
                   </h3>
-                  {onNavigate && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedCustomer(null);
-                        onNavigate('bills');
-                      }}
-                      className="text-xs text-sky-600 hover:text-sky-800 font-medium inline-flex items-center gap-1"
-                    >
-                      Open Bills Module
-                      <ExternalLink className="w-3 h-3" />
-                    </button>
-                  )}
                 </div>
 
                 {linkedBills.length === 0 ? (
@@ -1191,10 +1166,12 @@ export const CustomersPage: React.FC<CustomersPageProps> = ({
                         <tr>
                           <th className="text-left px-4 py-2.5 font-semibold">Bill Code</th>
                           <th className="text-left px-4 py-2.5 font-semibold">Order</th>
-                          <th className="text-left px-4 py-2.5 font-semibold">Total Amount</th>
-                          <th className="text-left px-4 py-2.5 font-semibold">Paid Amount</th>
+                          <th className="text-left px-4 py-2.5 font-semibold">Total</th>
+                          <th className="text-left px-4 py-2.5 font-semibold">Paid</th>
+                          <th className="text-left px-4 py-2.5 font-semibold">Due</th>
                           <th className="text-left px-4 py-2.5 font-semibold">Status</th>
                           <th className="text-left px-4 py-2.5 font-semibold">Due Date</th>
+                          <th className="text-right px-4 py-2.5 font-semibold">Action</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
@@ -1206,13 +1183,26 @@ export const CustomersPage: React.FC<CustomersPageProps> = ({
                               {b.currency} {b.totalAmount.toLocaleString()}
                             </td>
                             <td className="px-4 py-3 text-emerald-700 font-medium">
-                              {b.currency} {b.paidAmount.toLocaleString()}
+                              {b.currency} {b.amountPaid.toLocaleString()}
+                            </td>
+                            <td className="px-4 py-3 text-rose-600 font-medium">
+                              {b.currency} {b.amountDue.toLocaleString()}
                             </td>
                             <td className="px-4 py-3">
                               <StatusBadge status={b.status} />
                             </td>
                             <td className="px-4 py-3 text-slate-500">
-                              {new Date(b.dueDate).toLocaleDateString()}
+                              {b.dueDate ? new Date(b.dueDate).toLocaleDateString() : '—'}
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              <button
+                                type="button"
+                                onClick={() => setViewBill(b)}
+                                className="text-xs text-sky-600 hover:text-sky-800 font-medium inline-flex items-center gap-1"
+                              >
+                                <Eye className="w-3.5 h-3.5" />
+                                View
+                              </button>
                             </td>
                           </tr>
                         ))}
@@ -1230,19 +1220,6 @@ export const CustomersPage: React.FC<CustomersPageProps> = ({
                   <h3 className="text-xs font-semibold text-slate-700 uppercase tracking-wider">
                     Linked Shipments
                   </h3>
-                  {onNavigate && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedCustomer(null);
-                        onNavigate('shipments');
-                      }}
-                      className="text-xs text-sky-600 hover:text-sky-800 font-medium inline-flex items-center gap-1"
-                    >
-                      Open Shipments Module
-                      <ExternalLink className="w-3 h-3" />
-                    </button>
-                  )}
                 </div>
 
                 {linkedShipments.length === 0 ? (
@@ -1259,13 +1236,14 @@ export const CustomersPage: React.FC<CustomersPageProps> = ({
                           <th className="text-left px-4 py-2.5 font-semibold">Route</th>
                           <th className="text-left px-4 py-2.5 font-semibold">Status</th>
                           <th className="text-left px-4 py-2.5 font-semibold">ETA</th>
+                          <th className="text-right px-4 py-2.5 font-semibold">Action</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
                         {linkedShipments.map(s => (
                           <tr key={s.id} className="hover:bg-slate-50/70">
                             <td className="px-4 py-3 font-mono font-medium text-slate-800">
-                              {s.trackingNumber}
+                              {s.trackingNumber || s.shipmentCode}
                             </td>
                             <td className="px-4 py-3 text-slate-700">{s.carrier}</td>
                             <td className="px-4 py-3 text-slate-600">
@@ -1275,9 +1253,19 @@ export const CustomersPage: React.FC<CustomersPageProps> = ({
                               <StatusBadge status={s.status} />
                             </td>
                             <td className="px-4 py-3 text-slate-500">
-                              {s.estimatedArrival
-                                ? new Date(s.estimatedArrival).toLocaleDateString()
+                              {s.eta
+                                ? new Date(s.eta).toLocaleDateString()
                                 : 'TBD'}
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              <button
+                                type="button"
+                                onClick={() => setViewShipment(s)}
+                                className="text-xs text-sky-600 hover:text-sky-800 font-medium inline-flex items-center gap-1"
+                              >
+                                <Eye className="w-3.5 h-3.5" />
+                                View
+                              </button>
                             </td>
                           </tr>
                         ))}
@@ -1326,7 +1314,7 @@ export const CustomersPage: React.FC<CustomersPageProps> = ({
                           <tr key={doc.id} className="hover:bg-slate-50/70">
                             <td className="px-4 py-3 font-medium text-slate-900">{doc.title}</td>
                             <td className="px-4 py-3 text-slate-600">{doc.category}</td>
-                            <td className="px-4 py-3 text-slate-500 font-mono">{doc.originalName}</td>
+                            <td className="px-4 py-3 text-slate-500 font-mono">{doc.fileName}</td>
                             <td className="px-4 py-3 text-slate-500">
                               {new Date(doc.createdAt).toLocaleDateString()}
                             </td>
@@ -1369,7 +1357,7 @@ export const CustomersPage: React.FC<CustomersPageProps> = ({
                               {new Date(act.createdAt).toLocaleString()}
                             </span>
                           </div>
-                          <p className="text-slate-600 mt-0.5">{act.details}</p>
+                          <p className="text-slate-600 mt-0.5">{act.description}</p>
                         </div>
                       </div>
                     ))}
@@ -1599,6 +1587,440 @@ export const CustomersPage: React.FC<CustomersPageProps> = ({
             </button>
           </div>
         </form>
+      </Modal>
+
+      {/* IN-PLACE QUOTATION MODAL */}
+      <Modal
+        isOpen={!!viewQuotation}
+        onClose={() => setViewQuotation(null)}
+        title={viewQuotation ? `Quotation: ${viewQuotation.quotationCode}` : 'Quotation Details'}
+        subtitle={viewQuotation?.title || ''}
+        maxWidth="2xl"
+      >
+        {viewQuotation && (
+          <div className="space-y-4 text-xs">
+            <div className="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl">
+              <div>
+                <span className="text-slate-500">Status: </span>
+                <StatusBadge status={viewQuotation.status} />
+              </div>
+              <div className="text-right">
+                <span className="text-slate-500">Total Amount: </span>
+                <span className="font-semibold text-slate-900 text-sm">
+                  {viewQuotation.currency} {viewQuotation.totalAmount.toLocaleString()}
+                </span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 p-3 bg-white border border-slate-200 rounded-xl">
+              <div>
+                <span className="text-slate-400 block text-[10px] uppercase">Payment Terms</span>
+                <span className="font-medium text-slate-800">{viewQuotation.paymentTerms || 'Standard'}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[10px] uppercase">Validity Date</span>
+                <span className="font-medium text-slate-800">
+                  {viewQuotation.validityDate ? new Date(viewQuotation.validityDate).toLocaleDateString() : '—'}
+                </span>
+              </div>
+            </div>
+
+            {viewQuotation.lineItems && viewQuotation.lineItems.length > 0 && (
+              <div className="border border-slate-200 rounded-xl overflow-hidden">
+                <table className="w-full text-xs">
+                  <thead className="bg-slate-50 text-slate-500 border-b border-slate-200">
+                    <tr>
+                      <th className="text-left px-3 py-2 font-semibold">Description</th>
+                      <th className="text-center px-3 py-2 font-semibold">Qty</th>
+                      <th className="text-right px-3 py-2 font-semibold">Unit Price</th>
+                      <th className="text-right px-3 py-2 font-semibold">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {viewQuotation.lineItems.map((li, idx) => (
+                      <tr key={idx}>
+                        <td className="px-3 py-2 text-slate-800">{li.description}</td>
+                        <td className="px-3 py-2 text-center text-slate-600">{li.quantity}</td>
+                        <td className="px-3 py-2 text-right text-slate-600">
+                          {viewQuotation.currency} {li.unitPrice.toLocaleString()}
+                        </td>
+                        <td className="px-3 py-2 text-right font-medium text-slate-900">
+                          {viewQuotation.currency} {li.amount.toLocaleString()}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {viewQuotation.notes && (
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-600">
+                <span className="font-semibold text-slate-700 block mb-0.5">Notes:</span>
+                <p className="whitespace-pre-wrap">{viewQuotation.notes}</p>
+              </div>
+            )}
+
+            <div className="flex justify-end pt-3 border-t border-slate-200">
+              <button
+                type="button"
+                onClick={() => setViewQuotation(null)}
+                className="px-4 py-1.5 text-xs font-medium text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* IN-PLACE ORDER MODAL */}
+      <Modal
+        isOpen={!!viewOrder}
+        onClose={() => setViewOrder(null)}
+        title={viewOrder ? `Order: ${viewOrder.orderCode}` : 'Order Details'}
+        subtitle={viewOrder?.company || ''}
+        maxWidth="2xl"
+      >
+        {viewOrder && (
+          <div className="space-y-4 text-xs">
+            <div className="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl flex-wrap gap-2">
+              <div className="flex items-center gap-2">
+                <span className="text-slate-500 font-medium">Order Status:</span>
+                <StatusBadge status={viewOrder.orderStatus} />
+                <span className="text-slate-500 font-medium ml-2">Billing:</span>
+                {viewOrder.billingStatus ? (
+                  <StatusBadge status={viewOrder.billingStatus} />
+                ) : (
+                  <span className="text-slate-400">Pending</span>
+                )}
+              </div>
+              <div className="text-right">
+                <span className="text-slate-500">Order Total: </span>
+                <span className="font-semibold text-slate-900 text-sm">
+                  ${Number(viewOrder.totalAmount || viewOrder.orderValue).toLocaleString()} {viewOrder.currency}
+                </span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-3 bg-slate-50/80 border border-slate-200 rounded-xl">
+              <div>
+                <span className="text-slate-400 block text-[10px] uppercase font-medium">Total Amount</span>
+                <span className="font-semibold text-slate-800 mt-0.5 block">
+                  ${Number(viewOrder.totalAmount || viewOrder.orderValue).toLocaleString()} {viewOrder.currency}
+                </span>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[10px] uppercase font-medium">Amount Paid</span>
+                <span className="font-semibold text-emerald-700 mt-0.5 block">
+                  ${Number(viewOrder.amountPaid || 0).toLocaleString()} {viewOrder.currency}
+                </span>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[10px] uppercase font-medium">Amount Due</span>
+                <span className="font-semibold text-rose-600 mt-0.5 block">
+                  ${Number(viewOrder.amountDue ?? viewOrder.orderValue).toLocaleString()} {viewOrder.currency}
+                </span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 p-3 bg-white border border-slate-200 rounded-xl">
+              <div>
+                <span className="text-slate-400 block text-[10px] uppercase">Products Consignment</span>
+                <span className="font-medium text-slate-800">{viewOrder.products}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[10px] uppercase">Quantity</span>
+                <span className="font-medium text-slate-800">{viewOrder.quantity}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[10px] uppercase">Destination Port</span>
+                <span className="font-medium text-slate-800">{viewOrder.destinationPort || '—'}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[10px] uppercase">Expected Delivery</span>
+                <span className="font-medium text-slate-800">
+                  {viewOrder.expectedDelivery ? new Date(viewOrder.expectedDelivery).toLocaleDateString() : '—'}
+                </span>
+              </div>
+              {viewOrder.trackingNumber && (
+                <div className="col-span-2">
+                  <span className="text-slate-400 block text-[10px] uppercase">Carrier & Tracking</span>
+                  <span className="font-mono text-slate-800">
+                    {viewOrder.shippingCarrier ? `${viewOrder.shippingCarrier}: ` : ''}{viewOrder.trackingNumber}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {viewOrder.notes && (
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-600">
+                <span className="font-semibold text-slate-700 block mb-0.5">Notes:</span>
+                <p className="whitespace-pre-wrap">{viewOrder.notes}</p>
+              </div>
+            )}
+
+            <div className="flex justify-end pt-3 border-t border-slate-200">
+              <button
+                type="button"
+                onClick={() => setViewOrder(null)}
+                className="px-4 py-1.5 text-xs font-medium text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* IN-PLACE BILL / INVOICE MODAL WITH PAYMENT RECORDING & PDF DOWNLOAD */}
+      <Modal
+        isOpen={!!viewBill}
+        onClose={() => setViewBill(null)}
+        title={viewBill ? `Invoice / Bill: ${viewBill.billCode}` : 'Bill Details'}
+        subtitle={viewBill ? `Order ${viewBill.orderCode} · ${viewBill.company}` : ''}
+        maxWidth="2xl"
+      >
+        {viewBill && (
+          <div className="space-y-4 text-xs">
+            <div className="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl flex-wrap gap-2">
+              <div className="flex items-center gap-2">
+                <span className="text-slate-500 font-medium">Billing Status:</span>
+                <StatusBadge status={viewBill.status} />
+              </div>
+              <button
+                type="button"
+                disabled={isDownloadingPdf}
+                onClick={async () => {
+                  try {
+                    setIsDownloadingPdf(true);
+                    await api.bills.downloadPdf(viewBill.id, viewBill.billCode);
+                  } catch (err: any) {
+                    alert(err.message || 'Failed to download PDF');
+                  } finally {
+                    setIsDownloadingPdf(false);
+                  }
+                }}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-sky-50 text-sky-800 hover:bg-sky-100 border border-sky-200 rounded-lg font-medium transition-colors"
+              >
+                <Download className="w-3.5 h-3.5 text-sky-600" />
+                <span>{isDownloadingPdf ? 'Generating PDF…' : 'Download Invoice PDF'}</span>
+              </button>
+            </div>
+
+            {/* Financial Summary */}
+            <div className="grid grid-cols-3 gap-3 p-3.5 bg-white border border-slate-200 rounded-xl text-center">
+              <div>
+                <span className="text-[10px] uppercase tracking-wider text-slate-400 block font-medium">Total Amount</span>
+                <span className="text-sm font-semibold text-slate-900 block mt-0.5">
+                  {viewBill.currency} {viewBill.totalAmount.toLocaleString()}
+                </span>
+              </div>
+              <div>
+                <span className="text-[10px] uppercase tracking-wider text-slate-400 block font-medium">Amount Paid</span>
+                <span className="text-sm font-semibold text-emerald-700 block mt-0.5">
+                  {viewBill.currency} {viewBill.amountPaid.toLocaleString()}
+                </span>
+              </div>
+              <div>
+                <span className="text-[10px] uppercase tracking-wider text-slate-400 block font-medium">Amount Due</span>
+                <span className="text-sm font-semibold text-rose-600 block mt-0.5">
+                  {viewBill.currency} {viewBill.amountDue.toLocaleString()}
+                </span>
+              </div>
+            </div>
+
+            {/* Line items if available */}
+            {viewBill.lineItems && viewBill.lineItems.length > 0 && (
+              <div className="border border-slate-200 rounded-xl overflow-hidden">
+                <table className="w-full text-xs">
+                  <thead className="bg-slate-50 text-slate-500 border-b border-slate-200">
+                    <tr>
+                      <th className="text-left px-3 py-2 font-semibold">Description</th>
+                      <th className="text-center px-3 py-2 font-semibold">Qty</th>
+                      <th className="text-right px-3 py-2 font-semibold">Unit Price</th>
+                      <th className="text-right px-3 py-2 font-semibold">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {viewBill.lineItems.map((li, idx) => (
+                      <tr key={idx}>
+                        <td className="px-3 py-2 text-slate-800">{li.description}</td>
+                        <td className="px-3 py-2 text-center text-slate-600">{li.quantity}</td>
+                        <td className="px-3 py-2 text-right text-slate-600">
+                          {viewBill.currency} {li.unitPrice.toLocaleString()}
+                        </td>
+                        <td className="px-3 py-2 text-right font-medium text-slate-900">
+                          {viewBill.currency} {li.amount.toLocaleString()}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* In-Place Payment Recording Section */}
+            {hasPermission('bills.edit') && viewBill.amountDue > 0 && (
+              <div className="p-4 bg-emerald-50/50 border border-emerald-200 rounded-xl space-y-3">
+                <h4 className="text-xs font-semibold text-emerald-950 uppercase tracking-wider">
+                  Record User-Controlled Payment
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-medium text-slate-700 mb-1">
+                      Payment Amount ({viewBill.currency}) * (Max: {viewBill.amountDue})
+                    </label>
+                    <input
+                      type="number"
+                      min="0.01"
+                      max={viewBill.amountDue}
+                      step="any"
+                      value={paymentAmount}
+                      onChange={e => setPaymentAmount(e.target.value)}
+                      placeholder={`e.g. ${viewBill.amountDue}`}
+                      className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs bg-white text-slate-800 focus:outline-none focus:ring-1 focus:ring-emerald-600"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-medium text-slate-700 mb-1">
+                      Payment Notes / Reference
+                    </label>
+                    <input
+                      type="text"
+                      value={paymentNotes}
+                      onChange={e => setPaymentNotes(e.target.value)}
+                      placeholder="e.g. Bank wire ref #TRX-82719"
+                      className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs bg-white text-slate-800 focus:outline-none focus:ring-1 focus:ring-emerald-600"
+                    />
+                  </div>
+                </div>
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    disabled={isRecordingPayment || !paymentAmount || Number(paymentAmount) <= 0}
+                    onClick={async () => {
+                      const amt = Number(paymentAmount);
+                      if (!amt || amt <= 0) {
+                        alert('Enter a valid payment amount');
+                        return;
+                      }
+                      if (amt > viewBill.amountDue) {
+                        alert(`Payment amount cannot exceed amount due (${viewBill.currency} ${viewBill.amountDue})`);
+                        return;
+                      }
+                      try {
+                        setIsRecordingPayment(true);
+                        const res = await api.bills.recordPayment(viewBill.id, amt, paymentNotes);
+                        if (res.success && res.data) {
+                          setViewBill(res.data);
+                          setPaymentAmount('');
+                          setPaymentNotes('');
+                          // Refresh linked bills list
+                          if (selectedCustomer) {
+                            api.bills.getBills({ customerId: selectedCustomer.id }).then(bRes => {
+                              if (bRes.success) setLinkedBills(bRes.data);
+                            });
+                          }
+                          alert('Payment recorded successfully!');
+                        }
+                      } catch (err: any) {
+                        alert(err.message || 'Failed to record payment');
+                      } finally {
+                        setIsRecordingPayment(false);
+                      }
+                    }}
+                    className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-medium disabled:opacity-50 transition-colors shadow-2xs"
+                  >
+                    {isRecordingPayment ? 'Recording…' : 'Submit Payment'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-end pt-3 border-t border-slate-200">
+              <button
+                type="button"
+                onClick={() => setViewBill(null)}
+                className="px-4 py-1.5 text-xs font-medium text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* IN-PLACE SHIPMENT MODAL */}
+      <Modal
+        isOpen={!!viewShipment}
+        onClose={() => setViewShipment(null)}
+        title={viewShipment ? `Shipment: ${viewShipment.shipmentCode}` : 'Shipment Details'}
+        subtitle={viewShipment ? `${viewShipment.originPort} → ${viewShipment.destinationPort}` : ''}
+        maxWidth="2xl"
+      >
+        {viewShipment && (
+          <div className="space-y-4 text-xs">
+            <div className="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl">
+              <div>
+                <span className="text-slate-500">Status: </span>
+                <StatusBadge status={viewShipment.status} />
+              </div>
+              <div>
+                <span className="text-slate-500">Carrier: </span>
+                <span className="font-semibold text-slate-800">{viewShipment.carrier || '—'}</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 p-3 bg-white border border-slate-200 rounded-xl">
+              <div>
+                <span className="text-slate-400 block text-[10px] uppercase">Tracking / B/L Number</span>
+                <span className="font-mono font-medium text-slate-900">{viewShipment.trackingNumber || '—'}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[10px] uppercase">Container Reference</span>
+                <span className="font-mono font-medium text-slate-900">{viewShipment.containerReference || '—'}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[10px] uppercase">Origin Port</span>
+                <span className="font-medium text-slate-800">{viewShipment.originPort}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[10px] uppercase">Destination Port</span>
+                <span className="font-medium text-slate-800">{viewShipment.destinationPort}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[10px] uppercase">Estimated Departure (ETD)</span>
+                <span className="font-medium text-slate-800">
+                  {viewShipment.etd ? new Date(viewShipment.etd).toLocaleDateString() : '—'}
+                </span>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[10px] uppercase">Estimated Arrival (ETA)</span>
+                <span className="font-medium text-slate-800">
+                  {viewShipment.eta ? new Date(viewShipment.eta).toLocaleDateString() : '—'}
+                </span>
+              </div>
+            </div>
+
+            {viewShipment.notes && (
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-600">
+                <span className="font-semibold text-slate-700 block mb-0.5">Notes:</span>
+                <p className="whitespace-pre-wrap">{viewShipment.notes}</p>
+              </div>
+            )}
+
+            <div className="flex justify-end pt-3 border-t border-slate-200">
+              <button
+                type="button"
+                onClick={() => setViewShipment(null)}
+                className="px-4 py-1.5 text-xs font-medium text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );

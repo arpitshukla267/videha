@@ -1,6 +1,24 @@
 import mongoose, { Schema, Document, Types } from "mongoose";
 import type { ImportEntityType } from "../constants/importFields";
 
+export interface ImportCustomerMatch {
+  type: "existing" | "new" | "ambiguous";
+  matchedBy?: string;
+  customerCode?: string;
+  customerName?: string;
+  companyName?: string;
+  details?: string;
+}
+
+export interface ImportSupplierMatch {
+  type: "existing" | "new" | "ambiguous" | "duplicate_in_csv";
+  matchedBy?: string;
+  supplierCode?: string;
+  supplierName?: string;
+  companyName?: string;
+  details?: string;
+}
+
 export interface ImportSessionRow {
   rowNumber: number;
   raw: Record<string, string>;
@@ -9,6 +27,8 @@ export interface ImportSessionRow {
   warnings: string[];
   isDuplicate: boolean;
   valid: boolean;
+  customerMatch?: ImportCustomerMatch;
+  supplierMatch?: ImportSupplierMatch;
 }
 
 export interface IImportSession extends Document {
@@ -32,6 +52,8 @@ const importSessionRowSchema = new Schema<ImportSessionRow>(
     warnings: { type: [String], default: [] },
     isDuplicate: { type: Boolean, default: false },
     valid: { type: Boolean, default: false },
+    customerMatch: { type: Schema.Types.Mixed, default: null },
+    supplierMatch: { type: Schema.Types.Mixed, default: null },
   },
   { _id: false },
 );

@@ -238,11 +238,21 @@ export function serializeOrder(doc: Record<string, unknown>) {
     quantity: doc.quantity || "",
     orderValue: Number(doc.orderValue) || 0,
     currency: doc.currency || "USD",
+    exchangeRateSnapshot: doc.exchangeRateSnapshot || null,
+    reportingAmountINR: doc.reportingAmountINR || null,
     assignedMemberId: assignedToId,
     assignedToId,
     assignedMemberName: assigned?.name ? String(assigned.name) : doc.assignedMemberName || undefined,
     orderStatus: doc.status || doc.orderStatus || "Order Confirmed",
     status: doc.status || doc.orderStatus || "Order Confirmed",
+    billingStatus: (doc.billingStatus as string) || (doc.status === "Draft" ? "draft" : "pending"),
+    amountPaid: Number(doc.amountPaid) || 0,
+    amountDue:
+      doc.amountDue !== undefined && doc.amountDue !== null
+        ? Number(doc.amountDue)
+        : Math.max(0, (Number(doc.orderValue) || 0) - (Number(doc.amountPaid) || 0)),
+    billId: refId(doc.billId),
+    totalAmount: Number(doc.orderValue) || 0,
     expectedDelivery: iso(doc.expectedDelivery) || "",
     createdDate: iso(doc.createdAt) || new Date().toISOString(),
     notes: doc.notes || "",
@@ -265,15 +275,46 @@ export function serializeRole(doc: Record<string, unknown>) {
     displayName: doc.displayName,
     description: doc.description || "",
     permissions: Array.isArray(doc.permissions) ? doc.permissions : [],
+    isSystem: Boolean(doc.isSystem),
+    visibilityScope: doc.visibilityScope || "own",
   };
 }
 
 export function serializeDepartment(doc: Record<string, unknown>) {
+  const defaultRolePopulated =
+    doc.defaultRoleId && typeof doc.defaultRoleId === "object"
+      ? (doc.defaultRoleId as Record<string, unknown>)
+      : null;
+  const defaultRoleId = defaultRolePopulated
+    ? String(defaultRolePopulated._id ?? defaultRolePopulated.id)
+    : doc.defaultRoleId
+      ? String(doc.defaultRoleId)
+      : null;
+
+  const allowedPopulated = Array.isArray(doc.allowedRoleIds)
+    ? doc.allowedRoleIds.filter((entry) => entry && typeof entry === "object")
+    : [];
+  const allowedRoleIds = allowedPopulated.length
+    ? allowedPopulated.map((entry) =>
+        String((entry as Record<string, unknown>)._id ?? (entry as Record<string, unknown>).id),
+      )
+    : Array.isArray(doc.allowedRoleIds)
+      ? doc.allowedRoleIds.map((id) => String(id))
+      : [];
+
+  const allowedRoleNames = allowedPopulated
+    .map((entry) => (entry as Record<string, unknown>).displayName as string)
+    .filter(Boolean);
+
   return {
     id: String(doc._id ?? doc.id),
     name: doc.name,
     description: doc.description || "",
     status: doc.status || "active",
+    defaultRoleId,
+    defaultRoleName: (defaultRolePopulated?.displayName as string | undefined) || null,
+    allowedRoleIds,
+    allowedRoleNames,
     createdAt: iso(doc.createdAt) || new Date().toISOString(),
     updatedAt: iso(doc.updatedAt) || new Date().toISOString(),
     revision: revisionOf(doc),
@@ -368,12 +409,36 @@ export function serializeOrderHistory(doc: Record<string, unknown>) {
   };
 }
 
+export function serializeBillSummary(doc: Record<string, unknown>) {
+  return {
+    id: String(doc._id ?? doc.id),
+    billCode: doc.billCode,
+    orderId: refId(doc.orderId) || "",
+    orderCode: doc.orderCode,
+    customerId: refId(doc.customerId),
+    companyId: refId(doc.companyId),
+    customerName: doc.customerName,
+    company: doc.company,
+    totalAmount: Number(doc.totalAmount) || 0,
+    amountPaid: Number(doc.amountPaid) || 0,
+    amountDue: Number(doc.amountDue) || 0,
+    currency: doc.currency || "USD",
+    status: doc.status || "issued",
+    dueDate: iso(doc.dueDate) || "",
+    issuedAt: iso(doc.issuedAt) || "",
+    createdAt: iso(doc.createdAt) || new Date().toISOString(),
+    updatedAt: iso(doc.updatedAt) || new Date().toISOString(),
+  };
+}
+
 export function serializeBill(doc: Record<string, unknown>) {
   return {
     id: String(doc._id ?? doc.id),
     billCode: doc.billCode,
     orderId: refId(doc.orderId) || "",
     orderCode: doc.orderCode,
+    customerId: refId(doc.customerId),
+    companyId: refId(doc.companyId),
     customerName: doc.customerName,
     company: doc.company,
     phone: doc.phone || "",
@@ -389,6 +454,8 @@ export function serializeBill(doc: Record<string, unknown>) {
     amountPaid: Number(doc.amountPaid) || 0,
     amountDue: Number(doc.amountDue) || 0,
     currency: doc.currency || "USD",
+    exchangeRateSnapshot: doc.exchangeRateSnapshot || null,
+    reportingAmountINR: doc.reportingAmountINR || null,
     paymentTerms: doc.paymentTerms || "",
     status: doc.status || "issued",
     dueDate: iso(doc.dueDate) || "",
@@ -666,6 +733,30 @@ export function serializeShipment(doc: Record<string, unknown>) {
     notes: doc.notes || "",
     assignedToId: assignee ? String(assignee._id ?? assignee.id) : refId(doc.assignedToId),
     assignedToName: assignee?.name ? String(assignee.name) : "",
+    createdById: refId(doc.createdById) || "",
+    createdAt: iso(doc.createdAt) || new Date().toISOString(),
+    updatedAt: iso(doc.updatedAt) || new Date().toISOString(),
+    revision: revisionOf(doc),
+  };
+}
+
+export function serializeSupplier(doc: Record<string, unknown>) {
+  return {
+    id: String(doc._id ?? doc.id),
+    supplierCode: doc.supplierCode,
+    supplierName: doc.supplierName,
+    companyName: doc.companyName || "",
+    contactPerson: doc.contactPerson || "",
+    email: doc.email || "",
+    phone: doc.phone || "",
+    address: doc.address || "",
+    country: doc.country || "",
+    taxId: doc.taxId || "",
+    paymentTerms: doc.paymentTerms || "",
+    currency: doc.currency || "USD",
+    productsSupplied: doc.productsSupplied || "",
+    status: doc.status || "active",
+    notes: doc.notes || "",
     createdById: refId(doc.createdById) || "",
     createdAt: iso(doc.createdAt) || new Date().toISOString(),
     updatedAt: iso(doc.updatedAt) || new Date().toISOString(),

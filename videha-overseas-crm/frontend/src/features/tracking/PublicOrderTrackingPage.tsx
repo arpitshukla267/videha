@@ -13,7 +13,10 @@ import {
   Factory,
   Box,
   ListOrdered,
-  ArrowRight
+  ArrowRight,
+  Copy,
+  Check,
+  Loader2
 } from 'lucide-react';
 import { api } from '../../api/client';
 import { PublicOrderTrackingInfo, OrderStatus, Order } from '../../types/crm';
@@ -74,6 +77,22 @@ function orderToSummary(o: Order): TrackableOrderSummary {
   };
 }
 
+// Human-friendly countdown/overdue label for the expected delivery date,
+// shown as a small hint under the date itself.
+function deliveryEtaLabel(expectedDelivery?: string, isDelivered?: boolean): string | null {
+  if (isDelivered) return 'Delivered';
+  if (!expectedDelivery) return null;
+  const diffDays = Math.ceil((new Date(expectedDelivery).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+  if (diffDays > 0) return `In ${diffDays} day${diffDays === 1 ? '' : 's'}`;
+  if (diffDays === 0) return 'Due today';
+  return `${Math.abs(diffDays)} day${Math.abs(diffDays) === 1 ? '' : 's'} overdue`;
+}
+
+function isOrderOverdue(order: TrackableOrderSummary): boolean {
+  if (!order.expectedDelivery || order.orderStatus === 'Delivered') return false;
+  return new Date(order.expectedDelivery).getTime() < Date.now();
+}
+
 export const PublicOrderTrackingPage: React.FC<PublicOrderTrackingPageProps> = ({
   initialOrderCode = '',
   onBackToCrm,
@@ -85,6 +104,9 @@ export const PublicOrderTrackingPage: React.FC<PublicOrderTrackingPageProps> = (
   const [usingDemo, setUsingDemo] = useState(false);
   const [orderList, setOrderList] = useState<TrackableOrderSummary[]>(DEMO_ORDER_LIST);
   const [listFilter, setListFilter] = useState('');
+  const [trackInput, setTrackInput] = useState(initialOrderCode);
+  const [isTracking, setIsTracking] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const performTracking = async (codeToSearch: string) => {
     const trimmed = codeToSearch.trim();
@@ -93,7 +115,9 @@ export const PublicOrderTrackingPage: React.FC<PublicOrderTrackingPageProps> = (
       return;
     }
 
+    setTrackInput(trimmed);
     setErrorMsg(null);
+    setIsTracking(true);
 
     try {
       const res = await api.public.trackOrder(trimmed);
@@ -104,6 +128,8 @@ export const PublicOrderTrackingPage: React.FC<PublicOrderTrackingPageProps> = (
       }
     } catch {
       // fall through to demo catalog
+    } finally {
+      setIsTracking(false);
     }
 
     const demo = getDemoTracking(trimmed);
@@ -116,6 +142,22 @@ export const PublicOrderTrackingPage: React.FC<PublicOrderTrackingPageProps> = (
       setUsingDemo(false);
       setErrorMsg(`No shipment found for "${trimmed}". Try a sample order from the list.`);
     }
+  };
+
+  const handleTrackSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    performTracking(trackInput);
+  };
+
+  const handleCopyCode = () => {
+    if (!trackingData) return;
+    navigator.clipboard
+      ?.writeText(trackingData.orderCode)
+      .then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1500);
+      })
+      .catch(() => {});
   };
 
   useEffect(() => {
@@ -172,8 +214,12 @@ export const PublicOrderTrackingPage: React.FC<PublicOrderTrackingPageProps> = (
     ])
   );
 
+  const progressPct = trackingData
+    ? Math.min(100, Math.round(((currentStepIdx + 1) / milestoneSteps.length) * 100))
+    : 0;
+
   const content = (
-    <div className={`space-y-5 ${embedded ? 'p-6 max-w-7xl mx-auto' : 'max-w-6xl w-full mx-auto px-4 py-8'}`}>
+    <div className={`space-y-5 ${embedded ? 'p-6' : 'w-full px-4 py-8'}`}>
       {!embedded && (
         <div>
           <h2 className="text-base font-semibold text-slate-900">Public Order Tracking</h2>
@@ -217,6 +263,7 @@ export const PublicOrderTrackingPage: React.FC<PublicOrderTrackingPageProps> = (
                 filteredList.map(order => {
                   const active =
                     trackingData?.orderCode?.toUpperCase() === order.orderCode.toUpperCase();
+                  const overdue = isOrderOverdue(order);
                   return (
                     <button
                       key={order.orderCode}
@@ -229,7 +276,7 @@ export const PublicOrderTrackingPage: React.FC<PublicOrderTrackingPageProps> = (
                       }`}
                     >
                       <div className="flex items-start justify-between gap-2">
-                        <span className="font-mono text-[11px] font-semibold text-slate-900">
+                        <span className="text-[11px] font-semibold tracking-wide text-slate-900">
                           {order.orderCode}
                         </span>
                         <StatusBadge status={order.orderStatus} className="scale-90 origin-right" />
@@ -240,7 +287,12 @@ export const PublicOrderTrackingPage: React.FC<PublicOrderTrackingPageProps> = (
                       <p className="text-[11px] text-slate-500 mt-0.5 truncate">
                         {order.country} · {order.products}
                       </p>
-                      <p className="text-[10px] text-slate-400 mt-1.5 inline-flex items-center gap-1">
+                      <p
+                        className={`text-[10px] mt-1.5 inline-flex items-center gap-1 ${
+                          overdue ? 'text-amber-600 font-medium' : 'text-slate-400'
+                        }`}
+                      >
+                        {overdue && <span className="w-1.5 h-1.5 rounded-full bg-amber-500" aria-hidden />}
                         ETA{' '}
                         {order.expectedDelivery
                           ? new Date(order.expectedDelivery).toLocaleDateString([], {
@@ -265,6 +317,35 @@ export const PublicOrderTrackingPage: React.FC<PublicOrderTrackingPageProps> = (
 
         {/* Tracking panel */}
         <section className="xl:col-span-8 space-y-4">
+          {/* Direct track-by-ID search */}
+          <form
+            onSubmit={handleTrackSubmit}
+            className="bg-white border border-slate-200 rounded-xl p-3 shadow-xs flex gap-2"
+          >
+            <div className="relative flex-1">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                value={trackInput}
+                onChange={e => setTrackInput(e.target.value)}
+                placeholder="Enter order ID, e.g. VO-2026-0182"
+                className="w-full pl-9 pr-3 py-2.5 rounded-lg bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-1 focus:ring-sky-600"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={isTracking}
+              className="px-4 py-2.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-sm font-medium disabled:opacity-60 inline-flex items-center gap-1.5 shrink-0 transition-colors"
+            >
+              {isTracking ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <ArrowRight className="w-4 h-4" />
+              )}
+              Track
+            </button>
+          </form>
+
           {errorMsg && (
             <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs flex items-center gap-2.5">
               <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
@@ -286,9 +367,23 @@ export const PublicOrderTrackingPage: React.FC<PublicOrderTrackingPageProps> = (
                     <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
                       Consignment
                     </p>
-                    <h3 className="text-lg font-semibold font-mono text-slate-900 mt-0.5">
-                      {trackingData.orderCode}
-                    </h3>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <h3 className="text-lg font-semibold tracking-wide text-slate-900">
+                        {trackingData.orderCode}
+                      </h3>
+                      <button
+                        type="button"
+                        onClick={handleCopyCode}
+                        title="Copy order ID"
+                        className="text-slate-400 hover:text-slate-600 transition-colors"
+                      >
+                        {copied ? (
+                          <Check className="w-3.5 h-3.5 text-emerald-600" />
+                        ) : (
+                          <Copy className="w-3.5 h-3.5" />
+                        )}
+                      </button>
+                    </div>
                     <p className="text-xs text-slate-600 mt-1">
                       {trackingData.customerCompany} · {trackingData.country}
                     </p>
@@ -311,6 +406,19 @@ export const PublicOrderTrackingPage: React.FC<PublicOrderTrackingPageProps> = (
                           })
                         : '—'}
                     </p>
+                    {deliveryEtaLabel(trackingData.expectedDelivery, trackingData.orderStatus === 'Delivered') && (
+                      <p
+                        className={`mt-1 text-[10px] font-medium ${
+                          trackingData.orderStatus === 'Delivered'
+                            ? 'text-emerald-600'
+                            : deliveryEtaLabel(trackingData.expectedDelivery, false)?.includes('overdue')
+                              ? 'text-amber-600'
+                              : 'text-slate-400'
+                        }`}
+                      >
+                        {deliveryEtaLabel(trackingData.expectedDelivery, trackingData.orderStatus === 'Delivered')}
+                      </p>
+                    )}
                   </div>
                   <div className="rounded-lg border border-slate-100 bg-gradient-to-br from-teal-50/50 to-white p-3">
                     <p className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">
@@ -333,7 +441,7 @@ export const PublicOrderTrackingPage: React.FC<PublicOrderTrackingPageProps> = (
                     <p className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">
                       BL / AWB
                     </p>
-                    <p className="mt-1 font-mono font-semibold text-slate-900 truncate">
+                    <p className="mt-1 font-semibold tracking-wide text-slate-900 truncate">
                       {trackingData.trackingNumber || 'Pending'}
                     </p>
                   </div>
@@ -352,13 +460,25 @@ export const PublicOrderTrackingPage: React.FC<PublicOrderTrackingPageProps> = (
 
               {/* Timeline */}
               <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs">
-                <div className="flex items-center justify-between mb-5">
+                <div className="flex items-center justify-between mb-3">
                   <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
                     Shipment Timeline
                   </h4>
                   <span className="text-[11px] font-semibold text-slate-600 bg-slate-50 border border-slate-200 px-2 py-0.5 rounded-full">
                     Step {Math.max(currentStepIdx + 1, 0)} / {milestoneSteps.length}
                   </span>
+                </div>
+
+                {/* Overall progress bar */}
+                <div className="mb-5">
+                  <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-500 ${
+                        trackingData.orderStatus === 'Delivered' ? 'bg-emerald-500' : 'bg-sky-500'
+                      }`}
+                      style={{ width: `${progressPct}%` }}
+                    />
+                  </div>
                 </div>
 
                 <ol className="relative">
@@ -371,7 +491,11 @@ export const PublicOrderTrackingPage: React.FC<PublicOrderTrackingPageProps> = (
                     const isLast = idx === milestoneSteps.length - 1;
 
                     return (
-                      <li key={step} className="relative flex gap-4 pb-6 last:pb-0">
+                      <li
+                        key={step}
+                        className="relative flex gap-4 pb-6 last:pb-0 animate-in fade-in slide-in-from-bottom-1"
+                        style={{ animationDelay: `${idx * 60}ms`, animationDuration: '350ms', animationFillMode: 'backwards' }}
+                      >
                         {!isLast && (
                           <span
                             className={`absolute left-[15px] top-8 w-0.5 h-[calc(100%-1.25rem)] ${
@@ -469,11 +593,15 @@ export const PublicOrderTrackingPage: React.FC<PublicOrderTrackingPageProps> = (
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       <header className="bg-white border-b border-slate-200 px-6 py-4 shrink-0">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
+        <div className=" flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-sky-600 to-teal-600 text-white flex items-center justify-center font-bold text-base shadow-xs">
-              VO
-            </div>
+              <div className="w-36 h-12 rounded-xl flex items-center justify-center mx-auto -ml-6">
+                <img
+                  src="/logo.png"
+                  alt="Videha Overseas"
+                  className="h-24 w-24 object-cover"
+                />
+              </div>
             <div>
               <h1 className="text-sm font-semibold text-slate-800 tracking-tight leading-none">
                 VIDEHA OVERSEAS
@@ -495,7 +623,9 @@ export const PublicOrderTrackingPage: React.FC<PublicOrderTrackingPageProps> = (
       </header>
       <main className="flex-1">{content}</main>
       <footer className="border-t border-slate-200 bg-white py-5 px-6 text-center text-xs text-slate-400 shrink-0">
-        <p>© 2026 Videha Overseas. Global Export Operations & Trade Logistics.</p>
+        <p>
+          © 2026 Videha Overseas. Global Export Operations & Trade Logistics.
+        </p>
       </footer>
     </div>
   );

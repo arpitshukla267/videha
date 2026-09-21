@@ -13,8 +13,11 @@ import { ReportsPage } from './features/reports/ReportsPage';
 import { SettingsPage } from './features/settings/SettingsPage';
 import { FollowUpsPage } from './features/followups/FollowUpsPage';
 import { QuotationsPage } from './features/quotations/QuotationsPage';
+import { QuotationBuilderPage } from './features/quotations/QuotationBuilderPage';
+import type { BuilderQuotationData } from './lib/crmToBuilderQuotation';
 import { DocumentsPage } from './features/documents/DocumentsPage';
 import { ShipmentsPage } from './features/shipments/ShipmentsPage';
+import { SuppliersPage } from './features/suppliers/SuppliersPage';
 import { PublicOrderTrackingPage } from './features/tracking/PublicOrderTrackingPage';
 import { LoginPage } from './features/auth/LoginPage';
 import { ProfileModal } from './components/ui/ProfileModal';
@@ -26,6 +29,9 @@ const CrmApp: React.FC = () => {
   const [publicOrderCode, setPublicOrderCode] = useState('');
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [focusEntityId, setFocusEntityId] = useState<string | null>(null);
+  const [quotationBuilderPayload, setQuotationBuilderPayload] = useState<BuilderQuotationData | null>(
+    null
+  );
 
   // Check URL pathname or query for /order-tracking
   useEffect(() => {
@@ -56,6 +62,7 @@ const CrmApp: React.FC = () => {
       { tab: 'tasks', perm: 'tasks.view' },
       { tab: 'orders', perm: 'orders.view' },
       { tab: 'shipments', perm: 'shipments.view' },
+      { tab: 'suppliers', perm: 'suppliers.view' },
       { tab: 'finance', perm: 'finance.view' },
       { tab: 'bills', perm: 'bills.view' },
       { tab: 'team', perm: 'users.view' },
@@ -83,12 +90,18 @@ const CrmApp: React.FC = () => {
   // If loading session
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="text-center space-y-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-600 to-teal-600 text-white flex items-center justify-center font-bold text-lg mx-auto animate-pulse shadow-md">
-            VO
+      <div className="min-h-screen flex items-center justify-center bg-[#F6F8F6]">
+        <div className="text-center space-y-4">
+          <div className="w-36 h-36 rounded-xl flex items-center justify-center mx-auto animate-pulse -mb-8">
+            <img
+              src="/logo.png"
+              alt="Videha Overseas"
+              className="h-24 w-24 object-cover"
+            />
           </div>
-          <p className="text-xs font-medium text-slate-500">Initializing Videha CRM...</p>
+          <p className="text-xs font-medium text-[#0E3B2E]/70 tracking-wide">
+            Initializing Videha CRM…
+          </p>
         </div>
       </div>
     );
@@ -164,7 +177,31 @@ const CrmApp: React.FC = () => {
             </div>
           );
         }
-        return <QuotationsPage />;
+        return (
+          <QuotationsPage
+            onOpenBuilder={payload => {
+              setQuotationBuilderPayload(payload);
+              setCurrentTab('quotation-builder');
+            }}
+          />
+        );
+      case 'quotation-builder':
+        if (!hasPermission('quotations.view')) {
+          return (
+            <div className="p-8 text-center text-xs text-slate-500">
+              You do not have permission to use the Quotation Builder.
+            </div>
+          );
+        }
+        return (
+          <QuotationBuilderPage
+            initialPayload={quotationBuilderPayload}
+            onBack={() => {
+              setQuotationBuilderPayload(null);
+              setCurrentTab('quotations');
+            }}
+          />
+        );
       case 'documents':
         if (!hasPermission('documents.view')) {
           return (
@@ -210,6 +247,15 @@ const CrmApp: React.FC = () => {
           );
         }
         return <ShipmentsPage />;
+      case 'suppliers':
+        if (!hasPermission('suppliers.view')) {
+          return (
+            <div className="p-8 text-center text-xs text-slate-500">
+              You do not have permission to view Suppliers.
+            </div>
+          );
+        }
+        return <SuppliersPage />;
       case 'finance':
         if (!hasPermission('finance.view')) {
           return (

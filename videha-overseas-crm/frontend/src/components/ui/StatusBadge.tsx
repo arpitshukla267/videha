@@ -64,6 +64,34 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, className = ''
       colorClass = 'bg-emerald-50 text-emerald-700 border-emerald-200';
       break;
 
+    // Order: Draft
+    case 'Draft':
+      colorClass = 'bg-slate-100 text-slate-600 border-slate-300';
+      break;
+
+    // Billing statuses
+    case 'draft':
+      colorClass = 'bg-slate-100 text-slate-600 border-slate-300';
+      break;
+    case 'pending':
+      colorClass = 'bg-amber-50 text-amber-700 border-amber-200';
+      break;
+    case 'partially_paid':
+      colorClass = 'bg-orange-50 text-orange-700 border-orange-200';
+      break;
+    case 'paid':
+      colorClass = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+      break;
+    case 'overdue':
+      colorClass = 'bg-red-50 text-red-700 border-red-200';
+      break;
+    case 'void':
+      colorClass = 'bg-gray-100 text-gray-500 border-gray-200';
+      break;
+    case 'issued':
+      colorClass = 'bg-blue-50 text-blue-700 border-blue-200';
+      break;
+
     // Customer & Company statuses
     case 'active':
     case 'Active':
@@ -78,11 +106,22 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, className = ''
       colorClass = 'bg-slate-100 text-slate-700 border-slate-200';
   }
 
+  const LABEL_MAP: Record<string, string> = {
+    draft: 'Draft',
+    pending: 'Pending',
+    partially_paid: 'Partially Paid',
+    paid: 'Paid',
+    overdue: 'Overdue',
+    void: 'Void',
+    issued: 'Issued',
+  };
+  const displayLabel = LABEL_MAP[status] ?? status;
+
   return (
     <span
       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${colorClass} whitespace-nowrap ${className}`}
     >
-      {status}
+      {displayLabel}
     </span>
   );
 };

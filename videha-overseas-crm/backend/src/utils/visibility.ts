@@ -1,11 +1,16 @@
 import { Types } from "mongoose";
 import { User } from "../models/User";
 import type { AuthUser } from "../middleware/auth";
-import type { RoleName } from "../models/Role";
+import type { RoleName, VisibilityScope } from "../models/Role";
 
-export type VisibilityScope = "own" | "team" | "department" | "all";
+export type { VisibilityScope };
 
-export function resolveVisibilityScope(roleName: RoleName): VisibilityScope {
+export function resolveVisibilityScope(
+  roleName: RoleName,
+  visibilityScope?: VisibilityScope | null,
+): VisibilityScope {
+  if (visibilityScope) return visibilityScope;
+
   switch (roleName) {
     case "SUPER_ADMIN":
     case "ADMIN":
@@ -36,7 +41,7 @@ export function isManagerRole(roleName: RoleName): boolean {
 }
 
 export async function userIdsInActorScope(actor: AuthUser): Promise<Types.ObjectId[]> {
-  const scope = resolveVisibilityScope(actor.roleName);
+  const scope = resolveVisibilityScope(actor.roleName, actor.visibilityScope);
   if (scope === "all") return [];
   if (scope === "own") return [new Types.ObjectId(actor.id)];
   return userIdsInDepartment(actor.departmentId);
@@ -48,7 +53,7 @@ export async function buildAssigneeVisibilityFilter(
   assigneeField = "assignedToId",
   creatorField?: string,
 ): Promise<Record<string, unknown>> {
-  const scope = resolveVisibilityScope(actor.roleName);
+  const scope = resolveVisibilityScope(actor.roleName, actor.visibilityScope);
   if (scope === "all") return {};
 
   const actorId = new Types.ObjectId(actor.id);

@@ -29,6 +29,7 @@ import {
   DocumentCategory,
   DocumentEntityType,
   Shipment,
+  Supplier,
   ImportEntityType,
   ImportFieldMeta,
   ImportPreviewResult
@@ -441,6 +442,8 @@ export const api = {
       status?: string;
       country?: string;
       assignedMemberId?: string;
+      customerId?: string;
+      companyId?: string;
       page?: number;
       limit?: number;
     }) => {
@@ -450,6 +453,8 @@ export const api = {
       if (params.country && params.country !== 'all') query.set('country', params.country);
       if (params.assignedMemberId && params.assignedMemberId !== 'all')
         query.set('assignedMemberId', params.assignedMemberId);
+      if (params.customerId) query.set('customerId', params.customerId);
+      if (params.companyId) query.set('companyId', params.companyId);
       if (params.page) query.set('page', params.page.toString());
       if (params.limit) query.set('limit', params.limit.toString());
 
@@ -534,6 +539,32 @@ export const api = {
         success: boolean;
         data: { roles: Role[]; permissions: Permission[] };
       }>('/api/roles'),
+    createRole: (data: {
+      displayName: string;
+      description?: string;
+      visibilityScope?: string;
+      permissions?: string[];
+    }) =>
+      request<{ success: boolean; data: Role }>('/api/roles', {
+        method: 'POST',
+        body: JSON.stringify(data)
+      }),
+    updateRole: (
+      roleId: string,
+      data: {
+        displayName?: string;
+        description?: string;
+        visibilityScope?: string;
+      }
+    ) =>
+      request<{ success: boolean; data: Role }>(`/api/roles/${roleId}`, {
+        method: 'PUT',
+        body: JSON.stringify(data)
+      }),
+    deleteRole: (roleId: string) =>
+      request<{ success: boolean; message: string }>(`/api/roles/${roleId}`, {
+        method: 'DELETE'
+      }),
     updatePermissions: (roleId: string, permissions: string[]) =>
       request<{ success: boolean; data: Role }>(`/api/roles/${roleId}/permissions`, {
         method: 'PUT',
@@ -601,12 +632,27 @@ export const api = {
 
   // Bills
   bills: {
-    getBills: (params?: { search?: string; status?: string }) => {
+    getBills: (params?: {
+      search?: string;
+      status?: string;
+      customerId?: string;
+      companyId?: string;
+      orderId?: string;
+      page?: number;
+      limit?: number;
+      sync?: boolean;
+    }) => {
       const query = new URLSearchParams();
       if (params?.search) query.set('search', params.search);
-      if (params?.status) query.set('status', params.status);
+      if (params?.status && params.status !== 'all') query.set('status', params.status);
+      if (params?.customerId) query.set('customerId', params.customerId);
+      if (params?.companyId) query.set('companyId', params.companyId);
+      if (params?.orderId) query.set('orderId', params.orderId);
+      if (params?.page) query.set('page', params.page.toString());
+      if (params?.limit) query.set('limit', params.limit.toString());
+      if (params?.sync === false) query.set('sync', 'false');
       const qs = query.toString();
-      return request<{ success: boolean; data: Bill[] }>(`/api/bills${qs ? `?${qs}` : ''}`);
+      return request<PaginatedListResponse<Bill>>(`/api/bills${qs ? `?${qs}` : ''}`);
     },
     getBill: (id: string) =>
       request<{ success: boolean; data: Bill }>(`/api/bills/${id}`),
@@ -649,14 +695,19 @@ export const api = {
         `/api/departments${qs ? `?${qs}` : ''}`
       );
     },
-    createDepartment: (data: { name: string; description?: string }) =>
+    createDepartment: (data: {
+      name: string;
+      description?: string;
+      defaultRoleId?: string | null;
+      allowedRoleIds?: string[];
+    }) =>
       request<{ success: boolean; data: Department }>('/api/departments', {
         method: 'POST',
         body: JSON.stringify(data)
       }),
     updateDepartment: (id: string, data: UpdatePayload<Department>) =>
       request<{ success: boolean; data: Department }>(`/api/departments/${id}`, {
-        method: 'PATCH',
+        method: 'PUT',
         body: JSON.stringify(data)
       }),
     deleteDepartment: (id: string) =>
@@ -1037,6 +1088,8 @@ export const api = {
       search?: string;
       status?: string;
       orderId?: string;
+      customerId?: string;
+      companyId?: string;
       page?: number;
       limit?: number;
     }) => {
@@ -1044,6 +1097,8 @@ export const api = {
       if (params?.search) query.set('search', params.search);
       if (params?.status && params.status !== 'all') query.set('status', params.status);
       if (params?.orderId) query.set('orderId', params.orderId);
+      if (params?.customerId) query.set('customerId', params.customerId);
+      if (params?.companyId) query.set('companyId', params.companyId);
       if (params?.page) query.set('page', params.page.toString());
       if (params?.limit) query.set('limit', params.limit.toString());
       return request<PaginatedListResponse<Shipment>>(`/api/shipments?${query.toString()}`);
@@ -1062,5 +1117,45 @@ export const api = {
         method: 'PUT',
         body: JSON.stringify(data)
       })
+  },
+
+  suppliers: {
+    getSuppliers: (params?: {
+      search?: string;
+      status?: string;
+      country?: string;
+      sortBy?: string;
+      sortOrder?: 'asc' | 'desc';
+      page?: number;
+      limit?: number;
+    }) => {
+      const query = new URLSearchParams();
+      if (params?.search) query.set('search', params.search);
+      if (params?.status && params.status !== 'all') query.set('status', params.status);
+      if (params?.country && params.country !== 'all') query.set('country', params.country);
+      if (params?.sortBy) query.set('sortBy', params.sortBy);
+      if (params?.sortOrder) query.set('sortOrder', params.sortOrder);
+      if (params?.page) query.set('page', params.page.toString());
+      if (params?.limit) query.set('limit', params.limit.toString());
+      return request<PaginatedListResponse<Supplier>>(`/api/suppliers?${query.toString()}`);
+    },
+    getSupplier: (id: string) =>
+      request<{ success: boolean; data: Supplier }>(`/api/suppliers/${id}`),
+    createSupplier: (data: Partial<Supplier>) =>
+      request<{ success: boolean; data: Supplier }>('/api/suppliers', {
+        method: 'POST',
+        body: JSON.stringify(data)
+      }),
+    updateSupplier: (id: string, data: UpdatePayload<Supplier>) =>
+      request<{ success: boolean; data: Supplier }>(`/api/suppliers/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data)
+      }),
+    deactivateSupplier: (id: string) =>
+      request<{ success: boolean; data: Supplier }>(`/api/suppliers/${id}`, {
+        method: 'DELETE'
+      }),
+    exportCsv: (params?: { search?: string; status?: string; country?: string }) =>
+      exportCsvDownload('/api/suppliers/export', params ?? {}, 'videha_suppliers.csv')
   }
 };

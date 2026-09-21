@@ -22,7 +22,8 @@ const ENTITY_LABELS: Record<ImportEntityType, string> = {
   customers: 'Customers',
   'follow-ups': 'Follow-ups',
   quotations: 'Quotations',
-  orders: 'Orders'
+  orders: 'Orders',
+  suppliers: 'Suppliers'
 };
 
 type Step = 'upload' | 'mapping' | 'preview' | 'done';
@@ -412,6 +413,12 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({
                   <tr>
                     <th className="px-2 py-1.5 text-left">Row</th>
                     <th className="px-2 py-1.5 text-left">Status</th>
+                    {preview.entityType === 'orders' && (
+                      <th className="px-2 py-1.5 text-left">Customer Match</th>
+                    )}
+                    {preview.entityType === 'suppliers' && (
+                      <th className="px-2 py-1.5 text-left">Supplier Match</th>
+                    )}
                     <th className="px-2 py-1.5 text-left">Details</th>
                   </tr>
                 </thead>
@@ -430,8 +437,57 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({
                           </span>
                         )}
                       </td>
+                      {preview.entityType === 'orders' && (
+                        <td className="px-2 py-1.5">
+                          {row.customerMatch?.type === 'existing' && (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                              Existing: {row.customerMatch.customerCode ?? 'Match'} ({row.customerMatch.companyName})
+                            </span>
+                          )}
+                          {row.customerMatch?.type === 'new' && (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                              New Customer ({row.customerMatch.companyName})
+                            </span>
+                          )}
+                          {row.customerMatch?.type === 'ambiguous' && (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-rose-50 text-rose-700 border border-rose-200">
+                              Ambiguous
+                            </span>
+                          )}
+                          {!row.customerMatch && (
+                            <span className="text-slate-400 text-[10px]">—</span>
+                          )}
+                        </td>
+                      )}
+                      {preview.entityType === 'suppliers' && (
+                        <td className="px-2 py-1.5">
+                          {row.supplierMatch?.type === 'existing' && (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                              Existing Supplier: {row.supplierMatch.supplierCode ?? 'Match'} ({row.supplierMatch.supplierName})
+                            </span>
+                          )}
+                          {row.supplierMatch?.type === 'duplicate_in_csv' && (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-rose-50 text-rose-700 border border-rose-200">
+                              Duplicate in CSV
+                            </span>
+                          )}
+                          {row.supplierMatch?.type === 'new' && (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                              New Supplier ({row.supplierMatch.supplierName})
+                            </span>
+                          )}
+                          {row.supplierMatch?.type === 'ambiguous' && (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-rose-50 text-rose-700 border border-rose-200">
+                              Ambiguous
+                            </span>
+                          )}
+                          {!row.supplierMatch && (
+                            <span className="text-slate-400 text-[10px]">—</span>
+                          )}
+                        </td>
+                      )}
                       <td className="px-2 py-1.5 text-slate-600">
-                        {row.errors.length ? row.errors.join('; ') : 'Ready to import'}
+                        {row.errors.length ? row.errors.join('; ') : row.warnings.length ? row.warnings.join('; ') : 'Ready to import'}
                       </td>
                     </tr>
                   ))}

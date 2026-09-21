@@ -8,7 +8,11 @@ const manage = requirePermission("settings.manage", "departments.manage");
 
 departmentsRoutes.use(authenticate);
 
-departmentsRoutes.get("/", manage, ctrl.list);
+departmentsRoutes.get(
+  "/",
+  requirePermission("users.view", "settings.manage", "departments.manage"),
+  ctrl.list,
+);
 departmentsRoutes.post("/", manage, ctrl.create);
 departmentsRoutes.put("/:id", manage, ctrl.update);
 departmentsRoutes.patch("/:id/status", manage, ctrl.patchStatus);

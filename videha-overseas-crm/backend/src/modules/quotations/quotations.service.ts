@@ -20,6 +20,8 @@ import { applyOptimisticUpdate, parseClientRequestId, parseRevision } from "../.
 import { withTransaction } from "../../utils/transactions";
 import { writeAudit } from "../../services/audit.service";
 import { createNotification } from "../../services/notification.service";
+import { resolveOrCreateCustomerForOrder } from "../../services/customerResolution.service";
+import { createBillFromOrder } from "../bills/bills.service";
 import type { AuthUser } from "../../middleware/auth";
 import {
   assertQuotationDelete,
@@ -300,7 +302,12 @@ export async function listQuotations(
 
   const [total, docs] = await Promise.all([
     Quotation.countDocuments(query),
-    Quotation.find(query).populate(POPULATE).sort(sort).skip(skip).limit(limit),
+    Quotation.find(query)
+      .populate(POPULATE)
+      .select("-lineItems -notes -paymentTerms")
+      .sort(sort)
+      .skip(skip)
+      .limit(limit),
   ]);
 
   const items = docs.map((d) =>
@@ -797,18 +804,45 @@ async function createOrderFromQuotation(
   const assignee = await User.findById(assignedMemberId).session(session);
   if (!assignee) throw new AppError("Assigned member not found.", 400);
 
+  // 1. Resolve Customer and Company cleanly
+  const resolved = await resolveOrCreateCustomerForOrder(
+    {
+      customerId: optionalObjectId((body.customerId as string) || (quotation.customerId ? String(quotation.customerId) : null)),
+      relatedLeadId: optionalObjectId((body.relatedLeadId as string) || (quotation.leadId ? String(quotation.leadId) : null)),
+      customerName,
+      company,
+      email: String(body.email ?? draft.email ?? ""),
+      phone: String(body.phone ?? draft.phone ?? ""),
+      country: String(body.country ?? draft.country ?? ""),
+      notes: String(body.notes ?? draft.notes ?? ""),
+      assignedToId: assignedMemberId,
+    },
+    actor.id,
+    session,
+  );
+
+  let statusRaw = String(body.orderStatus ?? body.status ?? draft.orderStatus ?? "Order Confirmed");
+  if (statusRaw === "Confirmed") statusRaw = "Order Confirmed";
+  const orderValue = Number(body.orderValue ?? draft.orderValue) || 0;
+  const isDraft = statusRaw === "Draft";
+  const initialBillingStatus = isDraft ? "draft" : "pending";
+
   const orderData = {
-    customerName,
-    company,
-    phone: String(body.phone ?? draft.phone),
-    email: String(body.email ?? draft.email),
-    country: String(body.country ?? draft.country),
+    customerName: resolved.customer.name,
+    company: resolved.company.name,
+    phone: String(body.phone ?? draft.phone ?? resolved.customer.phone ?? ""),
+    email: String(body.email ?? draft.email ?? resolved.customer.email ?? ""),
+    country: String(body.country ?? draft.country ?? resolved.company.country ?? ""),
     products,
     quantity: String(body.quantity ?? draft.quantity),
-    orderValue: Number(body.orderValue ?? draft.orderValue) || 0,
+    orderValue,
     currency: String(body.currency ?? draft.currency),
     assignedToId: assignedMemberId,
-    status: String(body.orderStatus ?? body.status ?? draft.orderStatus),
+    status: statusRaw,
+    billingStatus: initialBillingStatus,
+    amountPaid: 0,
+    amountDue: orderValue,
+    billId: null,
     expectedDelivery: new Date(String(expectedDeliveryRaw)),
     notes: String(body.notes ?? draft.notes),
     destinationPort: String(body.destinationPort ?? draft.destinationPort),
@@ -817,11 +851,9 @@ async function createOrderFromQuotation(
     relatedLeadId: optionalObjectId(
       (body.relatedLeadId as string | null | undefined) ?? draft.relatedLeadId,
     ),
-    companyId: optionalObjectId((body.companyId as string | null | undefined) ?? draft.companyId),
-    customerId: optionalObjectId(
-      (body.customerId as string | null | undefined) ?? draft.customerId,
-    ),
-    createdById: actor.id,
+    companyId: resolved.company._id,
+    customerId: resolved.customer._id,
+    createdById: new Types.ObjectId(actor.id),
     clientRequestId: parseClientRequestId(body) ?? null,
   };
 
@@ -840,6 +872,11 @@ async function createOrderFromQuotation(
 
   if (!created) {
     throw new AppError("Failed to allocate a unique order code.", 500);
+  }
+
+  // 2. Automatically create exactly ONE linked Bill if confirmed
+  if (!isDraft) {
+    await createBillFromOrder(String(created._id), actor.id, session);
   }
 
   await OrderStatusHistory.create(

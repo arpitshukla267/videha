@@ -19,6 +19,43 @@ interface TopbarProps {
   onOpenProfile: () => void;
 }
 
+// Keep this equal to the sidebar header's rendered height so the two
+// chrome pieces line up pixel-for-pixel. If the sidebar's logo box
+// (currently `h-18`) ever changes, update this value too.
+export const TOPBAR_HEIGHT = 72;
+
+// Same manifest/ledger palette used across Orders & Finance — marine, not
+// blue, is the one accent color this CRM uses.
+const INK = '#182430';
+const INK_SOFT = '#4B5563';
+const INK_FAINT = '#8B8D85';
+const LINE = '#E2DED2';
+const MARINE = '#155A52';
+const MARINE_TINT = '#EEF4F2';
+const RUST = '#A6402F';
+
+// Short reference code shown next to the page heading — read like a form
+// or manifest section code rather than a decorative color bar.
+const tabCodes: Record<NavigationTab, string> = {
+  dashboard: 'OPS',
+  leads: 'LDS',
+  customers: 'CUS',
+  followups: 'F/U',
+  quotations: 'QUO',
+  documents: 'DOC',
+  tasks: 'TSK',
+  orders: 'ORD',
+  shipments: 'SHP',
+  suppliers: 'SUP',
+  finance: 'FIN',
+  bills: 'BIL',
+  team: 'TM',
+  reports: 'RPT',
+  settings: 'SET',
+  'quotation-builder': 'Q/P',
+  'public-tracking': 'PUB'
+};
+
 export const Topbar: React.FC<TopbarProps> = ({ currentTab, onNavigate, onOpenProfile }) => {
   const { user, role, logout } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -128,6 +165,10 @@ export const Topbar: React.FC<TopbarProps> = ({ currentTab, onNavigate, onOpenPr
       title: 'Export Shipments',
       subtitle: 'Operational shipment records linked to orders, ports, and carriers'
     },
+    suppliers: {
+      title: 'Supplier Management',
+      subtitle: 'Internal supplier directory with contacts, payment terms, and currencies'
+    },
     finance: {
       title: 'Finance Overview',
       subtitle: 'Revenue collected, due payments, and receivables from delivered orders'
@@ -148,6 +189,10 @@ export const Topbar: React.FC<TopbarProps> = ({ currentTab, onNavigate, onOpenPr
       title: 'CRM Settings & Access Control',
       subtitle: 'Manage system roles, permission policies, and security audit logs'
     },
+    'quotation-builder': {
+      title: 'Quotation Builder',
+      subtitle: 'Design the export quotation document and download a print-ready PDF'
+    },
     'public-tracking': {
       title: 'Public Consignment Tracking',
       subtitle: 'Customer portal view for real-time shipment status verification'
@@ -155,38 +200,77 @@ export const Topbar: React.FC<TopbarProps> = ({ currentTab, onNavigate, onOpenPr
   };
 
   const currentInfo = tabTitles[currentTab] || { title: 'CRM Portal', subtitle: '' };
+  const currentCode = tabCodes[currentTab] || '—';
+  const initials = user?.name ? user.name.slice(0, 2).toUpperCase() : 'VO';
 
   return (
-    <header className="min-h-16 py-3 bg-white/95 backdrop-blur-xs border-b border-slate-200/80 px-6 flex items-center justify-between sticky top-0 z-20 shrink-0">
-      <div className="min-w-0 pr-4">
-        <h2 className="text-sm font-semibold text-slate-900 tracking-tight leading-snug">
-          {currentInfo.title}
-        </h2>
-        <p className="text-[11px] text-slate-500 font-normal mt-0.5 leading-snug">
-          {currentInfo.subtitle}
-        </p>
+    <header
+      style={{ height: TOPBAR_HEIGHT, borderColor: LINE }}
+      className="flex items-center justify-between gap-4 px-6 bg-white/95 backdrop-blur-xs
+        border-b sticky top-0 z-20 shrink-0"
+    >
+      {/* Page title, presented as a manifest reference code + heading */}
+      <div className="min-w-0 flex items-center gap-3">
+        {/* <div
+          className="hidden sm:flex flex-col items-center justify-center w-10 h-10 rounded-md border shrink-0"
+          style={{ borderColor: LINE }}
+        >
+          <span className="font-mono text-[10px] font-semibold" style={{ color: MARINE }}>
+            {currentCode}
+          </span>
+        </div> */}
+        <div className="min-w-0">
+          <h2 className="text-base font-semibold tracking-tight leading-snug truncate" style={{ color: INK }}>
+            {currentInfo.title}
+          </h2>
+          <p className="text-xs mt-0.5 leading-snug truncate" style={{ color: INK_SOFT }}>
+            {currentInfo.subtitle}
+          </p>
+        </div>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 shrink-0">
+        {/* Notifications */}
         <div className="relative" ref={notifRef}>
           <button
             onClick={() => setShowNotifMenu(!showNotifMenu)}
-            className="relative p-2 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors focus:outline-none"
+            className="relative p-2.5 rounded-md transition-colors focus:outline-none"
+            style={{ color: INK_SOFT }}
+            onMouseEnter={e => {
+              e.currentTarget.style.color = MARINE;
+              e.currentTarget.style.backgroundColor = MARINE_TINT;
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.color = INK_SOFT;
+              e.currentTarget.style.backgroundColor = 'transparent';
+            }}
             title="Notifications"
           >
-            <Bell className="w-4 h-4" />
+            <Bell className="w-[18px] h-[18px]" />
             {unreadNotifications.length > 0 && (
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-sky-500 ring-2 ring-white" />
+              <span
+                className="absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full ring-2 ring-white"
+                style={{ backgroundColor: MARINE }}
+              />
             )}
           </button>
 
           {showNotifMenu && (
-            <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-slate-200 py-2 z-50 animate-in fade-in zoom-in-95 duration-100">
-              <div className="px-4 py-2.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs font-semibold text-slate-800">Notifications</span>
+            <div
+              className="absolute right-0 mt-2 w-[22rem] bg-white rounded-lg shadow-lg border py-2 z-50 animate-in fade-in zoom-in-95 duration-100"
+              style={{ borderColor: LINE }}
+            >
+              <div
+                className="px-4 py-3 border-b flex items-center justify-between rounded-t-lg"
+                style={{ borderColor: LINE, backgroundColor: MARINE_TINT }}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold" style={{ color: INK }}>Notifications</span>
                   {unreadNotifications.length > 0 && (
-                    <span className="text-[10px] bg-sky-100 text-sky-800 font-medium px-2 py-0.5 rounded-full border border-sky-200/60">
+                    <span
+                      className="text-xs font-semibold px-2 py-0.5 rounded-full border bg-white"
+                      style={{ color: MARINE, borderColor: LINE }}
+                    >
                       {unreadNotifications.length} new
                     </span>
                   )}
@@ -194,37 +278,38 @@ export const Topbar: React.FC<TopbarProps> = ({ currentTab, onNavigate, onOpenPr
                 {unreadNotifications.length > 0 && (
                   <button
                     onClick={handleMarkAllRead}
-                    className="text-[11px] text-slate-500 hover:text-slate-800 font-medium flex items-center gap-1"
+                    className="text-xs font-medium flex items-center gap-1 transition-colors"
+                    style={{ color: INK_SOFT }}
                   >
-                    <CheckCheck className="w-3 h-3 text-slate-400" /> Mark all read
+                    <CheckCheck className="w-3.5 h-3.5" /> Mark all read
                   </button>
                 )}
               </div>
 
-              <div className="max-h-80 overflow-y-auto divide-y divide-slate-100">
+              <div className="max-h-96 overflow-y-auto divide-y" style={{ borderColor: LINE }}>
                 {notifications.length === 0 ? (
-                  <div className="py-6 text-center text-xs text-slate-400">
-                    No notifications right now
+                  <div className="py-10 text-center">
+                    <Bell className="w-6 h-6 mx-auto mb-2" style={{ color: LINE }} />
+                    <p className="text-sm" style={{ color: INK_FAINT }}>No notifications right now</p>
                   </div>
                 ) : (
                   notifications.slice(0, 12).map(n => (
                     <div
                       key={n.id}
                       onClick={() => handleNotificationClick(n)}
-                      className={`p-3 text-left hover:bg-slate-50 cursor-pointer transition-colors ${
-                        !n.isRead ? 'bg-sky-50/50' : ''
-                      }`}
+                      className="p-3.5 text-left cursor-pointer transition-colors hover:bg-[#F6F4EE]"
+                      style={!n.isRead ? { backgroundColor: MARINE_TINT } : undefined}
                     >
                       <div className="flex items-start justify-between gap-2">
-                        <p className="text-xs font-medium text-slate-800">{n.title}</p>
+                        <p className="text-sm font-semibold leading-snug" style={{ color: INK }}>{n.title}</p>
                         {!n.isRead && (
-                          <span className="w-1.5 h-1.5 rounded-full bg-sky-500 shrink-0 mt-1" />
+                          <span className="w-2 h-2 rounded-full shrink-0 mt-1.5" style={{ backgroundColor: MARINE }} />
                         )}
                       </div>
-                      <p className="text-[11px] text-slate-600 mt-0.5 leading-relaxed">
+                      <p className="text-xs mt-1 leading-relaxed" style={{ color: INK_SOFT }}>
                         {n.message}
                       </p>
-                      <span className="text-[10px] text-slate-400 mt-1 block">
+                      <span className="text-xs mt-1.5 block" style={{ color: INK_FAINT }}>
                         {new Date(n.createdAt).toLocaleString([], {
                           month: 'short',
                           day: 'numeric',
@@ -240,50 +325,83 @@ export const Topbar: React.FC<TopbarProps> = ({ currentTab, onNavigate, onOpenPr
           )}
         </div>
 
+        {/* Divider */}
+        <div className="w-px h-8" style={{ backgroundColor: LINE }} />
+
+        {/* User menu */}
         <div className="relative" ref={userRef}>
           <button
             onClick={() => setShowUserMenu(!showUserMenu)}
-            className="flex items-center gap-2 pl-2 pr-2.5 py-1.5 rounded-lg border border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-all text-left shadow-2xs"
+            className="flex items-center gap-2.5 pl-2 pr-3 py-1.5 rounded-md border transition-colors text-left focus:outline-none"
+            style={{ borderColor: LINE }}
+            onMouseEnter={e => (e.currentTarget.style.backgroundColor = MARINE_TINT)}
+            onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
           >
-            <div className="w-6 h-6 rounded-full bg-gradient-to-br from-sky-500 to-teal-600 text-white flex items-center justify-center text-[10px] font-semibold shrink-0">
-              {user?.name ? user.name.slice(0, 2).toUpperCase() : 'VO'}
+            <div
+              className="w-8 h-8 rounded-full text-white flex items-center justify-center text-xs font-semibold shrink-0"
+              style={{ backgroundColor: MARINE }}
+            >
+              {initials}
             </div>
-            <span className="text-xs font-medium text-slate-800 max-w-[120px] truncate">
-              {user?.name}
-            </span>
-            <ChevronDown className="w-3 h-3 text-slate-400" />
+            <div className="hidden sm:block min-w-0">
+              <p className="text-sm font-semibold max-w-[130px] truncate leading-tight" style={{ color: INK }}>
+                {user?.name}
+              </p>
+              <p className="text-xs truncate leading-tight" style={{ color: INK_FAINT }}>
+                {role?.displayName || user?.roleName}
+              </p>
+            </div>
+            <ChevronDown className="w-3.5 h-3.5 shrink-0" style={{ color: INK_FAINT }} />
           </button>
 
           {showUserMenu && (
-            <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-50 animate-in fade-in zoom-in-95 duration-100">
-              <div className="px-3.5 py-2.5 border-b border-slate-100 bg-slate-50/50">
-                <p className="text-xs font-semibold text-slate-800">{user?.name}</p>
-                <p className="text-[11px] text-slate-500 truncate">{user?.email}</p>
-                <div className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-medium bg-slate-100 text-slate-700 px-2 py-0.5 rounded border border-slate-200/60">
-                  <Shield className="w-3 h-3 text-slate-500" />
+            <div
+              className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border py-1.5 z-50 animate-in fade-in zoom-in-95 duration-100"
+              style={{ borderColor: LINE }}
+            >
+              <div className="px-4 py-3 border-b rounded-t-lg" style={{ borderColor: LINE, backgroundColor: MARINE_TINT }}>
+                <div className="flex items-center gap-2.5">
+                  <div
+                    className="w-9 h-9 rounded-full text-white flex items-center justify-center text-xs font-semibold shrink-0"
+                    style={{ backgroundColor: MARINE }}
+                  >
+                    {initials}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold truncate" style={{ color: INK }}>{user?.name}</p>
+                    <p className="text-xs truncate" style={{ color: INK_FAINT }}>{user?.email}</p>
+                  </div>
+                </div>
+                <div
+                  className="mt-2.5 inline-flex items-center gap-1.5 text-xs font-semibold bg-white px-2.5 py-1 rounded-md border"
+                  style={{ borderColor: LINE, color: INK }}
+                >
+                  <Shield className="w-3.5 h-3.5" style={{ color: MARINE }} />
                   {role?.displayName || user?.roleName}
                 </div>
               </div>
 
-              <div className="py-1">
+              <div className="py-1.5">
                 <button
                   onClick={() => {
                     setShowUserMenu(false);
                     onOpenProfile();
                   }}
-                  className="w-full px-3.5 py-2 text-xs text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 text-left transition-colors"
+                  className="w-full px-4 py-2.5 text-sm flex items-center gap-2.5 text-left transition-colors hover:bg-[#F6F4EE]"
+                  style={{ color: INK }}
                 >
-                  <UserIcon className="w-3.5 h-3.5 text-slate-400" />
+                  <UserIcon className="w-4 h-4" style={{ color: INK_FAINT }} />
                   <span>Profile & Security</span>
                 </button>
               </div>
 
-              <div className="border-t border-slate-100 pt-1">
+              <div className="border-t pt-1.5" style={{ borderColor: LINE }}>
                 <button
                   onClick={logout}
-                  className="w-full px-3.5 py-2 text-xs text-rose-600 hover:bg-rose-50 flex items-center gap-2.5 text-left font-medium transition-colors"
+                  className="w-full px-4 py-2.5 text-sm flex items-center gap-2.5 text-left font-semibold transition-colors hover:bg-[#F7ECE9]"
+                  style={{ color: RUST }}
                 >
-                  <LogOut className="w-3.5 h-3.5" />
+                  <LogOut className="w-4 h-4" />
                   <span>Sign Out</span>
                 </button>
               </div>

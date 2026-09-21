@@ -9,9 +9,13 @@ export default defineConfig(() => {
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
+        '@videha/quotation-builder': path.resolve(__dirname, '../../quotation-builder/src'),
       },
     },
     server: {
+      fs: {
+        allow: [path.resolve(__dirname, '..'), path.resolve(__dirname, '../..')],
+      },
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
       // Do not modifyâfile watching is disabled to prevent flickering during agent edits.
       hmr: process.env.DISABLE_HMR !== 'true',

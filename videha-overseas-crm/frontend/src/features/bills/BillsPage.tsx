@@ -7,7 +7,11 @@ import {
   FileText,
   Plus,
   Trash2,
-  CreditCard
+  CreditCard,
+  Receipt,
+  Building2,
+  Landmark,
+  StickyNote
 } from 'lucide-react';
 import { api } from '../../api/client';
 import { Bill, BillLineItem, BillStatus } from '../../types/crm';
@@ -15,9 +19,12 @@ import { Modal } from '../../components/ui/Modal';
 import { SearchableSelect } from '../../components/ui/SearchableSelect';
 import { DateTimePicker } from '../../components/ui/DateTimePicker';
 import { useAuth } from '../../context/AuthContext';
+import { PaginationBar } from '../../components/ui/PaginationBar';
+import { LIST_PAGE_SIZE } from '../../lib/pagination';
 
 const STATUS_OPTIONS: { value: BillStatus | 'all'; label: string }[] = [
   { value: 'all', label: 'All Statuses' },
+  { value: 'pending', label: 'Pending' },
   { value: 'issued', label: 'Issued' },
   { value: 'partially_paid', label: 'Partially Paid' },
   { value: 'paid', label: 'Paid' },
@@ -28,12 +35,24 @@ const STATUS_OPTIONS: { value: BillStatus | 'all'; label: string }[] = [
 
 const STATUS_STYLES: Record<BillStatus, string> = {
   draft: 'bg-slate-100 text-slate-700 border-slate-200',
-  issued: 'bg-sky-50 text-sky-700 border-sky-100',
-  partially_paid: 'bg-amber-50 text-amber-700 border-amber-100',
-  paid: 'bg-emerald-50 text-emerald-700 border-emerald-100',
+  pending: 'bg-amber-50 text-amber-700 border-amber-200',
+  issued: 'bg-emerald-50 text-emerald-700 border-emerald-100',
+  partially_paid: 'bg-orange-50 text-orange-700 border-orange-100',
+  paid: 'bg-emerald-100 text-emerald-800 border-emerald-200',
   overdue: 'bg-rose-50 text-rose-700 border-rose-100',
   void: 'bg-slate-50 text-slate-500 border-slate-200'
 };
+
+function billStatusStyle(status?: string) {
+  if (status && status in STATUS_STYLES) {
+    return STATUS_STYLES[status as BillStatus];
+  }
+  return 'bg-slate-100 text-slate-600 border-slate-200';
+}
+
+function billStatusLabel(status?: string) {
+  return (status || 'pending').replace(/_/g, ' ');
+}
 
 function formatMoney(amount: number, currency = 'USD') {
   const prefix = currency === 'INR' ? '₹' : currency === 'USD' ? '$' : `${currency} `;
@@ -82,11 +101,16 @@ function recalcPreview(form: BillForm) {
 export const BillsPage: React.FC = () => {
   const { hasPermission } = useAuth();
   const [bills, setBills] = useState<Bill[]>([]);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [pageLimit] = useState(LIST_PAGE_SIZE);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [editBill, setEditBill] = useState<Bill | null>(null);
   const [editForm, setEditForm] = useState<BillForm | null>(null);
+  const [isLoadingEdit, setIsLoadingEdit] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [paymentBill, setPaymentBill] = useState<Bill | null>(null);
   const [paymentAmount, setPaymentAmount] = useState('');
@@ -94,14 +118,21 @@ export const BillsPage: React.FC = () => {
   const [isRecordingPayment, setIsRecordingPayment] = useState(false);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
-  const fetchBills = async () => {
+  const fetchBills = async (pageNum = page) => {
     setIsLoading(true);
     try {
       const res = await api.bills.getBills({
-        search,
-        status: statusFilter
+        search: search.trim() || undefined,
+        status: statusFilter,
+        page: pageNum,
+        limit: pageLimit
       });
-      if (res.success) setBills(res.data);
+      if (res.success) {
+        setBills(res.data);
+        setTotal(res.total);
+        setPage(res.page);
+        setTotalPages(res.totalPages);
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -110,17 +141,34 @@ export const BillsPage: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchBills();
+    setPage(1);
   }, [search, statusFilter]);
+
+  useEffect(() => {
+    fetchBills(page);
+  }, [search, statusFilter, page]);
 
   const preview = useMemo(
     () => (editForm ? recalcPreview(editForm) : null),
     [editForm]
   );
 
-  const openEdit = (bill: Bill) => {
+  const openEdit = async (bill: Bill) => {
     setEditBill(bill);
-    setEditForm(billToForm(bill));
+    setIsLoadingEdit(true);
+    setEditForm(null);
+    try {
+      const res = await api.bills.getBill(bill.id);
+      if (res.success) {
+        setEditBill(res.data);
+        setEditForm(billToForm(res.data));
+      }
+    } catch (err) {
+      console.error(err);
+      setEditBill(null);
+    } finally {
+      setIsLoadingEdit(false);
+    }
   };
 
   const updateLineItem = (index: number, patch: Partial<BillLineItem>) => {
@@ -130,7 +178,9 @@ export const BillsPage: React.FC = () => {
         if (i !== index) return item;
         const next = { ...item, ...patch };
         if (patch.unitPrice !== undefined || patch.quantity !== undefined) {
-          next.amount = Number(next.unitPrice) || 0;
+          const qty = parseFloat(String(next.quantity)) || 1;
+          const unitPrice = Number(next.unitPrice) || 0;
+          next.amount = Math.round(unitPrice * qty * 100) / 100;
         }
         return next;
       });
@@ -197,6 +247,10 @@ export const BillsPage: React.FC = () => {
       alert('Enter a valid payment amount');
       return;
     }
+    if (amount > paymentBill.amountDue) {
+      alert(`Payment amount cannot exceed amount due (${formatMoney(paymentBill.amountDue, paymentBill.currency)})`);
+      return;
+    }
     setIsRecordingPayment(true);
     try {
       await api.bills.recordPayment(paymentBill.id, amount, paymentNotes);
@@ -225,12 +279,36 @@ export const BillsPage: React.FC = () => {
     }
   };
 
+  const inputClass =
+    'w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500 transition bg-white';
+
+  // Labeled section wrapper — breaks the invoice form into readable groups.
+  const FormSection: React.FC<{ icon: React.ReactNode; title: string; children: React.ReactNode }> = ({
+    icon,
+    title,
+    children
+  }) => (
+    <div className="rounded-xl border border-slate-200 p-3.5">
+      <div className="flex items-center gap-1.5 mb-3 text-slate-500">
+        {icon}
+        <p className="text-[11px] font-bold uppercase tracking-wider">{title}</p>
+      </div>
+      <div className="space-y-3">{children}</div>
+    </div>
+  );
+
   return (
-    <div className="p-6 space-y-5 max-w-7xl mx-auto">
+    <div className="p-6 space-y-5">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h3 className="text-base font-semibold text-slate-800">Bills & Invoices</h3>
-          <p className="text-xs text-slate-500">
+          <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+            <span className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center">
+              <Receipt className="w-4 h-4" />
+            </span>
+            Bills & Invoices
+          </h3>
+          <p className="text-sm text-slate-500 mt-1 ml-10">
             Delivered orders appear here automatically — edit invoice details and download PDF
           </p>
         </div>
@@ -238,7 +316,7 @@ export const BillsPage: React.FC = () => {
           <button
             type="button"
             onClick={handleSync}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-slate-200 bg-white text-xs font-medium text-slate-700 hover:bg-slate-50"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 hover:bg-slate-50 transition"
           >
             <RefreshCw className="w-4 h-4" />
             Sync Delivered Orders
@@ -246,16 +324,17 @@ export const BillsPage: React.FC = () => {
         )}
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-2xs">
+      {/* Toolbar */}
+      <div className="bg-white border border-slate-200 rounded-2xl p-3 shadow-sm">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="relative">
-            <Search className="w-3.5 h-3.5 absolute left-3 top-3 text-slate-400" />
+            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
               placeholder="Search bills, orders, companies…"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="w-full pl-8 pr-3 py-1.5 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-sky-600"
+              className="w-full pl-8 pr-3 py-2 border border-slate-200 rounded-lg text-sm bg-slate-50 focus:bg-white focus:outline-none focus:border-emerald-500 transition"
             />
           </div>
           <SearchableSelect
@@ -267,116 +346,122 @@ export const BillsPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-xl shadow-2xs overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead>
-              <tr className="border-b border-slate-200 bg-slate-50/75 text-slate-600 font-semibold">
-                <th className="py-3 px-4">Invoice</th>
-                <th className="py-3 px-4">Customer</th>
-                <th className="py-3 px-4">Order</th>
-                <th className="py-3 px-4">Total</th>
-                <th className="py-3 px-4">Paid</th>
-                <th className="py-3 px-4">Due</th>
-                <th className="py-3 px-4">Status</th>
-                <th className="py-3 px-4">Due Date</th>
-                <th className="py-3 px-4 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {isLoading ? (
-                <tr>
-                  <td colSpan={9} className="py-12 text-center text-slate-400">
-                    Loading bills…
-                  </td>
-                </tr>
-              ) : bills.length === 0 ? (
-                <tr>
-                  <td colSpan={9} className="py-12 text-center text-slate-400">
-                    No bills yet. Delivered orders will appear here automatically.
-                  </td>
-                </tr>
-              ) : (
-                bills.map(bill => (
-                  <tr key={bill.id} className="hover:bg-slate-50/70">
-                    <td className="py-3 px-4">
-                      <p className="font-mono font-semibold text-slate-800">{bill.billCode}</p>
-                      <p className="text-[10px] text-slate-400">
-                        {bill.issuedAt ? new Date(bill.issuedAt).toLocaleDateString() : '—'}
+      {/* Bill cards */}
+      <div className="space-y-3">
+        {isLoading ? (
+          <div className="py-16 text-center text-slate-400 bg-white border border-slate-200 rounded-2xl">
+            Loading bills…
+          </div>
+        ) : bills.length === 0 ? (
+          <div className="py-16 text-center text-slate-400 bg-white border border-slate-200 rounded-2xl">
+            No bills yet. Delivered orders will appear here automatically.
+          </div>
+        ) : (
+          bills.map(bill => (
+            <div
+              key={bill.id}
+              className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm hover:border-emerald-200 transition"
+            >
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                <div className="min-w-0 flex-1 space-y-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-sm font-bold text-slate-900">{bill.billCode}</span>
+                    <span
+                      className={`inline-flex text-[11px] font-semibold px-2 py-0.5 rounded-full border capitalize ${billStatusStyle(
+                        bill.status
+                      )}`}
+                    >
+                      {billStatusLabel(bill.status)}
+                    </span>
+                    <span className="text-xs text-slate-400">
+                      {bill.issuedAt ? new Date(bill.issuedAt).toLocaleDateString() : 'No issue date'}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-slate-800 truncate">{bill.company || '—'}</p>
+                    <p className="text-xs text-slate-500 truncate">
+                      {bill.customerName || '—'} · Order {bill.orderCode || '—'}
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3 max-w-md text-xs">
+                    <div>
+                      <p className="text-slate-400 uppercase tracking-wide text-[10px]">Total</p>
+                      <p className="font-semibold text-slate-800 mt-0.5">
+                        {formatMoney(bill.totalAmount ?? 0, bill.currency)}
                       </p>
-                    </td>
-                    <td className="py-3 px-4">
-                      <p className="font-medium text-slate-800">{bill.company}</p>
-                      <p className="text-[10px] text-slate-500">{bill.customerName}</p>
-                    </td>
-                    <td className="py-3 px-4 font-mono text-slate-600">{bill.orderCode}</td>
-                    <td className="py-3 px-4 font-semibold text-slate-800">
-                      {formatMoney(bill.totalAmount, bill.currency)}
-                    </td>
-                    <td className="py-3 px-4 text-emerald-700">
-                      {formatMoney(bill.amountPaid, bill.currency)}
-                    </td>
-                    <td className="py-3 px-4 text-amber-700 font-semibold">
-                      {formatMoney(bill.amountDue, bill.currency)}
-                    </td>
-                    <td className="py-3 px-4">
-                      <span
-                        className={`inline-flex text-[10px] font-medium px-2 py-0.5 rounded border capitalize ${
-                          STATUS_STYLES[bill.status]
-                        }`}
+                    </div>
+                    <div>
+                      <p className="text-slate-400 uppercase tracking-wide text-[10px]">Paid</p>
+                      <p className="font-semibold text-emerald-700 mt-0.5">
+                        {formatMoney(bill.amountPaid ?? 0, bill.currency)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-slate-400 uppercase tracking-wide text-[10px]">Due</p>
+                      <p className="font-semibold text-amber-700 mt-0.5">
+                        {formatMoney(bill.amountDue ?? 0, bill.currency)}
+                      </p>
+                    </div>
+                  </div>
+                  {bill.dueDate && (
+                    <p className="text-[11px] text-slate-500">
+                      Due {new Date(bill.dueDate).toLocaleDateString()}
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => handleDownload(bill)}
+                    disabled={downloadingId === bill.id}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 transition disabled:opacity-60"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    {downloadingId === bill.id ? 'Downloading…' : 'Download PDF'}
+                  </button>
+                  {hasPermission('bills.edit') && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => openEdit(bill)}
+                        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-200 text-slate-700 text-xs font-medium hover:bg-slate-50 transition"
                       >
-                        {bill.status.replace('_', ' ')}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-slate-600">
-                      {bill.dueDate ? new Date(bill.dueDate).toLocaleDateString() : '—'}
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="flex items-center justify-end gap-1">
-                        <button
-                          type="button"
-                          onClick={() => handleDownload(bill)}
-                          disabled={downloadingId === bill.id}
-                          className="p-1.5 rounded-lg text-slate-500 hover:text-sky-700 hover:bg-sky-50"
-                          title="Download PDF invoice"
-                        >
-                          <Download className="w-4 h-4" />
-                        </button>
-                        {hasPermission('bills.edit') && (
-                          <>
-                            <button
-                              type="button"
-                              onClick={() => openEdit(bill)}
-                              className="p-1.5 rounded-lg text-slate-500 hover:text-sky-700 hover:bg-sky-50"
-                              title="Edit invoice"
-                            >
-                              <Pencil className="w-4 h-4" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setPaymentBill(bill);
-                                setPaymentAmount(String(bill.amountDue));
-                              }}
-                              className="p-1.5 rounded-lg text-slate-500 hover:text-emerald-700 hover:bg-emerald-50"
-                              title="Record payment"
-                            >
-                              <CreditCard className="w-4 h-4" />
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                        <Pencil className="w-3.5 h-3.5" />
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPaymentBill(bill);
+                          setPaymentAmount(String(bill.amountDue ?? 0));
+                        }}
+                        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-200 text-slate-700 text-xs font-medium hover:bg-slate-50 transition"
+                      >
+                        <CreditCard className="w-3.5 h-3.5" />
+                        Payment
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))
+        )}
       </div>
 
+      <PaginationBar
+        page={page}
+        totalPages={totalPages}
+        total={total}
+        isLoading={isLoading}
+        onPageChange={nextPage => setPage(nextPage)}
+        label="bills"
+      />
+
+      {/* Edit Invoice modal */}
       <Modal
-        isOpen={!!editBill && !!editForm}
+        isOpen={!!editBill}
         onClose={() => {
           setEditBill(null);
           setEditForm(null);
@@ -385,311 +470,339 @@ export const BillsPage: React.FC = () => {
         subtitle={editBill ? `${editBill.billCode} · ${editBill.orderCode}` : ''}
         maxWidth="xl"
       >
-        {editForm && editBill && (
-          <form onSubmit={handleSave} className="space-y-4 text-xs max-h-[70vh] overflow-y-auto pr-1">
-            <div className="rounded-lg border border-sky-100 bg-sky-50/40 p-3 flex items-start gap-2">
-              <FileText className="w-4 h-4 text-sky-600 shrink-0 mt-0.5" />
-              <p className="text-slate-600 leading-relaxed">
-                Update invoice fields below, then save and download the PDF. Changes apply to the
-                generated invoice document.
-              </p>
-            </div>
+        {isLoadingEdit ? (
+          <div className="py-12 text-center text-slate-400 text-sm">Loading invoice details…</div>
+        ) : editForm && editBill ? (
+          <form onSubmit={handleSave} className="flex flex-col max-h-[75vh] text-sm">
+            <div className="flex-1 overflow-y-auto px-1 space-y-3">
+              <div className="rounded-xl border border-emerald-100 bg-emerald-50/40 p-3.5 flex items-start gap-2.5">
+                <FileText className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                <p className="text-slate-600 leading-relaxed text-xs">
+                  Update invoice fields below, then save and download the PDF. Changes apply to the
+                  generated invoice document.
+                </p>
+              </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block font-medium text-slate-700 mb-1">Company</label>
-                <input
-                  value={editForm.company}
-                  onChange={e => setEditForm({ ...editForm, company: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg"
-                />
-              </div>
-              <div>
-                <label className="block font-medium text-slate-700 mb-1">Contact Name</label>
-                <input
-                  value={editForm.customerName}
-                  onChange={e => setEditForm({ ...editForm, customerName: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg"
-                />
-              </div>
-              <div>
-                <label className="block font-medium text-slate-700 mb-1">Email</label>
-                <input
-                  value={editForm.email}
-                  onChange={e => setEditForm({ ...editForm, email: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg"
-                />
-              </div>
-              <div>
-                <label className="block font-medium text-slate-700 mb-1">Phone</label>
-                <input
-                  value={editForm.phone}
-                  onChange={e => setEditForm({ ...editForm, phone: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg"
-                />
-              </div>
-              <div className="sm:col-span-2">
-                <label className="block font-medium text-slate-700 mb-1">Billing Address</label>
-                <textarea
-                  rows={2}
-                  value={editForm.billingAddress}
-                  onChange={e => setEditForm({ ...editForm, billingAddress: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg"
-                />
-              </div>
-              <div>
-                <label className="block font-medium text-slate-700 mb-1">GST / Tax ID</label>
-                <input
-                  value={editForm.gstNumber}
-                  onChange={e => setEditForm({ ...editForm, gstNumber: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg"
-                />
-              </div>
-              <div>
-                <label className="block font-medium text-slate-700 mb-1">Currency</label>
-                <SearchableSelect
-                  options={[
-                    { value: 'USD', label: 'USD' },
-                    { value: 'INR', label: 'INR' },
-                    { value: 'EUR', label: 'EUR' },
-                    { value: 'AED', label: 'AED' }
-                  ]}
-                  value={editForm.currency}
-                  onChange={v => setEditForm({ ...editForm, currency: v })}
-                />
-              </div>
-              <div>
-                <label className="block font-medium text-slate-700 mb-1">Issue Date</label>
-                <DateTimePicker
-                  includeTime
-                  value={editForm.issuedAt}
-                  onChange={v => setEditForm({ ...editForm, issuedAt: v })}
-                />
-              </div>
-              <div>
-                <label className="block font-medium text-slate-700 mb-1">Due Date</label>
-                <DateTimePicker
-                  includeTime
-                  value={editForm.dueDate}
-                  onChange={v => setEditForm({ ...editForm, dueDate: v })}
-                />
-              </div>
-              <div>
-                <label className="block font-medium text-slate-700 mb-1">Tax Rate (%)</label>
-                <input
-                  type="number"
-                  min={0}
-                  step={0.1}
-                  value={editForm.taxRate}
-                  onChange={e =>
-                    setEditForm({ ...editForm, taxRate: Number(e.target.value) || 0 })
-                  }
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg"
-                />
-              </div>
-              <div>
-                <label className="block font-medium text-slate-700 mb-1">Amount Paid</label>
-                <input
-                  type="number"
-                  min={0}
-                  step={0.01}
-                  value={editForm.amountPaid}
-                  onChange={e =>
-                    setEditForm({ ...editForm, amountPaid: Number(e.target.value) || 0 })
-                  }
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg"
-                />
-              </div>
-              <div className="sm:col-span-2">
-                <label className="block font-medium text-slate-700 mb-1">Payment Terms</label>
-                <input
-                  value={editForm.paymentTerms}
-                  onChange={e => setEditForm({ ...editForm, paymentTerms: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg"
-                />
-              </div>
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="font-medium text-slate-700">Line Items</label>
-                <button
-                  type="button"
-                  onClick={addLineItem}
-                  className="inline-flex items-center gap-1 text-[11px] text-sky-700 hover:text-sky-800"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  Add line
-                </button>
-              </div>
-              <div className="space-y-2">
-                {editForm.lineItems.map((item, index) => (
-                  <div
-                    key={index}
-                    className="grid grid-cols-12 gap-2 items-start rounded-lg border border-slate-100 p-2"
-                  >
+              <FormSection icon={<Building2 className="w-3.5 h-3.5" />} title="Bill To">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1.5">Company</label>
                     <input
-                      value={item.description}
-                      onChange={e => updateLineItem(index, { description: e.target.value })}
-                      placeholder="Description"
-                      className="col-span-5 px-2 py-1.5 border border-slate-200 rounded-lg"
+                      value={editForm.company}
+                      onChange={e => setEditForm({ ...editForm, company: e.target.value })}
+                      className={inputClass}
                     />
-                    <input
-                      value={item.quantity}
-                      onChange={e => updateLineItem(index, { quantity: e.target.value })}
-                      placeholder="Qty"
-                      className="col-span-2 px-2 py-1.5 border border-slate-200 rounded-lg"
-                    />
-                    <input
-                      type="number"
-                      value={item.unitPrice}
-                      onChange={e =>
-                        updateLineItem(index, { unitPrice: Number(e.target.value) || 0 })
-                      }
-                      placeholder="Price"
-                      className="col-span-2 px-2 py-1.5 border border-slate-200 rounded-lg"
-                    />
-                    <input
-                      type="number"
-                      value={item.amount}
-                      onChange={e =>
-                        updateLineItem(index, { amount: Number(e.target.value) || 0 })
-                      }
-                      placeholder="Amount"
-                      className="col-span-2 px-2 py-1.5 border border-slate-200 rounded-lg"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removeLineItem(index)}
-                      className="col-span-1 p-1.5 text-slate-400 hover:text-rose-600"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
                   </div>
-                ))}
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1.5">Contact Name</label>
+                    <input
+                      value={editForm.customerName}
+                      onChange={e => setEditForm({ ...editForm, customerName: e.target.value })}
+                      className={inputClass}
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1.5">Email</label>
+                    <input
+                      value={editForm.email}
+                      onChange={e => setEditForm({ ...editForm, email: e.target.value })}
+                      className={inputClass}
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1.5">Phone</label>
+                    <input
+                      value={editForm.phone}
+                      onChange={e => setEditForm({ ...editForm, phone: e.target.value })}
+                      className={inputClass}
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="block font-semibold text-slate-700 mb-1.5">Billing Address</label>
+                    <textarea
+                      rows={2}
+                      value={editForm.billingAddress}
+                      onChange={e => setEditForm({ ...editForm, billingAddress: e.target.value })}
+                      className={`${inputClass} resize-none`}
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1.5">GST / Tax ID</label>
+                    <input
+                      value={editForm.gstNumber}
+                      onChange={e => setEditForm({ ...editForm, gstNumber: e.target.value })}
+                      className={inputClass}
+                    />
+                  </div>
+                </div>
+              </FormSection>
+
+              <FormSection icon={<Receipt className="w-3.5 h-3.5" />} title="Invoice Terms">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1.5">Currency</label>
+                    <SearchableSelect
+                      options={[
+                        { value: 'USD', label: 'USD' },
+                        { value: 'INR', label: 'INR' },
+                        { value: 'EUR', label: 'EUR' },
+                        { value: 'AED', label: 'AED' }
+                      ]}
+                      value={editForm.currency}
+                      onChange={v => setEditForm({ ...editForm, currency: v })}
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1.5">Tax Rate (%)</label>
+                    <input
+                      type="number"
+                      min={0}
+                      step={0.1}
+                      value={editForm.taxRate}
+                      onChange={e =>
+                        setEditForm({ ...editForm, taxRate: Number(e.target.value) || 0 })
+                      }
+                      className={inputClass}
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1.5">Issue Date</label>
+                    <DateTimePicker
+                      includeTime
+                      value={editForm.issuedAt}
+                      onChange={v => setEditForm({ ...editForm, issuedAt: v })}
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1.5">Due Date</label>
+                    <DateTimePicker
+                      includeTime
+                      value={editForm.dueDate}
+                      onChange={v => setEditForm({ ...editForm, dueDate: v })}
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1.5">Amount Paid</label>
+                    <input
+                      type="number"
+                      min={0}
+                      step={0.01}
+                      value={editForm.amountPaid}
+                      onChange={e =>
+                        setEditForm({ ...editForm, amountPaid: Number(e.target.value) || 0 })
+                      }
+                      className={inputClass}
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1.5">Payment Terms</label>
+                    <input
+                      value={editForm.paymentTerms}
+                      onChange={e => setEditForm({ ...editForm, paymentTerms: e.target.value })}
+                      className={inputClass}
+                    />
+                  </div>
+                </div>
+              </FormSection>
+
+              <div className="rounded-xl border border-slate-200 p-3.5">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-1.5 text-slate-500">
+                    <Receipt className="w-3.5 h-3.5" />
+                    <p className="text-[11px] font-bold uppercase tracking-wider">Line Items</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={addLineItem}
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 hover:text-emerald-800 transition"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    Add line
+                  </button>
+                </div>
+                <div className="space-y-3">
+                  {editForm.lineItems.map((item, index) => (
+                    <div
+                      key={index}
+                      className="rounded-lg border border-slate-200 p-3 space-y-2 bg-slate-50/40"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <label className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                          Line {index + 1}
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => removeLineItem(index)}
+                          className="p-1 text-slate-400 hover:text-rose-600 transition"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <input
+                        value={item.description}
+                        onChange={e => updateLineItem(index, { description: e.target.value })}
+                        placeholder="Description"
+                        className="w-full px-2 py-1.5 border border-slate-200 rounded-md text-xs focus:outline-none focus:border-emerald-500 transition bg-white"
+                      />
+                      <div className="grid grid-cols-3 gap-2">
+                        <input
+                          value={item.quantity}
+                          onChange={e => updateLineItem(index, { quantity: e.target.value })}
+                          placeholder="Qty"
+                          className="px-2 py-1.5 border border-slate-200 rounded-md text-xs focus:outline-none focus:border-emerald-500 transition bg-white"
+                        />
+                        <input
+                          type="number"
+                          value={item.unitPrice}
+                          onChange={e =>
+                            updateLineItem(index, { unitPrice: Number(e.target.value) || 0 })
+                          }
+                          placeholder="Unit price"
+                          className="px-2 py-1.5 border border-slate-200 rounded-md text-xs focus:outline-none focus:border-emerald-500 transition bg-white"
+                        />
+                        <input
+                          type="number"
+                          value={item.amount}
+                          onChange={e =>
+                            updateLineItem(index, { amount: Number(e.target.value) || 0 })
+                          }
+                          placeholder="Amount"
+                          className="px-2 py-1.5 border border-slate-200 rounded-md text-xs focus:outline-none focus:border-emerald-500 transition bg-white"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
+
+              <FormSection icon={<StickyNote className="w-3.5 h-3.5" />} title="Notes & Bank Details">
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1.5">Invoice Notes</label>
+                  <textarea
+                    rows={2}
+                    value={editForm.invoiceNotes}
+                    onChange={e => setEditForm({ ...editForm, invoiceNotes: e.target.value })}
+                    className={`${inputClass} resize-none`}
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1.5 flex items-center gap-1">
+                    <Landmark className="w-3.5 h-3.5" /> Bank Details (on PDF)
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={editForm.bankDetails}
+                    onChange={e => setEditForm({ ...editForm, bankDetails: e.target.value })}
+                    className={`${inputClass} resize-none`}
+                  />
+                </div>
+              </FormSection>
+
+              {preview && (
+                <div className="rounded-xl border border-emerald-100 bg-emerald-50/40 p-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div>
+                    <p className="text-[10px] text-slate-500 uppercase font-semibold tracking-wide">Subtotal</p>
+                    <p className="font-semibold text-slate-800 mt-0.5">{formatMoney(preview.subtotal, editForm.currency)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-slate-500 uppercase font-semibold tracking-wide">Tax</p>
+                    <p className="font-semibold text-slate-800 mt-0.5">{formatMoney(preview.taxAmount, editForm.currency)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-slate-500 uppercase font-semibold tracking-wide">Total</p>
+                    <p className="font-semibold text-slate-800 mt-0.5">{formatMoney(preview.totalAmount, editForm.currency)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-slate-500 uppercase font-semibold tracking-wide">Due</p>
+                    <p className="font-semibold text-amber-700 mt-0.5">
+                      {formatMoney(preview.amountDue, editForm.currency)}
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
 
-            <div>
-              <label className="block font-medium text-slate-700 mb-1">Invoice Notes</label>
-              <textarea
-                rows={2}
-                value={editForm.invoiceNotes}
-                onChange={e => setEditForm({ ...editForm, invoiceNotes: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg"
-              />
-            </div>
-
-            <div>
-              <label className="block font-medium text-slate-700 mb-1">Bank Details (on PDF)</label>
-              <textarea
-                rows={3}
-                value={editForm.bankDetails}
-                onChange={e => setEditForm({ ...editForm, bankDetails: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg font-mono text-[11px]"
-              />
-            </div>
-
-            {preview && (
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <div>
-                  <p className="text-[10px] text-slate-400 uppercase">Subtotal</p>
-                  <p className="font-semibold">{formatMoney(preview.subtotal, editForm.currency)}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] text-slate-400 uppercase">Tax</p>
-                  <p className="font-semibold">{formatMoney(preview.taxAmount, editForm.currency)}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] text-slate-400 uppercase">Total</p>
-                  <p className="font-semibold">{formatMoney(preview.totalAmount, editForm.currency)}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] text-slate-400 uppercase">Due</p>
-                  <p className="font-semibold text-amber-700">
-                    {formatMoney(preview.amountDue, editForm.currency)}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+            <div className="flex justify-end gap-2 pt-3 mt-3 border-t border-slate-100 shrink-0">
               <button
                 type="button"
                 onClick={() => {
                   setEditBill(null);
                   setEditForm(null);
                 }}
-                className="px-4 py-2 rounded-lg border border-slate-200 text-slate-600"
+                className="px-4 py-2.5 rounded-lg border border-slate-200 text-slate-600 font-medium hover:bg-slate-50 transition"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={() => handleDownload(editBill)}
-                className="px-4 py-2 rounded-lg border border-sky-200 text-sky-700 font-medium"
+                disabled={downloadingId === editBill.id}
+                className="px-4 py-2.5 rounded-lg border border-emerald-200 text-emerald-700 font-semibold hover:bg-emerald-50 transition disabled:opacity-60"
               >
-                Download PDF
+                {downloadingId === editBill.id ? 'Downloading…' : 'Download PDF'}
               </button>
               <button
                 type="submit"
                 disabled={isSaving}
-                className="px-4 py-2 rounded-lg bg-sky-600 text-white font-medium disabled:opacity-50"
+                className="px-4 py-2.5 rounded-lg bg-emerald-600 text-white font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-emerald-700 transition shadow-sm"
               >
                 {isSaving ? 'Saving…' : 'Save Invoice'}
               </button>
             </div>
           </form>
-        )}
+        ) : null}
       </Modal>
 
+      {/* Record Payment modal */}
       <Modal
         isOpen={!!paymentBill}
         onClose={() => setPaymentBill(null)}
         title="Record Payment"
         subtitle={paymentBill?.billCode}
       >
-        <form onSubmit={handleRecordPayment} className="space-y-4 text-xs">
-          <p className="text-slate-600">
-            Outstanding due:{' '}
-            <span className="font-semibold text-amber-700">
-              {paymentBill ? formatMoney(paymentBill.amountDue, paymentBill.currency) : '—'}
-            </span>
-          </p>
-          <div>
-            <label className="block font-medium text-slate-700 mb-1">Payment Amount</label>
-            <input
-              type="number"
-              min={0}
-              step={0.01}
-              required
-              value={paymentAmount}
-              onChange={e => setPaymentAmount(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-200 rounded-lg"
-            />
+        <form onSubmit={handleRecordPayment} className="flex flex-col max-h-[75vh] text-sm">
+          <div className="flex-1 overflow-y-auto px-1 space-y-4">
+            <div className="rounded-xl border border-amber-100 bg-amber-50/60 p-3.5">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-amber-700">Outstanding due</p>
+              <p className="text-lg font-bold text-amber-800 mt-0.5">
+                {paymentBill ? formatMoney(paymentBill.amountDue, paymentBill.currency) : '—'}
+              </p>
+            </div>
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1.5">Payment Amount</label>
+              <input
+                type="number"
+                min={0}
+                step={0.01}
+                required
+                value={paymentAmount}
+                onChange={e => setPaymentAmount(e.target.value)}
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1.5">Notes</label>
+              <textarea
+                rows={2}
+                value={paymentNotes}
+                onChange={e => setPaymentNotes(e.target.value)}
+                placeholder="Wire ref, UTR, cheque no…"
+                className={`${inputClass} resize-none`}
+              />
+            </div>
           </div>
-          <div>
-            <label className="block font-medium text-slate-700 mb-1">Notes</label>
-            <textarea
-              rows={2}
-              value={paymentNotes}
-              onChange={e => setPaymentNotes(e.target.value)}
-              placeholder="Wire ref, UTR, cheque no…"
-              className="w-full px-3 py-2 border border-slate-200 rounded-lg"
-            />
-          </div>
-          <div className="flex justify-end gap-2">
+          <div className="flex justify-end gap-2 pt-3 mt-3 border-t border-slate-100 shrink-0">
             <button
               type="button"
               onClick={() => setPaymentBill(null)}
-              className="px-4 py-2 rounded-lg border border-slate-200 text-slate-600"
+              className="px-4 py-2.5 rounded-lg border border-slate-200 text-slate-600 font-medium hover:bg-slate-50 transition"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isRecordingPayment}
-              className="px-4 py-2 rounded-lg bg-emerald-600 text-white font-medium disabled:opacity-50"
+              className="px-4 py-2.5 rounded-lg bg-emerald-600 text-white font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-emerald-700 transition shadow-sm"
             >
               {isRecordingPayment ? 'Recording…' : 'Record Payment'}
             </button>

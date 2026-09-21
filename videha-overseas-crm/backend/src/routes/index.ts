@@ -24,6 +24,7 @@ import { financeRoutes } from "../modules/finance/finance.routes";
 import { documentsRoutes } from "../modules/documents/documents.routes";
 import { importRoutes } from "../modules/import/import.routes";
 import { shipmentsRoutes } from "../modules/shipments/shipments.routes";
+import { suppliersRoutes } from "../modules/suppliers/suppliers.routes";
 import { publicRoutes } from "../modules/public/public.routes";
 
 export const apiRouter = Router();
@@ -71,6 +72,7 @@ apiRouter.use("/finance", financeRoutes);
 apiRouter.use("/documents", documentsRoutes);
 apiRouter.use("/import", importRoutes);
 apiRouter.use("/shipments", shipmentsRoutes);
+apiRouter.use("/suppliers", suppliersRoutes);
 apiRouter.use("/public", publicRoutes);
 
 apiRouter.get("/health", (_req, res) => {

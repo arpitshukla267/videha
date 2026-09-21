@@ -46,6 +46,15 @@ async function seed() {
         ? [...ALL_PERMISSION_CODES]
         : ROLE_PERMISSIONS[name] || [];
 
+    const visibilityScope =
+      name === "SUPER_ADMIN" || name === "ADMIN"
+        ? "all"
+        : name === "MANAGER"
+          ? "department"
+          : name === "OPERATIONS"
+            ? "team"
+            : "own";
+
     const role = await Role.findOneAndUpdate(
       { name },
       {
@@ -53,6 +62,8 @@ async function seed() {
         displayName: meta.displayName,
         description: meta.description,
         permissions,
+        isSystem: true,
+        visibilityScope,
       },
       { upsert: true, new: true, setDefaultsOnInsert: true },
     );

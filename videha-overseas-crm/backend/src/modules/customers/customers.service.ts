@@ -11,6 +11,7 @@ import type { AuthUser } from "../../middleware/auth";
 import { exportFilename } from "../../utils/csv";
 import { streamCsvExport } from "../../utils/csvExport";
 import { CUSTOMER_EXPORT_COLUMNS } from "../../constants/exportColumns";
+import { normalizePhone } from "../../services/customerResolution.service";
 
 const POPULATE = [{ path: "companyId", select: "companyCode name country status" }];
 
@@ -103,7 +104,12 @@ export async function listCustomers(filters: {
 
   const [total, docs] = await Promise.all([
     Customer.countDocuments(query),
-    Customer.find(query).populate(POPULATE).sort({ name: 1 }).skip(skip).limit(limit),
+    Customer.find(query)
+      .populate(POPULATE)
+      .select("-notes")
+      .sort({ name: 1 })
+      .skip(skip)
+      .limit(limit),
   ]);
 
   const items = docs.map((d) => serializeCustomer(d.toObject() as unknown as Record<string, unknown>));
@@ -140,6 +146,7 @@ export async function createCustomer(body: Record<string, unknown>, actor: AuthU
     name: input.name,
     email: input.email || "",
     phone: input.phone || "",
+    normalizedPhone: normalizePhone(input.phone),
     whatsAppNumber: input.whatsAppNumber || input.phone || "",
     designation: input.designation || "",
     isPrimaryContact: input.isPrimaryContact ?? false,
@@ -180,7 +187,10 @@ export async function updateCustomer(id: string, body: Record<string, unknown>, 
   }
   if (input.name !== undefined) setFields.name = input.name;
   if (input.email !== undefined) setFields.email = input.email;
-  if (input.phone !== undefined) setFields.phone = input.phone;
+  if (input.phone !== undefined) {
+    setFields.phone = input.phone;
+    setFields.normalizedPhone = normalizePhone(input.phone);
+  }
   if (input.whatsAppNumber !== undefined) setFields.whatsAppNumber = input.whatsAppNumber;
   if (input.designation !== undefined) setFields.designation = input.designation;
   if (input.notes !== undefined) setFields.notes = input.notes;

@@ -1,10 +1,16 @@
-export type RoleName = 'SUPER_ADMIN' | 'ADMIN' | 'MANAGER' | 'SALES_MEMBER' | 'OPERATIONS';
+export type RoleName = 'SUPER_ADMIN' | 'ADMIN' | 'MANAGER' | 'SALES_MEMBER' | 'OPERATIONS' | string;
+
+export type VisibilityScope = 'own' | 'team' | 'department' | 'all';
 
 export interface Department {
   id: string;
   name: string;
   description?: string;
   status: 'active' | 'inactive';
+  defaultRoleId?: string | null;
+  defaultRoleName?: string | null;
+  allowedRoleIds?: string[];
+  allowedRoleNames?: string[];
   revision?: number;
   createdAt: string;
   updatedAt: string;
@@ -45,6 +51,8 @@ export interface Role {
   displayName: string;
   description: string;
   permissions: string[];
+  isSystem?: boolean;
+  visibilityScope?: VisibilityScope;
 }
 
 export interface Permission {
@@ -337,6 +345,7 @@ export interface Task {
 }
 
 export type OrderStatus =
+  | 'Draft'
   | 'Order Confirmed'
   | 'Processing'
   | 'Production'
@@ -368,16 +377,23 @@ export interface Order {
   products: string;
   quantity: string;
   orderValue: number;
+  totalAmount: number;
   currency: string;
   assignedMemberId: string;
   assignedMemberName?: string;
   orderStatus: OrderStatus;
+  billingStatus: BillStatus;
+  amountPaid: number;
+  amountDue: number;
+  billId: string | null;
   expectedDelivery: string;
   createdDate: string;
   notes: string;
   destinationPort?: string;
   shippingCarrier?: string;
   trackingNumber?: string;
+  companyId?: string | null;
+  customerId?: string | null;
   updatedAt: string;
   revision?: number;
 }
@@ -426,7 +442,26 @@ export type ImportEntityType =
   | 'customers'
   | 'follow-ups'
   | 'quotations'
-  | 'orders';
+  | 'orders'
+  | 'suppliers';
+
+export interface ImportSupplierMatch {
+  type: 'existing' | 'new' | 'ambiguous' | 'duplicate_in_csv';
+  matchedBy?: string;
+  supplierCode?: string;
+  supplierName?: string;
+  companyName?: string;
+  details?: string;
+}
+
+export interface ImportCustomerMatch {
+  type: 'existing' | 'new' | 'ambiguous';
+  matchedBy?: string;
+  customerCode?: string;
+  customerName?: string;
+  companyName?: string;
+  details?: string;
+}
 
 export interface ImportPreviewRow {
   rowNumber: number;
@@ -436,6 +471,8 @@ export interface ImportPreviewRow {
   warnings: string[];
   isDuplicate: boolean;
   valid: boolean;
+  customerMatch?: ImportCustomerMatch;
+  supplierMatch?: ImportSupplierMatch;
 }
 
 export interface ImportFieldMeta {
@@ -502,7 +539,7 @@ export interface AuditLog {
   timestamp: string;
 }
 
-export type BillStatus = 'draft' | 'issued' | 'partially_paid' | 'paid' | 'overdue' | 'void';
+export type BillStatus = 'draft' | 'pending' | 'issued' | 'partially_paid' | 'paid' | 'overdue' | 'void';
 
 export interface BillLineItem {
   description: string;
@@ -550,6 +587,7 @@ export interface FinanceOverview {
   totalDue: number;
   overdueAmount: number;
   revenueThisMonth: number;
+  reportingCurrency: string;
   paidBillsCount: number;
   dueBillsCount: number;
   overdueBillsCount: number;
@@ -562,6 +600,7 @@ export interface FinanceOverview {
     orderCode: string;
     company: string;
     amountDue: number;
+    amountDueINR?: number;
     totalAmount: number;
     amountPaid: number;
     currency: string;
@@ -574,9 +613,32 @@ export interface FinanceOverview {
     orderCode: string;
     company: string;
     amountPaid: number;
+    amountPaidINR?: number;
     currency: string;
     paidAt: string;
   }>;
+}
+
+export interface Supplier {
+  id: string;
+  supplierCode: string;
+  supplierName: string;
+  companyName: string;
+  contactPerson: string;
+  email: string;
+  phone: string;
+  address: string;
+  country: string;
+  taxId: string;
+  paymentTerms: string;
+  currency: string;
+  productsSupplied: string;
+  status: 'active' | 'inactive';
+  notes: string;
+  createdById: string;
+  createdAt: string;
+  updatedAt: string;
+  revision?: number;
 }
 
 export type DocumentCategory =

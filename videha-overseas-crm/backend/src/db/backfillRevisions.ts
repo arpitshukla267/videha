@@ -9,7 +9,7 @@ import { Customer } from "../models/Customer";
 import { Quotation } from "../models/Quotation";
 import { Role } from "../models/Role";
 import { ROLE_PERMISSIONS, resolveRolePermissions } from "../constants/permissions";
-import type { RoleName } from "../models/Role";
+import type { RoleName, VisibilityScope } from "../models/Role";
 
 const DEFAULT_DEPARTMENT_BY_ROLE: Partial<Record<RoleName, string>> = {
   MANAGER: "Sales",
@@ -121,9 +121,27 @@ export async function backfillFollowUpsFromLeads(): Promise<void> {
 
 /** Merge code-defined permission floors into stored role documents. */
 export async function syncRolePermissionDefaults(): Promise<void> {
+  const systemScope: Partial<Record<RoleName, string>> = {
+    SUPER_ADMIN: "all",
+    ADMIN: "all",
+    MANAGER: "department",
+    OPERATIONS: "team",
+    SALES_MEMBER: "own",
+  };
+
+  await Role.updateMany(
+    { name: { $in: Object.keys(ROLE_PERMISSIONS) }, isSystem: { $ne: true } },
+    { $set: { isSystem: true } },
+  );
+
   for (const [name, defaults] of Object.entries(ROLE_PERMISSIONS)) {
     const role = await Role.findOne({ name });
     if (!role) continue;
+
+    if (!role.isSystem) role.isSystem = true;
+    if (!role.visibilityScope && systemScope[name as RoleName]) {
+      role.visibilityScope = systemScope[name as RoleName] as VisibilityScope;
+    }
 
     const merged = resolveRolePermissions(name, role.permissions);
     const current = [...role.permissions].sort().join("|");

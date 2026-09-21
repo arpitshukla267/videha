@@ -9,6 +9,7 @@ export interface ICustomer extends Document {
   name: string;
   email: string;
   phone: string;
+  normalizedPhone?: string;
   whatsAppNumber: string;
   designation: string;
   isPrimaryContact: boolean;
@@ -26,8 +27,9 @@ const customerSchema = new Schema<ICustomer>(
     customerCode: { type: String, required: true, unique: true, index: true },
     companyId: { type: Schema.Types.ObjectId, ref: "Company", required: true, index: true },
     name: { type: String, required: true, trim: true, index: true },
-    email: { type: String, default: "", lowercase: true, trim: true, index: true },
+    email: { type: String, default: "", lowercase: true, trim: true },
     phone: { type: String, default: "", trim: true, index: true },
+    normalizedPhone: { type: String, default: "", trim: true },
     whatsAppNumber: { type: String, default: "" },
     designation: { type: String, default: "" },
     isPrimaryContact: { type: Boolean, default: false, index: true },
@@ -42,5 +44,13 @@ const customerSchema = new Schema<ICustomer>(
 
 customerSchema.index({ companyId: 1, status: 1, isPrimaryContact: -1 });
 customerSchema.index({ name: "text", email: "text", phone: "text" });
+customerSchema.index(
+  { email: 1 },
+  { unique: true, partialFilterExpression: { email: { $gt: "" } } },
+);
+customerSchema.index(
+  { normalizedPhone: 1 },
+  { unique: true, partialFilterExpression: { normalizedPhone: { $gt: "" } } },
+);
 
 export const Customer = mongoose.model<ICustomer>("Customer", customerSchema);

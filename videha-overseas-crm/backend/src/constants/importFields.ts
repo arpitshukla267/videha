@@ -10,7 +10,8 @@ export type ImportEntityType =
   | "customers"
   | "follow-ups"
   | "quotations"
-  | "orders";
+  | "orders"
+  | "suppliers";
 
 export type ImportFieldDef = {
   key: string;
@@ -26,6 +27,7 @@ export const IMPORT_ENTITY_TYPES: ImportEntityType[] = [
   "follow-ups",
   "quotations",
   "orders",
+  "suppliers",
 ];
 
 export const IMPORT_ENTITY_LABELS: Record<ImportEntityType, string> = {
@@ -35,6 +37,7 @@ export const IMPORT_ENTITY_LABELS: Record<ImportEntityType, string> = {
   "follow-ups": "Follow-ups",
   quotations: "Quotations",
   orders: "Orders",
+  suppliers: "Suppliers",
 };
 
 export const IMPORT_ENTITY_PERMISSION: Record<ImportEntityType, string> = {
@@ -44,6 +47,7 @@ export const IMPORT_ENTITY_PERMISSION: Record<ImportEntityType, string> = {
   "follow-ups": "followups.create",
   quotations: "quotations.create",
   orders: "orders.create",
+  suppliers: "suppliers.create",
 };
 
 export const IMPORT_MAX_FILE_BYTES = 5 * 1024 * 1024;
@@ -180,6 +184,23 @@ export const ORDER_IMPORT_FIELDS: ImportFieldDef[] = [
   { key: "notes", label: "Notes" },
 ];
 
+export const SUPPLIER_IMPORT_FIELDS: ImportFieldDef[] = [
+  { key: "supplierName", label: "Supplier Name", required: true, aliases: ["Name"] },
+  { key: "supplierCode", label: "Supplier Code", aliases: ["Code", "supplier_code"] },
+  { key: "companyName", label: "Company Name", aliases: ["Company", "company_name"] },
+  { key: "contactPerson", label: "Contact Person", aliases: ["Contact", "contact_person"] },
+  { key: "email", label: "Email" },
+  { key: "phone", label: "Phone", aliases: ["Phone Number", "phone_number"] },
+  { key: "address", label: "Address" },
+  { key: "country", label: "Country" },
+  { key: "taxId", label: "Tax/GST/VAT", aliases: ["GST", "VAT", "tax_id", "gst_number"] },
+  { key: "paymentTerms", label: "Payment Terms", aliases: ["payment_terms"] },
+  { key: "productsSupplied", label: "Products Supplied", aliases: ["Products", "products_supplied", "Product List"] },
+  { key: "currency", label: "Currency" },
+  { key: "status", label: "Status" },
+  { key: "notes", label: "Notes" },
+];
+
 export const IMPORT_FIELDS_BY_ENTITY: Record<ImportEntityType, ImportFieldDef[]> = {
   leads: LEAD_IMPORT_FIELDS,
   companies: COMPANY_IMPORT_FIELDS,
@@ -187,6 +208,7 @@ export const IMPORT_FIELDS_BY_ENTITY: Record<ImportEntityType, ImportFieldDef[]>
   "follow-ups": FOLLOWUP_IMPORT_FIELDS,
   quotations: QUOTATION_IMPORT_FIELDS,
   orders: ORDER_IMPORT_FIELDS,
+  suppliers: SUPPLIER_IMPORT_FIELDS,
 };
 
 export function normalizeHeader(value: unknown): string {
