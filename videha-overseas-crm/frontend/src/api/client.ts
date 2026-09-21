@@ -38,6 +38,23 @@ import { ApiError } from '../lib/apiErrors';
 
 const TOKEN_KEY = 'videha_crm_auth_token';
 
+export const API_BASE_URL = (
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) || ''
+).replace(/\/+$/, '');
+
+export function buildUrl(endpoint: string): string {
+  if (!API_BASE_URL) return endpoint;
+  if (/^https?:\/\//i.test(endpoint)) return endpoint;
+  const cleanPath = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  return `${API_BASE_URL}${cleanPath}`;
+}
+
+function getUnreachableMessage(): string {
+  return API_BASE_URL
+    ? `Cannot reach the CRM API at ${API_BASE_URL}. Make sure the backend server is running and accessible.`
+    : 'Cannot reach the CRM API. Make sure the backend is running on port 5000.';
+}
+
 export type PaginatedListResponse<T> = {
   success: boolean;
   data: T[];
@@ -74,12 +91,12 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
 
   let response: Response;
   try {
-    response = await fetch(endpoint, {
+    response = await fetch(buildUrl(endpoint), {
       ...options,
       headers
     });
   } catch {
-    throw new Error('Cannot reach the CRM API. Make sure the backend is running on port 5000.');
+    throw new Error(getUnreachableMessage());
   }
 
   let data: any = null;
@@ -116,9 +133,9 @@ async function uploadFormData<T>(endpoint: string, formData: FormData): Promise<
 
   let response: Response;
   try {
-    response = await fetch(endpoint, { method: 'POST', headers, body: formData });
+    response = await fetch(buildUrl(endpoint), { method: 'POST', headers, body: formData });
   } catch {
-    throw new Error('Cannot reach the CRM API. Make sure the backend is running on port 5000.');
+    throw new Error(getUnreachableMessage());
   }
 
   let data: any = null;
@@ -151,7 +168,12 @@ async function downloadBlob(endpoint: string, filename: string): Promise<void> {
   const headers: Record<string, string> = {};
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
-  const response = await fetch(endpoint, { headers });
+  let response: Response;
+  try {
+    response = await fetch(buildUrl(endpoint), { headers });
+  } catch {
+    throw new Error(getUnreachableMessage());
+  }
   if (!response.ok) {
     let message = `Download failed with status ${response.status}`;
     try {
@@ -1020,7 +1042,7 @@ export const api = {
       const headers: Record<string, string> = {};
       if (token) headers['Authorization'] = `Bearer ${token}`;
 
-      const response = await fetch(`/api/documents/${id}/file?disposition=inline`, { headers });
+      const response = await fetch(buildUrl(`/api/documents/${id}/file?disposition=inline`), { headers });
       if (!response.ok) {
         let message = `Preview failed with status ${response.status}`;
         try {
