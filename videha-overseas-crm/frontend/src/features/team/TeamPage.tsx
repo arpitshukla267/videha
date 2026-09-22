@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   Plus,
   Phone,
@@ -13,30 +13,51 @@ import {
   Building2,
   Lock,
   Briefcase,
-  Loader2
-} from 'lucide-react';
-import { api } from '../../api/client';
-import { User, Department } from '../../types/crm';
-import { Modal } from '../../components/ui/Modal';
-import { SearchableSelect } from '../../components/ui/SearchableSelect';
-import { useAuth } from '../../context/AuthContext';
-import { handleConflictWithReload, alertSaveError } from '../../lib/apiErrors';
-import { PaginationBar } from '../../components/ui/PaginationBar';
-import { LIST_PAGE_SIZE } from '../../lib/pagination';
+  Loader2,
+} from "lucide-react";
+import { api } from "../../api/client";
+import { User, Department } from "../../types/crm";
+import { Modal } from "../../components/ui/Modal";
+import { SearchableSelect } from "../../components/ui/SearchableSelect";
+import { useAuth } from "../../context/AuthContext";
+import { handleConflictWithReload, alertSaveError } from "../../lib/apiErrors";
+import { PaginationBar } from "../../components/ui/PaginationBar";
+import { LIST_PAGE_SIZE } from "../../lib/pagination";
 
 const emptyMemberForm = {
-  name: '',
-  email: '',
-  password: '',
-  phone: '',
-  departmentId: '',
-  designation: ''
+  name: "",
+  email: "",
+  password: "",
+  phone: "",
+  departmentId: "",
+  designation: "",
 };
 
 function initials(name?: string | null) {
-  if (!name) return '?';
+  if (!name) return "?";
   return name.slice(0, 2).toUpperCase();
 }
+
+const inputClass =
+  "w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500 transition bg-white text-slate-800";
+
+// Hoisted OUTSIDE of TeamPage so it keeps a stable component identity
+// across renders. Defining this inside TeamPage would create a brand
+// new function on every render, causing React to unmount/remount the
+// subtree (and any focused <input> inside it) on every keystroke.
+const FormSection: React.FC<{
+  icon: React.ReactNode;
+  title: string;
+  children: React.ReactNode;
+}> = ({ icon, title, children }) => (
+  <div className="rounded-xl border border-slate-200 p-3.5">
+    <div className="flex items-center gap-1.5 mb-3 text-slate-500">
+      {icon}
+      <p className="text-[11px] font-bold uppercase tracking-wider">{title}</p>
+    </div>
+    <div className="space-y-3">{children}</div>
+  </div>
+);
 
 export const TeamPage: React.FC = () => {
   const { hasPermission } = useAuth();
@@ -49,7 +70,7 @@ export const TeamPage: React.FC = () => {
   const [totalPages, setTotalPages] = useState(1);
 
   // View Mode: Cards (default) or Table
-  const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
+  const [viewMode, setViewMode] = useState<"cards" | "table">("cards");
 
   // Add Member Modal
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -60,19 +81,19 @@ export const TeamPage: React.FC = () => {
   const [editingMember, setEditingMember] = useState<User | null>(null);
   const [isLoadingMemberDetail, setIsLoadingMemberDetail] = useState(false);
   const [editForm, setEditForm] = useState({
-    name: '',
-    phone: '',
-    departmentId: '',
-    designation: ''
+    name: "",
+    phone: "",
+    departmentId: "",
+    designation: "",
   });
   const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
 
   const fetchDepartments = async () => {
     try {
-      const dRes = await api.departments.getDepartments('active');
+      const dRes = await api.departments.getDepartments("active");
       if (dRes.success) setDepartments(dRes.data);
     } catch (err) {
-      console.error('Failed to load departments:', err);
+      console.error("Failed to load departments:", err);
     }
   };
 
@@ -85,7 +106,7 @@ export const TeamPage: React.FC = () => {
     try {
       const [uRes] = await Promise.all([
         api.users.getUsers({ page, limit: LIST_PAGE_SIZE }),
-        fetchDepartments()
+        fetchDepartments(),
       ]);
       if (uRes.success) {
         setMembers(uRes.data);
@@ -94,7 +115,7 @@ export const TeamPage: React.FC = () => {
         setTotalPages(uRes.totalPages);
       }
     } catch (err) {
-      console.error('Failed to load team data:', err);
+      console.error("Failed to load team data:", err);
     } finally {
       setIsLoading(false);
     }
@@ -105,24 +126,24 @@ export const TeamPage: React.FC = () => {
   }, [currentPage]);
 
   const roleNameFromDepartment = (departmentId: string) => {
-    const dept = departments.find(d => d.id === departmentId);
-    return dept?.defaultRoleName || '—';
+    const dept = departments.find((d) => d.id === departmentId);
+    return dept?.defaultRoleName || "—";
   };
 
   const departmentHasRole = (departmentId: string) => {
-    const dept = departments.find(d => d.id === departmentId);
+    const dept = departments.find((d) => d.id === departmentId);
     return Boolean(dept?.defaultRoleId);
   };
 
   const handleCreateMember = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMemberForm.departmentId) {
-      alert('Select a department for this team member.');
+      alert("Select a department for this team member.");
       return;
     }
     if (!departmentHasRole(newMemberForm.departmentId)) {
       alert(
-        'This department has no assigned role. Assign a role to the department in Settings → Departments first.'
+        "This department has no assigned role. Assign a role to the department in Settings → Departments first.",
       );
       return;
     }
@@ -134,7 +155,7 @@ export const TeamPage: React.FC = () => {
         password: newMemberForm.password,
         phone: newMemberForm.phone || undefined,
         departmentId: newMemberForm.departmentId,
-        designation: newMemberForm.designation || undefined
+        designation: newMemberForm.designation || undefined,
       });
       if (res.success) {
         setIsCreateOpen(false);
@@ -142,7 +163,7 @@ export const TeamPage: React.FC = () => {
         fetchData(1);
       }
     } catch (err: unknown) {
-      alertSaveError(err, 'Failed to add team member');
+      alertSaveError(err, "Failed to add team member");
     } finally {
       setIsSubmittingCreate(false);
     }
@@ -159,9 +180,9 @@ export const TeamPage: React.FC = () => {
     setEditingMember(member);
     setEditForm({
       name: member.name,
-      phone: member.phone || '',
-      departmentId: member.departmentId || '',
-      designation: member.designation || ''
+      phone: member.phone || "",
+      departmentId: member.departmentId || "",
+      designation: member.designation || "",
     });
 
     setIsLoadingMemberDetail(true);
@@ -172,13 +193,13 @@ export const TeamPage: React.FC = () => {
         setEditingMember(full);
         setEditForm({
           name: full.name,
-          phone: full.phone || '',
-          departmentId: full.departmentId || '',
-          designation: full.designation || ''
+          phone: full.phone || "",
+          departmentId: full.departmentId || "",
+          designation: full.designation || "",
         });
       }
     } catch (err) {
-      console.error('Failed to load member details:', err);
+      console.error("Failed to load member details:", err);
     } finally {
       setIsLoadingMemberDetail(false);
     }
@@ -188,12 +209,12 @@ export const TeamPage: React.FC = () => {
     e.preventDefault();
     if (!editingMember) return;
     if (!editForm.departmentId) {
-      alert('Select a department for this team member.');
+      alert("Select a department for this team member.");
       return;
     }
     if (!departmentHasRole(editForm.departmentId)) {
       alert(
-        'This department has no assigned role. Assign a role to the department in Settings → Departments first.'
+        "This department has no assigned role. Assign a role to the department in Settings → Departments first.",
       );
       return;
     }
@@ -204,7 +225,7 @@ export const TeamPage: React.FC = () => {
         phone: editForm.phone || undefined,
         departmentId: editForm.departmentId,
         designation: editForm.designation || undefined,
-        revision: editingMember.revision
+        revision: editingMember.revision,
       });
       if (res.success) {
         setEditingMember(null);
@@ -212,9 +233,13 @@ export const TeamPage: React.FC = () => {
       }
     } catch (err: unknown) {
       if (editingMember) {
-        await handleConflictWithReload(err, () => fetchData(currentPage), 'Failed to update member');
+        await handleConflictWithReload(
+          err,
+          () => fetchData(currentPage),
+          "Failed to update member",
+        );
       } else {
-        alertSaveError(err, 'Failed to update member');
+        alertSaveError(err, "Failed to update member");
       }
     } finally {
       setIsSubmittingEdit(false);
@@ -222,9 +247,9 @@ export const TeamPage: React.FC = () => {
   };
 
   const handleToggleStatus = async (member: User) => {
-    const newStatus = member.status === 'active' ? 'inactive' : 'active';
+    const newStatus = member.status === "active" ? "inactive" : "active";
     const confirmMsg = `Are you sure you want to ${
-      newStatus === 'active' ? 'activate' : 'deactivate'
+      newStatus === "active" ? "activate" : "deactivate"
     } access for ${member.name}?`;
     if (!confirm(confirmMsg)) return;
 
@@ -232,58 +257,48 @@ export const TeamPage: React.FC = () => {
       await api.users.toggleStatus(member.id, newStatus, member.revision);
       fetchData(currentPage);
     } catch (err: unknown) {
-      await handleConflictWithReload(err, () => fetchData(currentPage), 'Failed to update member status');
+      await handleConflictWithReload(
+        err,
+        () => fetchData(currentPage),
+        "Failed to update member status",
+      );
     }
   };
 
   const departmentName = (member: User) => {
     if (member.department) return member.department;
-    const match = departments.find(d => d.id === member.departmentId);
-    return match?.name || '—';
+    const match = departments.find((d) => d.id === member.departmentId);
+    return match?.name || "—";
   };
 
-  const departmentOptions = departments.map(d => ({
+  const departmentOptions = departments.map((d) => ({
     value: d.id,
     label: d.defaultRoleName ? `${d.name} (${d.defaultRoleName})` : d.name,
-    description: d.defaultRoleName ? undefined : 'No default role assigned'
+    description: d.defaultRoleName ? undefined : "No default role assigned",
   }));
-
-  const inputClass =
-    'w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500 transition bg-white text-slate-800';
-
-  const FormSection: React.FC<{ icon: React.ReactNode; title: string; children: React.ReactNode }> = ({
-    icon,
-    title,
-    children
-  }) => (
-    <div className="rounded-xl border border-slate-200 p-3.5">
-      <div className="flex items-center gap-1.5 mb-3 text-slate-500">
-        {icon}
-        <p className="text-[11px] font-bold uppercase tracking-wider">{title}</p>
-      </div>
-      <div className="space-y-3">{children}</div>
-    </div>
-  );
 
   return (
     <div className="p-6 space-y-5">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h3 className="text-xl font-bold text-slate-900">Team Directory & Workload</h3>
+          <h3 className="text-xl font-bold text-slate-900">
+            Team Directory & Workload
+          </h3>
           <p className="text-sm text-slate-500 mt-1">
-            Monitor active workloads, overdue tasks by staff, and departmental RBAC assignments
+            Monitor active workloads, overdue tasks by staff, and departmental
+            RBAC assignments
           </p>
         </div>
         <div className="flex items-center gap-2">
           {/* View Mode Toggle */}
           <div className="flex items-center bg-slate-100 p-1 rounded-lg border border-slate-200">
             <button
-              onClick={() => setViewMode('cards')}
+              onClick={() => setViewMode("cards")}
               className={`px-2.5 py-1.5 rounded-md text-sm font-medium flex items-center gap-1.5 transition-all ${
-                viewMode === 'cards'
-                  ? 'bg-white text-emerald-700 shadow-sm'
-                  : 'text-slate-600 hover:text-slate-800'
+                viewMode === "cards"
+                  ? "bg-white text-emerald-700 shadow-sm"
+                  : "text-slate-600 hover:text-slate-800"
               }`}
               title="Card Form View"
             >
@@ -291,11 +306,11 @@ export const TeamPage: React.FC = () => {
               <span className="hidden md:inline">Cards</span>
             </button>
             <button
-              onClick={() => setViewMode('table')}
+              onClick={() => setViewMode("table")}
               className={`px-2.5 py-1.5 rounded-md text-sm font-medium flex items-center gap-1.5 transition-all ${
-                viewMode === 'table'
-                  ? 'bg-white text-emerald-700 shadow-sm'
-                  : 'text-slate-600 hover:text-slate-800'
+                viewMode === "table"
+                  ? "bg-white text-emerald-700 shadow-sm"
+                  : "text-slate-600 hover:text-slate-800"
               }`}
               title="Table View"
             >
@@ -304,7 +319,7 @@ export const TeamPage: React.FC = () => {
             </button>
           </div>
 
-          {hasPermission('users.create') && (
+          {hasPermission("users.create") && (
             <button
               onClick={() => {
                 setNewMemberForm(emptyMemberForm);
@@ -321,7 +336,7 @@ export const TeamPage: React.FC = () => {
       </div>
 
       {/* Content: Cards View (Default) or Table View */}
-      {viewMode === 'cards' ? (
+      {viewMode === "cards" ? (
         <div>
           {isLoading ? (
             <div className="py-16 text-center text-slate-400 bg-white border border-slate-200 rounded-2xl animate-pulse">
@@ -333,7 +348,7 @@ export const TeamPage: React.FC = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-              {members.map(member => (
+              {members.map((member) => (
                 <div
                   key={member.id}
                   className="bg-white border border-slate-200 hover:border-emerald-300 rounded-2xl p-4 shadow-sm hover:shadow-md transition-all flex flex-col justify-between group"
@@ -365,13 +380,13 @@ export const TeamPage: React.FC = () => {
                       <div className="flex flex-col items-end gap-1 shrink-0">
                         <span
                           className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium border ${
-                            member.status === 'active'
-                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                              : 'bg-slate-100 text-slate-500 border-slate-200'
+                            member.status === "active"
+                              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                              : "bg-slate-100 text-slate-500 border-slate-200"
                           }`}
                         >
                           <span className="w-1.5 h-1.5 rounded-full mr-1 bg-current" />
-                          {member.status === 'active' ? 'Active' : 'Inactive'}
+                          {member.status === "active" ? "Active" : "Inactive"}
                         </span>
                         <span className="inline-flex items-center gap-1 font-medium text-slate-700 bg-slate-100 px-2 py-0.5 rounded text-[11px]">
                           <Shield className="w-2.5 h-2.5 text-slate-500" />
@@ -383,18 +398,26 @@ export const TeamPage: React.FC = () => {
                     {/* Department & Designation */}
                     <div className="mt-3 space-y-1.5">
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-slate-500 font-medium">Designation:</span>
+                        <span className="text-slate-500 font-medium">
+                          Designation:
+                        </span>
                         <span className="font-semibold text-slate-800">
-                          {member.designation || '—'}
+                          {member.designation || "—"}
                         </span>
                       </div>
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-slate-500 font-medium">Department:</span>
-                        <span className="text-slate-700">{departmentName(member)}</span>
+                        <span className="text-slate-500 font-medium">
+                          Department:
+                        </span>
+                        <span className="text-slate-700">
+                          {departmentName(member)}
+                        </span>
                       </div>
                       {member.assignedTerritory && (
                         <div className="flex items-center justify-between text-sm">
-                          <span className="text-slate-500 font-medium">Territory:</span>
+                          <span className="text-slate-500 font-medium">
+                            Territory:
+                          </span>
                           <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-800 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded">
                             <MapPin className="w-2.5 h-2.5 text-emerald-600" />
                             {member.assignedTerritory}
@@ -418,10 +441,10 @@ export const TeamPage: React.FC = () => {
                       )}
 
                       <span className="text-[11px] text-slate-400">
-                        Joined{' '}
+                        Joined{" "}
                         {new Date(member.createdAt).toLocaleDateString([], {
-                          month: 'short',
-                          year: 'numeric'
+                          month: "short",
+                          year: "numeric",
                         })}
                       </span>
                     </div>
@@ -429,30 +452,42 @@ export const TeamPage: React.FC = () => {
                     {/* Workload Stats Row */}
                     <div className="grid grid-cols-3 gap-2 mt-3 text-center text-sm">
                       <div className="bg-slate-50 p-2 rounded-lg border border-slate-100">
-                        <span className="text-[11px] text-slate-400 block font-medium">Active Tasks</span>
-                        <span className="font-bold text-slate-800">{member.activeTasks || 0}</span>
+                        <span className="text-[11px] text-slate-400 block font-medium">
+                          Active Tasks
+                        </span>
+                        <span className="font-bold text-slate-800">
+                          {member.activeTasks || 0}
+                        </span>
                       </div>
                       <div className="bg-slate-50 p-2 rounded-lg border border-slate-100">
-                        <span className="text-[11px] text-slate-400 block font-medium">Overdue</span>
+                        <span className="text-[11px] text-slate-400 block font-medium">
+                          Overdue
+                        </span>
                         {(member.overdueTasks || 0) > 0 ? (
                           <span className="font-bold text-rose-700 flex items-center justify-center gap-1">
                             <AlertTriangle className="w-2.5 h-2.5" />
                             {member.overdueTasks}
                           </span>
                         ) : (
-                          <span className="font-semibold text-emerald-700">0</span>
+                          <span className="font-semibold text-emerald-700">
+                            0
+                          </span>
                         )}
                       </div>
                       <div className="bg-slate-50 p-2 rounded-lg border border-slate-100">
-                        <span className="text-[11px] text-slate-400 block font-medium">Leads</span>
-                        <span className="font-bold text-slate-800">{member.leadsAssigned || 0}</span>
+                        <span className="text-[11px] text-slate-400 block font-medium">
+                          Leads
+                        </span>
+                        <span className="font-bold text-slate-800">
+                          {member.leadsAssigned || 0}
+                        </span>
                       </div>
                     </div>
                   </div>
 
                   {/* Card Footer Actions */}
                   <div className="mt-4 pt-2.5 border-t border-slate-100 flex items-center justify-end gap-1.5">
-                    {hasPermission('users.edit') && (
+                    {hasPermission("users.edit") && (
                       <button
                         onClick={() => handleOpenEdit(member)}
                         className="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200/80 rounded-lg text-xs font-medium transition-colors flex items-center gap-1"
@@ -461,19 +496,24 @@ export const TeamPage: React.FC = () => {
                         <span>Edit</span>
                       </button>
                     )}
-                    {hasPermission('users.edit') && member.roleName !== 'SUPER_ADMIN' && (
-                      <button
-                        onClick={() => handleToggleStatus(member)}
-                        className={`p-1.5 rounded-lg border text-sm transition-colors ${
-                          member.status === 'active'
-                            ? 'text-slate-500 hover:text-rose-600 hover:bg-rose-50 border-slate-200'
-                            : 'text-teal-700 hover:bg-teal-50 border-teal-200'
-                        }`}
-                        title={member.status === 'active' ? 'Deactivate Member' : 'Activate Member'}
-                      >
-                        <Power className="w-3.5 h-3.5" />
-                      </button>
-                    )}
+                    {hasPermission("users.edit") &&
+                      member.roleName !== "SUPER_ADMIN" && (
+                        <button
+                          onClick={() => handleToggleStatus(member)}
+                          className={`p-1.5 rounded-lg border text-sm transition-colors ${
+                            member.status === "active"
+                              ? "text-slate-500 hover:text-rose-600 hover:bg-rose-50 border-slate-200"
+                              : "text-teal-700 hover:bg-teal-50 border-teal-200"
+                          }`}
+                          title={
+                            member.status === "active"
+                              ? "Deactivate Member"
+                              : "Activate Member"
+                          }
+                        >
+                          <Power className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                   </div>
                 </div>
               ))}
@@ -502,27 +542,40 @@ export const TeamPage: React.FC = () => {
               <tbody className="divide-y divide-slate-100">
                 {isLoading ? (
                   <tr>
-                    <td colSpan={10} className="py-12 text-center text-slate-400 animate-pulse">
+                    <td
+                      colSpan={10}
+                      className="py-12 text-center text-slate-400 animate-pulse"
+                    >
                       Loading team members...
                     </td>
                   </tr>
                 ) : members.length === 0 ? (
                   <tr>
-                    <td colSpan={10} className="py-12 text-center text-slate-400">
+                    <td
+                      colSpan={10}
+                      className="py-12 text-center text-slate-400"
+                    >
                       No team members found.
                     </td>
                   </tr>
                 ) : (
-                  members.map(member => (
-                    <tr key={member.id} className="hover:bg-slate-50/70 transition-colors">
+                  members.map((member) => (
+                    <tr
+                      key={member.id}
+                      className="hover:bg-slate-50/70 transition-colors"
+                    >
                       <td className="py-3 px-4 whitespace-nowrap">
                         <div className="flex items-center gap-2.5">
                           <div className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-xs shrink-0">
                             {initials(member.name)}
                           </div>
                           <div>
-                            <p className="font-semibold text-slate-800">{member.name}</p>
-                            <p className="text-xs text-slate-500">{member.email}</p>
+                            <p className="font-semibold text-slate-800">
+                              {member.name}
+                            </p>
+                            <p className="text-xs text-slate-500">
+                              {member.email}
+                            </p>
                           </div>
                         </div>
                       </td>
@@ -532,11 +585,15 @@ export const TeamPage: React.FC = () => {
                           <Shield className="w-3 h-3 text-slate-500" />
                           {member.roleDisplayName || member.roleName}
                         </span>
-                        <p className="text-[11px] text-slate-400 mt-0.5">{departmentName(member)}</p>
+                        <p className="text-[11px] text-slate-400 mt-0.5">
+                          {departmentName(member)}
+                        </p>
                       </td>
 
                       <td className="py-3 px-4 whitespace-nowrap">
-                        <p className="font-medium text-slate-800">{member.designation || '—'}</p>
+                        <p className="font-medium text-slate-800">
+                          {member.designation || "—"}
+                        </p>
                       </td>
 
                       <td className="py-3 px-4 whitespace-nowrap text-slate-600">
@@ -556,13 +613,13 @@ export const TeamPage: React.FC = () => {
                       <td className="py-3 px-4 whitespace-nowrap">
                         <span
                           className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${
-                            member.status === 'active'
-                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                              : 'bg-slate-100 text-slate-500 border-slate-200'
+                            member.status === "active"
+                              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                              : "bg-slate-100 text-slate-500 border-slate-200"
                           }`}
                         >
                           <span className="w-1.5 h-1.5 rounded-full mr-1 bg-current" />
-                          {member.status === 'active' ? 'Active' : 'Inactive'}
+                          {member.status === "active" ? "Active" : "Inactive"}
                         </span>
                       </td>
 
@@ -591,15 +648,15 @@ export const TeamPage: React.FC = () => {
 
                       <td className="py-3 px-4 whitespace-nowrap text-slate-500 text-xs">
                         {new Date(member.createdAt).toLocaleDateString([], {
-                          month: 'short',
-                          day: 'numeric',
-                          year: 'numeric'
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
                         })}
                       </td>
 
                       <td className="py-3 px-4 text-right whitespace-nowrap">
                         <div className="flex items-center justify-end gap-1">
-                          {hasPermission('users.edit') && (
+                          {hasPermission("users.edit") && (
                             <button
                               onClick={() => handleOpenEdit(member)}
                               className="p-1.5 rounded-lg text-slate-500 hover:text-emerald-700 hover:bg-emerald-50 transition-colors"
@@ -608,21 +665,24 @@ export const TeamPage: React.FC = () => {
                               <Edit2 className="w-3.5 h-3.5" />
                             </button>
                           )}
-                          {hasPermission('users.edit') && member.roleName !== 'SUPER_ADMIN' && (
-                            <button
-                              onClick={() => handleToggleStatus(member)}
-                              className={`p-1.5 rounded-lg transition-colors ${
-                                member.status === 'active'
-                                  ? 'text-slate-400 hover:text-rose-600 hover:bg-rose-50'
-                                  : 'text-slate-400 hover:text-teal-700 hover:bg-teal-50'
-                              }`}
-                              title={
-                                member.status === 'active' ? 'Deactivate Member' : 'Activate Member'
-                              }
-                            >
-                              <Power className="w-3.5 h-3.5" />
-                            </button>
-                          )}
+                          {hasPermission("users.edit") &&
+                            member.roleName !== "SUPER_ADMIN" && (
+                              <button
+                                onClick={() => handleToggleStatus(member)}
+                                className={`p-1.5 rounded-lg transition-colors ${
+                                  member.status === "active"
+                                    ? "text-slate-400 hover:text-rose-600 hover:bg-rose-50"
+                                    : "text-slate-400 hover:text-teal-700 hover:bg-teal-50"
+                                }`}
+                                title={
+                                  member.status === "active"
+                                    ? "Deactivate Member"
+                                    : "Activate Member"
+                                }
+                              >
+                                <Power className="w-3.5 h-3.5" />
+                              </button>
+                            )}
                         </div>
                       </td>
                     </tr>
@@ -639,7 +699,7 @@ export const TeamPage: React.FC = () => {
         totalPages={totalPages}
         total={totalMembers}
         isLoading={isLoading}
-        onPageChange={page => setCurrentPage(page)}
+        onPageChange={(page) => setCurrentPage(page)}
         label="members"
       />
 
@@ -651,9 +711,15 @@ export const TeamPage: React.FC = () => {
         subtitle="Assign a department — the role is inherited from that department"
         maxWidth="lg"
       >
-        <form onSubmit={handleCreateMember} className="flex flex-col max-h-[75vh] text-sm">
+        <form
+          onSubmit={handleCreateMember}
+          className="flex flex-col max-h-[75vh] text-sm"
+        >
           <div className="flex-1 overflow-y-auto px-1 space-y-3">
-            <FormSection icon={<Mail className="w-3.5 h-3.5" />} title="Account Details">
+            <FormSection
+              icon={<Mail className="w-3.5 h-3.5" />}
+              title="Account Details"
+            >
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-semibold text-slate-700 mb-1.5">
@@ -663,7 +729,12 @@ export const TeamPage: React.FC = () => {
                     type="text"
                     required
                     value={newMemberForm.name}
-                    onChange={e => setNewMemberForm({ ...newMemberForm, name: e.target.value })}
+                    onChange={(e) =>
+                      setNewMemberForm({
+                        ...newMemberForm,
+                        name: e.target.value,
+                      })
+                    }
                     placeholder="e.g. Samir Varma"
                     className={inputClass}
                   />
@@ -676,7 +747,12 @@ export const TeamPage: React.FC = () => {
                     type="email"
                     required
                     value={newMemberForm.email}
-                    onChange={e => setNewMemberForm({ ...newMemberForm, email: e.target.value })}
+                    onChange={(e) =>
+                      setNewMemberForm({
+                        ...newMemberForm,
+                        email: e.target.value,
+                      })
+                    }
                     placeholder="samir@videhaoverseas.com"
                     className={inputClass}
                   />
@@ -684,20 +760,29 @@ export const TeamPage: React.FC = () => {
               </div>
               <div>
                 <label className="block font-semibold text-slate-700 mb-1.5 flex items-center gap-1">
-                  <Lock className="w-3.5 h-3.5" /> Temporary Password <span className="text-rose-500">*</span>
+                  <Lock className="w-3.5 h-3.5" /> Temporary Password{" "}
+                  <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="password"
                   required
                   value={newMemberForm.password}
-                  onChange={e => setNewMemberForm({ ...newMemberForm, password: e.target.value })}
+                  onChange={(e) =>
+                    setNewMemberForm({
+                      ...newMemberForm,
+                      password: e.target.value,
+                    })
+                  }
                   placeholder="At least 6 characters"
                   className={inputClass}
                 />
               </div>
             </FormSection>
 
-            <FormSection icon={<Building2 className="w-3.5 h-3.5" />} title="Role & Department">
+            <FormSection
+              icon={<Building2 className="w-3.5 h-3.5" />}
+              title="Role & Department"
+            >
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-semibold text-slate-700 mb-1.5">
@@ -706,22 +791,32 @@ export const TeamPage: React.FC = () => {
                   <SearchableSelect
                     options={departmentOptions}
                     value={newMemberForm.departmentId}
-                    onChange={departmentId => setNewMemberForm({ ...newMemberForm, departmentId })}
+                    onChange={(departmentId) =>
+                      setNewMemberForm({ ...newMemberForm, departmentId })
+                    }
                     placeholder="Select department…"
                     searchPlaceholder="Search departments…"
                   />
                   {departments.length === 0 && (
                     <p className="text-[11px] text-amber-700 mt-1.5">
-                      No departments yet. Create a role and department in Settings first.
+                      No departments yet. Create a role and department in
+                      Settings first.
                     </p>
                   )}
                 </div>
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1.5">Phone Number</label>
+                  <label className="block font-semibold text-slate-700 mb-1.5">
+                    Phone Number
+                  </label>
                   <input
                     type="text"
                     value={newMemberForm.phone}
-                    onChange={e => setNewMemberForm({ ...newMemberForm, phone: e.target.value })}
+                    onChange={(e) =>
+                      setNewMemberForm({
+                        ...newMemberForm,
+                        phone: e.target.value,
+                      })
+                    }
                     placeholder="+91 98765 43210"
                     className={inputClass}
                   />
@@ -732,20 +827,24 @@ export const TeamPage: React.FC = () => {
                 <div
                   className={`p-3 rounded-lg border text-xs ${
                     departmentHasRole(newMemberForm.departmentId)
-                      ? 'border-emerald-100 bg-emerald-50/60 text-emerald-900'
-                      : 'border-amber-200 bg-amber-50/60 text-amber-900'
+                      ? "border-emerald-100 bg-emerald-50/60 text-emerald-900"
+                      : "border-amber-200 bg-amber-50/60 text-amber-900"
                   }`}
                 >
                   {departmentHasRole(newMemberForm.departmentId) ? (
                     <>
-                      <span className="font-semibold">Assigned role:</span>{' '}
+                      <span className="font-semibold">Assigned role:</span>{" "}
                       {roleNameFromDepartment(newMemberForm.departmentId)}
-                      <span className="text-emerald-700/80"> — inherited from the selected department</span>
+                      <span className="text-emerald-700/80">
+                        {" "}
+                        — inherited from the selected department
+                      </span>
                     </>
                   ) : (
                     <>
-                      This department has no role assigned yet. Edit it under Settings → Departments
-                      and assign a role before adding a member.
+                      This department has no role assigned yet. Edit it under
+                      Settings → Departments and assign a role before adding a
+                      member.
                     </>
                   )}
                 </div>
@@ -758,7 +857,12 @@ export const TeamPage: React.FC = () => {
                 <input
                   type="text"
                   value={newMemberForm.designation}
-                  onChange={e => setNewMemberForm({ ...newMemberForm, designation: e.target.value })}
+                  onChange={(e) =>
+                    setNewMemberForm({
+                      ...newMemberForm,
+                      designation: e.target.value,
+                    })
+                  }
                   placeholder="e.g. Export Sales Manager"
                   className={inputClass}
                 />
@@ -779,7 +883,7 @@ export const TeamPage: React.FC = () => {
               disabled={isSubmittingCreate}
               className="px-5 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
             >
-              {isSubmittingCreate ? 'Saving...' : 'Add Team Member'}
+              {isSubmittingCreate ? "Saving..." : "Add Team Member"}
             </button>
           </div>
         </form>
@@ -792,7 +896,10 @@ export const TeamPage: React.FC = () => {
         title="Edit Team Member Profile"
         subtitle={editingMember?.name}
       >
-        <form onSubmit={handleUpdateMember} className="flex flex-col max-h-[75vh] text-sm">
+        <form
+          onSubmit={handleUpdateMember}
+          className="flex flex-col max-h-[75vh] text-sm"
+        >
           <div className="flex-1 overflow-y-auto px-1 space-y-3 relative">
             {isLoadingMemberDetail && (
               <div className="absolute inset-0 z-10 flex items-center justify-center gap-2 bg-white/70 backdrop-blur-[1px] text-slate-500 text-xs font-medium rounded-xl">
@@ -800,7 +907,10 @@ export const TeamPage: React.FC = () => {
                 Loading full profile…
               </div>
             )}
-            <FormSection icon={<Building2 className="w-3.5 h-3.5" />} title="Profile & Department">
+            <FormSection
+              icon={<Building2 className="w-3.5 h-3.5" />}
+              title="Profile & Department"
+            >
               <div>
                 <label className="block font-semibold text-slate-700 mb-1.5">
                   Full Name <span className="text-rose-500">*</span>
@@ -809,7 +919,9 @@ export const TeamPage: React.FC = () => {
                   type="text"
                   required
                   value={editForm.name}
-                  onChange={e => setEditForm({ ...editForm, name: e.target.value })}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, name: e.target.value })
+                  }
                   className={inputClass}
                   disabled={isLoadingMemberDetail}
                 />
@@ -822,7 +934,9 @@ export const TeamPage: React.FC = () => {
                 <SearchableSelect
                   options={departmentOptions}
                   value={editForm.departmentId}
-                  onChange={departmentId => setEditForm({ ...editForm, departmentId })}
+                  onChange={(departmentId) =>
+                    setEditForm({ ...editForm, departmentId })
+                  }
                   placeholder="Select department…"
                   searchPlaceholder="Search departments…"
                 />
@@ -830,21 +944,29 @@ export const TeamPage: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1.5">Phone</label>
+                  <label className="block font-semibold text-slate-700 mb-1.5">
+                    Phone
+                  </label>
                   <input
                     type="text"
                     value={editForm.phone}
-                    onChange={e => setEditForm({ ...editForm, phone: e.target.value })}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, phone: e.target.value })
+                    }
                     className={inputClass}
                     disabled={isLoadingMemberDetail}
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1.5">Official Designation</label>
+                  <label className="block font-semibold text-slate-700 mb-1.5">
+                    Official Designation
+                  </label>
                   <input
                     type="text"
                     value={editForm.designation}
-                    onChange={e => setEditForm({ ...editForm, designation: e.target.value })}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, designation: e.target.value })
+                    }
                     className={inputClass}
                     disabled={isLoadingMemberDetail}
                   />
@@ -866,7 +988,7 @@ export const TeamPage: React.FC = () => {
               disabled={isSubmittingEdit || isLoadingMemberDetail}
               className="px-5 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
             >
-              {isSubmittingEdit ? 'Updating...' : 'Save Changes'}
+              {isSubmittingEdit ? "Updating..." : "Save Changes"}
             </button>
           </div>
         </form>

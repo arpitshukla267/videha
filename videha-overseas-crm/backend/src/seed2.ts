@@ -13,30 +13,12 @@ const ROLE_META: Record<
   SUPER_ADMIN: {
     displayName: "Super Admin",
     description: "Full administrative access across the entire Videha Overseas CRM system.",
-  },
-  ADMIN: {
-    displayName: "Administrator",
-    description: "Manage CRM operations, team members, leads, tasks, orders, and reports.",
-  },
-  MANAGER: {
-    displayName: "Manager",
-    description: "Oversee assigned sales and operational teams, delegate leads, and monitor tasks.",
-  },
-  SALES_MEMBER: {
-    displayName: "Sales Member",
-    description: "Manage client leads, qualify product interests, schedule follow-ups, and update tasks.",
-  },
-  OPERATIONS: {
-    displayName: "Operations Specialist",
-    description: "Handle logistics, cargo shipping, order milestones, and operational dispatch.",
-  },
+  }
 };
 
 const DEPARTMENTS = [
   { name: "Management", description: "Executive leadership and CRM administration" },
   { name: "Sales", description: "International trade & sales desks" },
-  { name: "Operations", description: "Order fulfillment and processing" },
-  { name: "Logistics", description: "Freight, shipping and cargo" },
 ];
 
 async function seedSuperAdminOnly() {
