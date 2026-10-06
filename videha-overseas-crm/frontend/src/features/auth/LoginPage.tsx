@@ -1,6 +1,14 @@
 import React, { useState } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { Lock, Mail, ArrowRight, Compass, ShieldCheck } from "lucide-react";
+import {
+  Lock,
+  Mail,
+  ArrowRight,
+  Compass,
+  ShieldCheck,
+  Eye,
+  EyeOff,
+} from "lucide-react";
 
 interface LoginPageProps {
   onOpenPublicTracking: () => void;
@@ -34,14 +42,42 @@ const DEMO_ACCOUNTS = [
   },
 ] as const;
 
+const INVALID_CREDENTIALS_MESSAGE =
+  "Your credentials were incorrect. Please try again.";
+
+/**
+ * Module-level draft. If a parent (e.g. AuthContext's loading state) unmounts
+ * and remounts this page during a login attempt, the typed values and the
+ * error message survive instead of being wiped.
+ */
+const draft = {
+  email: "",
+  password: "",
+  error: null as string | null,
+};
+
 export const LoginPage: React.FC<LoginPageProps> = ({
   onOpenPublicTracking,
 }) => {
   const { login } = useAuth();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [email, setEmailState] = useState(draft.email);
+  const [password, setPasswordState] = useState(draft.password);
+  const [error, setErrorState] = useState<string | null>(draft.error);
+  const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const setEmail = (v: string) => {
+    draft.email = v;
+    setEmailState(v);
+  };
+  const setPassword = (v: string) => {
+    draft.password = v;
+    setPasswordState(v);
+  };
+  const setError = (v: string | null) => {
+    draft.error = v;
+    setErrorState(v);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,10 +85,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({
     setIsSubmitting(true);
     try {
       await login(email.trim(), password);
-    } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : "Invalid corporate credentials.";
-      setError(message);
+      // Success: clear the draft so nothing lingers.
+      draft.email = "";
+      draft.password = "";
+      draft.error = null;
+    } catch {
+      // Keep email & password as typed; just show the error.
+      setError(INVALID_CREDENTIALS_MESSAGE);
     } finally {
       setIsSubmitting(false);
     }
@@ -129,7 +168,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({
           </div>
 
           {error && (
-            <div className="mb-5 px-3.5 py-2.5 bg-rose-50 border border-rose-200 text-rose-700 rounded-lg text-sm">
+            <div
+              role="alert"
+              className="mb-5 px-3.5 py-2.5 bg-rose-50 border border-rose-200 text-rose-700 rounded-lg text-sm"
+            >
               {error}
             </div>
           )}
@@ -168,14 +210,26 @@ export const LoginPage: React.FC<LoginPageProps> = ({
               <div className="relative">
                 <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   required
                   autoComplete="current-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full pl-10 pr-3.5 py-2.5 border border-slate-200 rounded-lg text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1E7A52]/30 focus:border-[#1E7A52] transition-colors"
+                  className="w-full pl-10 pr-10 py-2.5 border border-slate-200 rounded-lg text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1E7A52]/30 focus:border-[#1E7A52] transition-colors"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((s) => !s)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                >
+                  {showPassword ? (
+                    <EyeOff className="w-4 h-4" />
+                  ) : (
+                    <Eye className="w-4 h-4" />
+                  )}
+                </button>
               </div>
             </div>
 
