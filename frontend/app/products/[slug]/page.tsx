@@ -733,7 +733,9 @@ export default async function ProductDetailPage({ params }: PageProps) {
             "@type": "Product",
             name: product.name,
             description: product.description,
-            image: [`https://www.videhaoverseas.com${product.image}`],
+            image: product.image
+  ? [new URL(product.image, "https://www.videhaoverseas.com").href]
+  : [],
             brand: {
               "@type": "Brand",
               name: "Videha Overseas",
