@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowRight, Check, ChevronDown, Search, X } from "lucide-react";
 import { SectionLabel } from "@/components/section-label";
@@ -843,8 +844,8 @@ export function Contact({
                     </button>
 
                     <span className="max-w-xs text-[10px] leading-relaxed text-muted-foreground">
-                      Your enquiry details are handled privately and shared only
-                      with our export team.
+                      We use your details to respond to this enquiry and coordinate your requirements. Read our{" "}
+                      <Link href="/privacy-policy" className="underline">Privacy Policy</Link>.
                     </span>
                   </div>
                 </motion.form>
