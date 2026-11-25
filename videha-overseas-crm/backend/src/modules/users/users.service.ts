@@ -16,7 +16,10 @@ import type { RoleName } from "../../models/Role";
 
 const DEFAULT_DEPARTMENT_BY_ROLE: Partial<Record<RoleName, string>> = {
   MANAGER: "Sales",
+  SALES: "Sales",
   SALES_MEMBER: "Sales",
+  SALES_CRM: "Sales",
+  SALES_MARKETING_CMS: "Sales",
   OPERATIONS: "Operations",
 };
 
@@ -243,6 +246,13 @@ async function serializeSingleUser(user: InstanceType<typeof User>) {
   return serializeWithWorkload(user.toObject() as unknown as Record<string, unknown>, workload);
 }
 
+export async function getUser(id: string) {
+  assertObjectId(id, "user id");
+  const user = await User.findById(id).populate("roleId").populate("departmentId");
+  if (!user) throw new AppError("User not found.", 404);
+  return serializeSingleUser(user);
+}
+
 export async function createUser(
   data: {
     name: string;
@@ -308,6 +318,7 @@ export async function updateUser(
   id: string,
   data: {
     name?: string;
+    email?: string;
     roleId?: string;
     phone?: string;
     departmentId?: string | null;
@@ -333,6 +344,19 @@ export async function updateUser(
   if (data.phone !== undefined) setFields.phone = data.phone;
   if (data.designation !== undefined) setFields.designation = data.designation;
   if (data.status !== undefined) setFields.status = data.status;
+
+  if (data.email !== undefined && data.email.trim() && data.email.toLowerCase().trim() !== user.email) {
+    const normalized = data.email.toLowerCase().trim();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(normalized)) {
+      throw new AppError("Please provide a valid email address.", 400);
+    }
+    const existing = await User.findOne({ email: normalized, _id: { $ne: user._id } });
+    if (existing) {
+      throw new AppError("A team member with this email address already exists.", 409);
+    }
+    setFields.email = normalized;
+  }
 
   let resolvedDepartmentId: string | null | undefined;
   if (data.departmentId !== undefined || data.department !== undefined) {

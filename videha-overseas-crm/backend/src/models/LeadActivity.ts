@@ -21,7 +21,7 @@ export interface ILeadActivity extends Document {
   type: LeadActivityType;
   title: string;
   description: string;
-  performedById: Types.ObjectId;
+  performedById: Types.ObjectId | null;
   performedByName: string;
   createdAt: Date;
   updatedAt: Date;
@@ -37,7 +37,7 @@ const leadActivitySchema = new Schema<ILeadActivity>(
     },
     title: { type: String, required: true },
     description: { type: String, default: "" },
-    performedById: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    performedById: { type: Schema.Types.ObjectId, ref: "User", default: null },
     performedByName: { type: String, required: true },
   },
   { timestamps: true },

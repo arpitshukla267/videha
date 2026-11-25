@@ -2,6 +2,7 @@ import { Lead } from "../../models/Lead";
 import { Task } from "../../models/Task";
 import { Order } from "../../models/Order";
 import { User } from "../../models/User";
+import { isConvertedLeadStatus } from "../../constants/leadPipeline";
 
 function isOverdue(status: string, dueDate: Date): boolean {
   if (status === "Completed" || status === "Cancelled") return false;
@@ -36,7 +37,7 @@ export async function getReports() {
   }
 
   const totalLeads = leads.length;
-  const converted = leads.filter((l) => l.status === "Converted").length;
+  const converted = leads.filter((l) => isConvertedLeadStatus(l.status)).length;
   const conversionRate = totalLeads > 0 ? ((converted / totalLeads) * 100).toFixed(1) : "0";
 
   const tasksByStatus: Record<string, number> = {

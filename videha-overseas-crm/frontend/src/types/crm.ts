@@ -64,19 +64,46 @@ export interface Permission {
 }
 
 export type LeadStatus =
+  | 'New Lead'
+  | 'Verification'
+  | 'Qualified'
+  | 'Quotation Sent'
+  | 'Follow-up'
+  | 'Sample'
+  | 'Negotiation'
+  | 'Confirmed Order'
+  | 'Payment'
+  | 'Shipment'
+  | 'Closed'
   | 'New'
   | 'Contacted'
-  | 'Qualified'
   | 'Sample Requested'
   | 'Sample Sent'
-  | 'Negotiation'
-  | 'Quotation Sent'
   | 'Converted'
   | 'Lost'
   | 'Interested'
-  | 'Follow-up'
   | 'Not Interested';
 export type Priority = 'Low' | 'Medium' | 'High' | 'Urgent';
+
+export interface AssignmentDetails {
+  assignedAt?: string | null;
+  assignedBy?: 'round_robin' | 'country' | 'product' | 'manual' | string;
+  assignedRule?: string;
+  assignedById?: string | null;
+  reassignedAt?: string | null;
+  reassignedById?: string | null;
+  previousAssigneeId?: string | null;
+}
+
+export interface AssignmentConfig {
+  id?: string;
+  enabled: boolean;
+  defaultMode: 'round_robin' | 'country' | 'product' | 'rules';
+  roundRobinUserIds: Array<string | { id: string; name: string; email: string }>;
+  countryRules: Array<{ country: string; userId: string | { id: string; name: string; email: string } }>;
+  productRules: Array<{ product: string; userId: string | { id: string; name: string; email: string } }>;
+  fallbackUserId?: string | { id: string; name: string; email: string } | null;
+}
 
 export interface LeadPipelineMeta {
   allStatuses: LeadStatus[];
@@ -204,6 +231,7 @@ export interface Quotation {
 export interface Lead {
   id: string;
   leadCode: string;
+  rfqId?: string;
   name: string;
   company: string;
   phoneNumber: string;
@@ -211,8 +239,17 @@ export interface Lead {
   email: string;
   country: string;
   city?: string;
+  product?: string;
   productInterest: string;
-  leadSource: 'Website' | 'Trade Fair' | 'Referral' | 'LinkedIn' | 'Direct Inquiry' | 'Cold Outreach' | string;
+  grade?: string;
+  quantity?: string;
+  packaging?: string;
+  port?: string;
+  incoterm?: string;
+  sampleRequired?: boolean | string;
+  containerType?: string;
+  assignmentDetails?: AssignmentDetails;
+  leadSource: 'Website RFQ' | 'Product Page Direct' | 'WhatsApp' | 'Referral' | 'Country' | 'Website' | 'Trade Fair' | 'LinkedIn' | 'Direct Inquiry' | 'Cold Outreach' | string;
   leadCategory?: 'Wholesale' | 'Retail Chain' | 'Institutional' | 'Distributor' | string;
   leadStatus: LeadStatus;
   priority: Priority;
@@ -521,7 +558,7 @@ export interface Notification {
   userId: string;
   title: string;
   message: string;
-  type: 'task_assigned' | 'lead_assigned' | 'task_due' | 'task_overdue' | 'order_status' | 'system';
+  type: 'task_assigned' | 'lead_assigned' | 'task_due' | 'task_overdue' | 'order_status' | 'followup_due' | 'followup_overdue' | 'system';
   isRead: boolean;
   linkUrl?: string;
   createdAt: string;

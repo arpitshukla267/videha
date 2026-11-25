@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 import { asyncHandler } from "../../utils/asyncHandler";
+import { EmailReminderLog } from "../../models/EmailReminderLog";
 import * as service from "./notifications.service";
 
 export const list = asyncHandler(async (req: Request, res: Response) => {
@@ -14,6 +15,18 @@ export const list = asyncHandler(async (req: Request, res: Response) => {
     page: result.page,
     limit: result.limit,
     totalPages: result.totalPages,
+  });
+});
+
+export const listEmailReminders = asyncHandler(async (req: Request, res: Response) => {
+  const query: Record<string, unknown> = {};
+  if (req.user?.roleName !== "SUPER_ADMIN") {
+    query.to = req.user?.email.toLowerCase().trim();
+  }
+  const logs = await EmailReminderLog.find(query).sort({ sentAt: -1 }).limit(50).lean();
+  res.json({
+    success: true,
+    data: logs,
   });
 });
 

@@ -13,7 +13,10 @@ import type { RoleName, VisibilityScope } from "../models/Role";
 
 const DEFAULT_DEPARTMENT_BY_ROLE: Partial<Record<RoleName, string>> = {
   MANAGER: "Sales",
+  SALES: "Sales",
   SALES_MEMBER: "Sales",
+  SALES_CRM: "Sales",
+  SALES_MARKETING_CMS: "Sales",
   OPERATIONS: "Operations",
 };
 
@@ -50,25 +53,51 @@ export async function backfillNullClientRequestIds(): Promise<void> {
 }
 
 export async function backfillLeadPipelineFields(): Promise<void> {
-  const wonToConverted = await Lead.updateMany(
-    { status: "Won" },
-    { $set: { status: "Converted" } },
-  );
-  if (wonToConverted.modifiedCount > 0) {
-    console.log(
-      `[CRM] Migrated ${wonToConverted.modifiedCount} Lead(s) from Won → Converted`,
+  const migrations: Record<string, string> = {
+    New: "New Lead",
+    Contacted: "Verification",
+    "Sample Requested": "Sample",
+    "Sample Sent": "Sample",
+    Converted: "Confirmed Order",
+    Won: "Confirmed Order",
+    Lost: "Closed",
+    "Not Interested": "Closed",
+    Interested: "Qualified",
+  };
+
+  for (const [oldStatus, newStatus] of Object.entries(migrations)) {
+    const res = await Lead.updateMany(
+      { status: oldStatus },
+      { $set: { status: newStatus } },
     );
+    if (res.modifiedCount > 0) {
+      console.log(
+        `[CRM] Migrated ${res.modifiedCount} Lead(s) from "${oldStatus}" → "${newStatus}"`,
+      );
+    }
   }
 
   const leadResult = await Lead.updateMany(
     {
-      $or: [{ lostReason: { $exists: false } }, { convertedAt: { $exists: false } }],
+      $or: [
+        { lostReason: { $exists: false } },
+        { convertedAt: { $exists: false } },
+        { containerType: { $exists: false } },
+        { assignmentDetails: { $exists: false } },
+      ],
     },
-    { $set: { lostReason: "", convertedAt: null } },
+    {
+      $set: {
+        lostReason: "",
+        convertedAt: null,
+        containerType: "20ft FCL",
+        assignmentDetails: {},
+      },
+    },
   );
   if (leadResult.modifiedCount > 0) {
     console.log(
-      `[CRM] Backfilled pipeline fields on ${leadResult.modifiedCount} Lead document(s)`,
+      `[CRM] Backfilled pipeline & Phase 1 fields on ${leadResult.modifiedCount} Lead document(s)`,
     );
   }
 }
@@ -119,6 +148,47 @@ export async function backfillFollowUpsFromLeads(): Promise<void> {
   }
 }
 
+const ROLE_META_DEFAULTS: Record<
+  string,
+  { displayName: string; description: string; scope: VisibilityScope }
+> = {
+  SUPER_ADMIN: {
+    displayName: "Super Admin",
+    description: "Full administrative access across the entire Videha Overseas CRM system.",
+    scope: "all",
+  },
+  ADMIN: {
+    displayName: "Administrator",
+    description: "Manage CRM operations, team members, leads, tasks, orders, and reports.",
+    scope: "all",
+  },
+  MANAGER: {
+    displayName: "Manager",
+    description: "Oversee assigned sales and operational teams, delegate leads, and monitor tasks.",
+    scope: "department",
+  },
+  SALES_MEMBER: {
+    displayName: "Sales Member",
+    description: "Manage client leads, qualify product interests, schedule follow-ups, and update tasks.",
+    scope: "own",
+  },
+  SALES_CRM: {
+    displayName: "Sales / CRM",
+    description: "Manage client leads, customer accounts, quotations, follow-ups, and CRM operations.",
+    scope: "own",
+  },
+  SALES_MARKETING_CMS: {
+    displayName: "Sales / Marketing / CMS",
+    description: "Sales, marketing inquiries, and CMS support (subject to final role approval).",
+    scope: "own",
+  },
+  OPERATIONS: {
+    displayName: "Operations Specialist",
+    description: "Handle logistics, cargo shipping, order milestones, and operational dispatch.",
+    scope: "team",
+  },
+};
+
 /** Merge code-defined permission floors into stored role documents. */
 export async function syncRolePermissionDefaults(): Promise<void> {
   const systemScope: Partial<Record<RoleName, string>> = {
@@ -127,6 +197,8 @@ export async function syncRolePermissionDefaults(): Promise<void> {
     MANAGER: "department",
     OPERATIONS: "team",
     SALES_MEMBER: "own",
+    SALES_CRM: "own",
+    SALES_MARKETING_CMS: "own",
   };
 
   await Role.updateMany(
@@ -135,8 +207,25 @@ export async function syncRolePermissionDefaults(): Promise<void> {
   );
 
   for (const [name, defaults] of Object.entries(ROLE_PERMISSIONS)) {
-    const role = await Role.findOne({ name });
-    if (!role) continue;
+    let role = await Role.findOne({ name });
+    const meta = ROLE_META_DEFAULTS[name] || {
+      displayName: name,
+      description: "",
+      scope: (systemScope[name as RoleName] as VisibilityScope) || "own",
+    };
+
+    if (!role) {
+      role = await Role.create({
+        name,
+        displayName: meta.displayName,
+        description: meta.description,
+        permissions: defaults,
+        isSystem: true,
+        visibilityScope: meta.scope,
+      });
+      console.log(`[CRM] Created system role ${name}`);
+      continue;
+    }
 
     if (!role.isSystem) role.isSystem = true;
     if (!role.visibilityScope && systemScope[name as RoleName]) {
@@ -182,4 +271,24 @@ export async function backfillUserDepartments(): Promise<void> {
       );
     }
   }
+}
+
+/** Ensure core CRM employees exist: MD, Shilpa Shelar, and Sejal Bidgar.
+ *  Uses the REAL email addresses — never creates corporate aliases. */
+export async function ensureCoreCrmRolesAndUsers(): Promise<void> {
+  await Department.findOneAndUpdate(
+    { name: "Management" },
+    { name: "Management", description: "Executive leadership and CRM administration", status: "active" },
+    { upsert: true, new: true, setDefaultsOnInsert: true },
+  );
+
+  await Department.findOneAndUpdate(
+    { name: "Sales" },
+    { name: "Sales", description: "International trade & sales desks", status: "active" },
+    { upsert: true, new: true, setDefaultsOnInsert: true },
+  );
+
+  // Roles are synced by syncRolePermissionDefaults — nothing else to do here.
+  // Users already exist in the database; do NOT upsert duplicates.
+  console.log("[CRM] ensureCoreCrmRolesAndUsers: departments verified (users managed via cleanup script).");
 }

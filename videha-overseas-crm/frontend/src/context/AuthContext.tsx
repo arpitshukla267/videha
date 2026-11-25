@@ -12,6 +12,7 @@ interface AuthContextType {
   hasPermission: (code: string) => boolean;
   hasAnyPermission: (codes: string[]) => boolean;
   refreshUser: () => Promise<void>;
+  changeEmail: (newEmail: string, currentPassword?: string) => Promise<any>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -90,6 +91,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const changeEmail = async (newEmail: string, currentPassword?: string) => {
+    const res = await api.auth.changeEmail(newEmail, currentPassword);
+    if (res.data?.token) {
+      setStoredToken(res.data.token);
+    }
+    if (res.data?.user) {
+      setUser(res.data.user);
+    }
+    if (res.data?.role) {
+      setRole(res.data.role);
+    }
+    if (res.data?.permissions) {
+      setPermissions(res.data.permissions);
+    }
+    return res;
+  };
+
   const hasPermission = (code: string): boolean => {
     if (!user) return false;
     if (user.roleName === 'SUPER_ADMIN') return true;
@@ -113,7 +131,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         logout,
         hasPermission,
         hasAnyPermission,
-        refreshUser
+        refreshUser,
+        changeEmail
       }}
     >
       {children}

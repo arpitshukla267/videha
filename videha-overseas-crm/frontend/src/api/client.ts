@@ -39,7 +39,7 @@ import { ApiError } from '../lib/apiErrors';
 const TOKEN_KEY = 'videha_crm_auth_token';
 
 export const API_BASE_URL = (
-  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) || ''
+  (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE_URL) || ''
 ).replace(/\/+$/, '');
 
 export function buildUrl(endpoint: string): string {
@@ -235,6 +235,15 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ currentPassword, newPassword })
       }),
+    changeEmail: (newEmail: string, currentPassword?: string) =>
+      request<{
+        success: boolean;
+        message: string;
+        data: { token: string; user: User; role: Role | null; permissions: string[] };
+      }>('/api/auth/change-email', {
+        method: 'POST',
+        body: JSON.stringify({ newEmail, currentPassword })
+      }),
     updateProfile: (profile: { name?: string; phone?: string; department?: string }) =>
       request<{ success: boolean; data: User }>('/api/auth/profile', {
         method: 'PUT',
@@ -243,6 +252,21 @@ export const api = {
     logout: () =>
       request<{ success: boolean; message: string }>('/api/auth/logout', {
         method: 'POST'
+      }),
+    forgotPassword: (email: string) =>
+      request<{ success: boolean; message: string }>('/api/auth/forgot-password', {
+        method: 'POST',
+        body: JSON.stringify({ email })
+      }),
+    verifyOtp: (email: string, otp: string) =>
+      request<{ success: boolean; resetToken: string; message: string }>('/api/auth/verify-otp', {
+        method: 'POST',
+        body: JSON.stringify({ email, otp })
+      }),
+    resetPassword: (payload: { email: string; resetToken: string; newPassword: string }) =>
+      request<{ success: boolean; message: string }>('/api/auth/reset-password', {
+        method: 'POST',
+        body: JSON.stringify(payload)
       })
   },
 
@@ -393,6 +417,13 @@ export const api = {
       }),
     getLeadFollowUps: (id: string) =>
       request<PaginatedListResponse<FollowUp>>(`/api/leads/${id}/follow-ups`),
+    getAssignmentConfig: () =>
+      request<{ success: boolean; data: any }>('/api/leads/assignment-config'),
+    updateAssignmentConfig: (body: any) =>
+      request<{ success: boolean; message: string; data: any }>('/api/leads/assignment-config', {
+        method: 'PUT',
+        body: JSON.stringify(body)
+      }),
     exportCsv: (params: {
       search?: string;
       status?: string;
@@ -534,6 +565,8 @@ export const api = {
       const qs = query.toString();
       return request<PaginatedListResponse<User>>(`/api/users${qs ? `?${qs}` : ''}`);
     },
+    getUser: (id: string) =>
+      request<{ success: boolean; data: User }>(`/api/users/${id}`),
     createUser: (data: any) =>
       request<{ success: boolean; data: User }>('/api/users', {
         method: 'POST',

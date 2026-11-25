@@ -4,7 +4,7 @@ export interface INotification extends Document {
   userId: Types.ObjectId;
   title: string;
   message: string;
-  type: "task_assigned" | "lead_assigned" | "task_due" | "task_overdue" | "order_status" | "system";
+  type: "task_assigned" | "lead_assigned" | "task_due" | "task_overdue" | "order_status" | "followup_due" | "followup_overdue" | "system";
   isRead: boolean;
   linkUrl?: string;
   createdAt: Date;
@@ -18,7 +18,7 @@ const notificationSchema = new Schema<INotification>(
     message: { type: String, required: true },
     type: {
       type: String,
-      enum: ["task_assigned", "lead_assigned", "task_due", "task_overdue", "order_status", "system"],
+      enum: ["task_assigned", "lead_assigned", "task_due", "task_overdue", "order_status", "followup_due", "followup_overdue", "system"],
       default: "system",
     },
     isRead: { type: Boolean, default: false, index: true },

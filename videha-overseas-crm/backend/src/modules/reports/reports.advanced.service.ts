@@ -10,6 +10,7 @@ import type { AuthUser } from "../../middleware/auth";
 import { buildAssigneeVisibilityFilter } from "../../utils/visibility";
 import { assertObjectId } from "../../utils/objectId";
 import { AppError } from "../../utils/AppError";
+import { CONVERTED_LEAD_STATUSES } from "../../constants/leadPipeline";
 
 function isOverdue(status: string, dueDate: Date): boolean {
   if (status === "Completed" || status === "Cancelled" || status === "Skipped") return false;
@@ -48,6 +49,25 @@ function toCountMap(rows: Array<{ _id: string; count: number }>) {
   const map: Record<string, number> = {};
   for (const row of rows) map[row._id || "Unknown"] = row.count;
   return map;
+}
+
+function formatTurnaroundTime(ms?: number | null): string {
+  if (ms === undefined || ms === null || isNaN(ms) || ms < 0) return "—";
+  const hours = ms / (1000 * 60 * 60);
+  if (hours < 1) {
+    const mins = Math.max(1, Math.round(ms / (1000 * 60)));
+    return `${mins}m`;
+  }
+  if (hours < 24) {
+    return `${hours.toFixed(1)}h`;
+  }
+  const days = hours / 24;
+  return `${days.toFixed(1)}d`;
+}
+
+function formatDays(days?: number | null): string {
+  if (days === undefined || days === null || isNaN(days) || days < 0) return "—";
+  return `${days.toFixed(1)}d`;
 }
 
 export async function getAdvancedReports(
@@ -109,7 +129,7 @@ export async function getAdvancedReports(
     mergeVisibility(orderBase, actor, "assignedToId", "createdById"),
   ]);
 
-  const closedWon = ["Converted"];
+  const closedWon = [...CONVERTED_LEAD_STATUSES, "Converted", "Won"];
   const closedLost = ["Lost", "Not Interested"];
 
   const [
@@ -134,6 +154,9 @@ export async function getAdvancedReports(
     departmentRows,
     users,
     departments,
+    quotationTurnaroundRows,
+    leadAgingRows,
+    followUpSlaRows,
   ] = await Promise.all([
     Lead.countDocuments(leadFilter),
     Lead.countDocuments({ ...leadFilter, status: { $in: closedWon } }),
@@ -220,6 +243,81 @@ export async function getAdvancedReports(
     ]),
     User.find({ status: "active" }).select("name departmentId").lean(),
     Department.find().select("name").lean(),
+    // KPI 1: Quotation Turnaround Time (time between createdAt and sentAt/acceptedAt)
+    Quotation.aggregate<{ _id: Types.ObjectId | null; avgTurnaroundMs: number; count: number }>([
+      {
+        $match: {
+          ...quotationFilter,
+          $or: [
+            { sentAt: { $ne: null } },
+            { acceptedAt: { $ne: null } },
+            { status: { $in: ["Sent", "Negotiation", "Accepted", "Rejected"] } },
+          ],
+        },
+      },
+      {
+        $project: {
+          assignedToId: 1,
+          turnaroundMs: {
+            $subtract: [
+              { $ifNull: ["$sentAt", { $ifNull: ["$acceptedAt", "$updatedAt"] }] },
+              "$createdAt",
+            ],
+          },
+        },
+      },
+      { $match: { turnaroundMs: { $gte: 0 } } },
+      {
+        $group: {
+          _id: "$assignedToId",
+          avgTurnaroundMs: { $avg: "$turnaroundMs" },
+          count: { $sum: 1 },
+        },
+      },
+    ]),
+    // KPI 2: Open Lead Aging (average age of open leads in days)
+    Lead.aggregate<{ _id: Types.ObjectId | null; avgAgeDays: number; count: number }>([
+      {
+        $match: {
+          ...leadFilter,
+          status: { $nin: [...closedWon, ...closedLost, "Closed"] },
+        },
+      },
+      {
+        $project: {
+          assignedToId: 1,
+          ageDays: {
+            $divide: [{ $subtract: [new Date(), "$createdAt"] }, 1000 * 60 * 60 * 24],
+          },
+        },
+      },
+      {
+        $group: {
+          _id: "$assignedToId",
+          avgAgeDays: { $avg: "$ageDays" },
+          count: { $sum: 1 },
+        },
+      },
+    ]),
+    // KPI 3: Follow-up SLA Adherence (% of completed follow-ups completed on or before due date)
+    FollowUp.aggregate<{ _id: Types.ObjectId | null; total: number; onTime: number }>([
+      {
+        $match: {
+          ...followUpFilter,
+          status: "Completed",
+          completedAt: { $ne: null },
+        },
+      },
+      {
+        $group: {
+          _id: "$assignedToId",
+          total: { $sum: 1 },
+          onTime: {
+            $sum: { $cond: [{ $lte: ["$completedAt", "$dueAt"] }, 1, 0] },
+          },
+        },
+      },
+    ]),
   ]);
 
   const userName = (id: unknown) => {
@@ -243,16 +341,50 @@ export async function getAdvancedReports(
   const orderFulfillmentRate =
     orderTotal > 0 ? `${((orderDelivered / orderTotal) * 100).toFixed(1)}%` : "0%";
 
+  const turnaroundMap = new Map<string, number>(
+    quotationTurnaroundRows.map((r) => [r._id ? String(r._id) : "", r.avgTurnaroundMs]),
+  );
+  const agingMap = new Map<string, number>(
+    leadAgingRows.map((r) => [r._id ? String(r._id) : "", r.avgAgeDays]),
+  );
+  const slaMap = new Map<string, { total: number; onTime: number }>(
+    followUpSlaRows.map((r) => [r._id ? String(r._id) : "", { total: r.total, onTime: r.onTime }]),
+  );
+
   const memberPerformance = memberRows
-    .map((row) => ({
-      memberId: row._id ? String(row._id) : "",
-      memberName: userName(row._id),
-      leads: row.total,
-      won: row.won,
-      lost: row.lost,
-      winRate: row.total > 0 ? `${((row.won / row.total) * 100).toFixed(1)}%` : "0%",
-    }))
+    .map((row) => {
+      const memberIdStr = row._id ? String(row._id) : "";
+      const sla = slaMap.get(memberIdStr);
+      const slaRate = sla && sla.total > 0 ? `${((sla.onTime / sla.total) * 100).toFixed(1)}%` : "—";
+      const conversionRateStr = row.total > 0 ? `${((row.won / row.total) * 100).toFixed(1)}%` : "0%";
+
+      return {
+        memberId: memberIdStr,
+        memberName: userName(row._id),
+        leads: row.total,
+        won: row.won,
+        lost: row.lost,
+        winRate: conversionRateStr,
+        conversionRate: conversionRateStr,
+        quotationTurnaround: formatTurnaroundTime(turnaroundMap.get(memberIdStr)),
+        leadAging: formatDays(agingMap.get(memberIdStr)),
+        slaAdherence: slaRate,
+      };
+    })
     .sort((a, b) => b.leads - a.leads);
+
+  // Overall KPIs
+  const totalQuoteCount = quotationTurnaroundRows.reduce((sum, r) => sum + r.count, 0);
+  const totalQuoteMs = quotationTurnaroundRows.reduce((sum, r) => sum + r.avgTurnaroundMs * r.count, 0);
+  const overallQuotationTurnaround = totalQuoteCount > 0 ? formatTurnaroundTime(totalQuoteMs / totalQuoteCount) : "—";
+
+  const totalOpenLeadCount = leadAgingRows.reduce((sum, r) => sum + r.count, 0);
+  const totalOpenLeadDays = leadAgingRows.reduce((sum, r) => sum + r.avgAgeDays * r.count, 0);
+  const overallLeadAging = totalOpenLeadCount > 0 ? formatDays(totalOpenLeadDays / totalOpenLeadCount) : "—";
+
+  const totalSlaCompleted = followUpSlaRows.reduce((sum, r) => sum + r.total, 0);
+  const totalSlaOnTime = followUpSlaRows.reduce((sum, r) => sum + r.onTime, 0);
+  const overallSlaAdherence = totalSlaCompleted > 0 ? `${((totalSlaOnTime / totalSlaCompleted) * 100).toFixed(1)}%` : "—";
 
   const departmentPerformance = departments.map((dept) => {
     const deptUsers = users.filter((user) => String(user.departmentId) === String(dept._id));
@@ -318,6 +450,12 @@ export async function getAdvancedReports(
         total: row.total,
         count: row.count,
       })),
+    },
+    kpis: {
+      conversionRate,
+      avgQuotationTurnaround: overallQuotationTurnaround,
+      openLeadAging: overallLeadAging,
+      followUpSlaAdherence: overallSlaAdherence,
     },
     team: {
       byMember: memberPerformance,

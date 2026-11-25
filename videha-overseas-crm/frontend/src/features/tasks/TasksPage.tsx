@@ -171,15 +171,29 @@ export const TasksPage: React.FC<TasksPageProps> = ({ focusTaskId, onFocusConsum
   const [isLoadingTaskView, setIsLoadingTaskView] = useState(false);
   const [highlightedTaskId, setHighlightedTaskId] = useState<string | null>(null);
 
-  const memberOptions = useMemo(
-    () =>
-      teamMembers.map(m => ({
-        value: m.id,
-        label: m.name,
-        description: m.roleDisplayName || m.roleName
-      })),
-    [teamMembers]
-  );
+  // Active members pehle, phir dotted line, phir inactive members.
+  const memberOptions = useMemo(() => {
+    // NOTE: agar aapke type me field ka naam alag hai (e.g. status === 'active'), yahan badal lena
+    const isActive = (m: CrmUser) => (m as any).isActive !== false;
+
+    const active = teamMembers.filter(isActive);
+    const inactive = teamMembers.filter(m => !isActive(m));
+
+    const toOption = (m: CrmUser, extra: Record<string, unknown> = {}) => ({
+      value: m.id,
+      label: m.name,
+      description: m.roleDisplayName || m.roleName,
+      ...extra
+    });
+
+    return [
+      ...active.map(m => toOption(m)),
+      // pehla inactive member: uske upar dotted line
+      ...inactive.map((m, i) =>
+        toOption(m, { inactive: true, dividerBefore: i === 0 && active.length > 0 })
+      )
+    ];
+  }, [teamMembers]);
 
   const relatedLeadSelectOptions = useMemo(
     () => [

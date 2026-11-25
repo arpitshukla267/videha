@@ -5,19 +5,21 @@ export function refreshNotifications() {
 }
 
 export type NotificationTarget = {
-  tab: "leads" | "tasks" | "orders";
+  tab: "leads" | "tasks" | "orders" | "followups";
   entityId: string;
 };
 
-/** Parse `/leads/:id`, `/tasks/:id`, `/orders/:id` from notification linkUrl. */
+/** Parse `/leads/:id`, `/tasks/:id`, `/orders/:id`, `/follow-ups` from notification linkUrl. */
 export function parseNotificationLink(linkUrl?: string): NotificationTarget | null {
   if (!linkUrl) return null;
-  const match = linkUrl.match(/^\/(leads|tasks|orders)\/([a-fA-F0-9]{24}|[\w-]+)/);
+  const match = linkUrl.match(/^\/(leads|tasks|orders|follow-ups)\/([a-fA-F0-9]{24}|[\w-]+)/);
   if (!match) {
+    if (linkUrl.includes("follow-ups")) return { tab: "followups", entityId: "" };
     if (linkUrl.includes("tasks")) return { tab: "tasks", entityId: "" };
     if (linkUrl.includes("leads")) return { tab: "leads", entityId: "" };
     if (linkUrl.includes("orders")) return { tab: "orders", entityId: "" };
     return null;
   }
-  return { tab: match[1] as NotificationTarget["tab"], entityId: match[2] };
+  const tabName = match[1] === "follow-ups" ? "followups" : (match[1] as NotificationTarget["tab"]);
+  return { tab: tabName, entityId: match[2] };
 }

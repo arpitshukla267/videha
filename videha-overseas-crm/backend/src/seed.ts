@@ -29,6 +29,14 @@ const ROLE_META: Record<
     displayName: "Sales Member",
     description: "Manage client leads, qualify product interests, schedule follow-ups, and update tasks.",
   },
+  SALES_CRM: {
+    displayName: "Sales / CRM",
+    description: "Manage client leads, customer accounts, quotations, follow-ups, and CRM operations.",
+  },
+  SALES_MARKETING_CMS: {
+    displayName: "Sales / Marketing / CMS",
+    description: "Sales, marketing inquiries, and CMS support (subject to final role approval).",
+  },
   OPERATIONS: {
     displayName: "Operations Specialist",
     description: "Handle logistics, cargo shipping, order milestones, and operational dispatch.",
@@ -101,7 +109,34 @@ async function seed() {
       roleName: "SUPER_ADMIN" as const,
       department: "Management",
       phone: "+91 98100 23456",
-      designation: "Founder",
+      designation: "Founder / Super Admin",
+    },
+    {
+      name: "Managing Director",
+      email: "md@videhaoverseas.com",
+      passwordHash: adminHash,
+      roleName: "SUPER_ADMIN" as const,
+      department: "Management",
+      phone: "+91 98100 23456",
+      designation: "Managing Director",
+    },
+    {
+      name: "Shilpa Shelar",
+      email: "shilpa.shelar@videhaoverseas.com",
+      passwordHash: salesHash,
+      roleName: "SALES_CRM" as const,
+      department: "Sales",
+      phone: "+91 98200 11223",
+      designation: "Sales / CRM",
+    },
+    {
+      name: "Sejal Bidgar",
+      email: "sejal.bidgar@videhaoverseas.com",
+      passwordHash: salesHash,
+      roleName: "SALES_MARKETING_CMS" as const,
+      department: "Sales",
+      phone: "+91 98200 44556",
+      designation: "Sales / Marketing / CMS (Subject to final role approval)",
     },
     {
       name: "Ananya Sharma",
@@ -371,6 +406,9 @@ async function seed() {
   }
 
   console.log("\n[Seed] Done.");
+  console.log("  md@videhaoverseas.com / admin123 (Managing Director - Super Admin)");
+  console.log("  shilpa.shelar@videhaoverseas.com / sales123 (Shilpa Shelar - Sales / CRM)");
+  console.log("  sejal.bidgar@videhaoverseas.com / sales123 (Sejal Bidgar - Sales / Marketing / CMS)");
   console.log("  superadmin@videhaoverseas.com / admin123");
   console.log("  admin@videhaoverseas.com / admin123");
   console.log("  manager@videhaoverseas.com / admin123");

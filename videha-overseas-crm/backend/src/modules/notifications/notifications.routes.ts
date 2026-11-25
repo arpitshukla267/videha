@@ -7,5 +7,6 @@ export const notificationsRoutes = Router();
 notificationsRoutes.use(authenticate);
 
 notificationsRoutes.get("/", ctrl.list);
+notificationsRoutes.get("/email-reminders", ctrl.listEmailReminders);
 notificationsRoutes.patch("/:id/read", ctrl.markRead);
 notificationsRoutes.post("/read-all", ctrl.markAllRead);

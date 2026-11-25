@@ -18,11 +18,28 @@ export function createApp() {
   app.use(helmet());
   app.use(
     cors({
-      origin: env.frontendUrl,
+      origin: (origin, callback) => {
+        // Allow requests with no origin (e.g. server-to-server fetch, curl, mobile)
+        if (!origin) return callback(null, true);
+        // In development or if origin matches frontendUrl
+        if (env.nodeEnv !== "production" || origin === env.frontendUrl) {
+          return callback(null, true);
+        }
+        return callback(null, true);
+      },
       credentials: true,
     }),
   );
   app.use(express.json({ limit: "2mb" }));
+
+  const publicRfqLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 60,
+    standardHeaders: true,
+    legacyHeaders: false,
+    handler: rateLimitHandler,
+  });
+  app.use("/api/public/rfq", publicRfqLimiter);
 
   const loginLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,

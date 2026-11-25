@@ -57,6 +57,7 @@ export async function getOverview(actor: AuthUser) {
     qualifiedLeads,
     wonLeads,
     lostLeads,
+    unassignedLeadsCount,
     followUpsToday,
     followUpsUpcoming,
     followUpsOverdue,
@@ -85,6 +86,7 @@ export async function getOverview(actor: AuthUser) {
     Lead.countDocuments({ ...leadFilter, status: { $in: ["Qualified", "Interested", "Negotiation"] } }),
     Lead.countDocuments({ ...leadFilter, status: "Converted" }),
     Lead.countDocuments({ ...leadFilter, status: { $in: ["Lost", "Not Interested"] } }),
+    Lead.countDocuments({ ...leadFilter, assignedToId: null }),
     FollowUp.countDocuments({ ...followUpFilter, dueAt: { $gte: start, $lt: end } }),
     FollowUp.countDocuments({ ...followUpFilter, dueAt: { $gte: end } }),
     FollowUp.countDocuments({ ...followUpFilter, dueAt: { $lt: start } }),
@@ -222,6 +224,7 @@ export async function getOverview(actor: AuthUser) {
   return {
     kpi: {
       totalLeads,
+      unassignedLeadsCount,
       newLeads,
       interestedLeads: qualifiedLeads,
       followUpsDueCount: followUpsToday + legacyFollowUpsDueCount,

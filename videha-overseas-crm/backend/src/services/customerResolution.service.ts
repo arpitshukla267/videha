@@ -270,7 +270,7 @@ export async function resolveOrCreateCustomerForOrder(
         if (!lead.customerId || !lead.companyId) {
           lead.customerId = custByLead._id;
           lead.companyId = existingComp._id;
-          lead.status = "Converted";
+          lead.status = "Confirmed Order";
           lead.convertedAt = lead.convertedAt || new Date();
           await lead.save({ session });
         }
@@ -334,7 +334,7 @@ export async function resolveOrCreateCustomerForOrder(
     );
     const customer = custDocs[0];
 
-    lead.status = "Converted";
+    lead.status = "Confirmed Order";
     lead.customerId = customer._id;
     lead.companyId = comp._id;
     lead.convertedAt = new Date();

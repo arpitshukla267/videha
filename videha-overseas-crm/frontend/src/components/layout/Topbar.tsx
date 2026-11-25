@@ -63,11 +63,45 @@ export const Topbar: React.FC<TopbarProps> = ({ currentTab, onNavigate, onOpenPr
   const [showUserMenu, setShowUserMenu] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
   const userRef = useRef<HTMLDivElement>(null);
+  const seenNotifIdsRef = useRef<Set<string>>(new Set());
+
+  const triggerBrowserNotification = (notif: Notification) => {
+    if (typeof window !== 'undefined' && 'Notification' in window && window.Notification.permission === 'granted') {
+      try {
+        const browserNotif = new window.Notification(notif.title, {
+          body: notif.message,
+          icon: '/logo.png',
+        });
+        browserNotif.onclick = () => {
+          window.focus();
+          handleNotificationClick(notif);
+        };
+      } catch {
+        // ignore notification constructor errors on unsupported contexts
+      }
+    }
+  };
+
+  const requestNotificationPermission = () => {
+    if (typeof window !== 'undefined' && 'Notification' in window && window.Notification.permission === 'default') {
+      window.Notification.requestPermission().catch(() => {});
+    }
+  };
 
   const fetchNotifs = async () => {
     try {
       const res = await api.notifications.getNotifications();
       if (res.success) {
+        if (seenNotifIdsRef.current.size > 0) {
+          for (const n of res.data) {
+            if (!n.isRead && !seenNotifIdsRef.current.has(n.id)) {
+              if (n.type === 'followup_due' || n.type === 'followup_overdue') {
+                triggerBrowserNotification(n);
+              }
+            }
+          }
+        }
+        seenNotifIdsRef.current = new Set(res.data.map(n => n.id));
         setNotifications(res.data);
       }
     } catch {
@@ -233,7 +267,10 @@ export const Topbar: React.FC<TopbarProps> = ({ currentTab, onNavigate, onOpenPr
         {/* Notifications */}
         <div className="relative" ref={notifRef}>
           <button
-            onClick={() => setShowNotifMenu(!showNotifMenu)}
+            onClick={() => {
+              requestNotificationPermission();
+              setShowNotifMenu(!showNotifMenu);
+            }}
             className="relative p-2.5 rounded-md transition-colors focus:outline-none"
             style={{ color: INK_SOFT }}
             onMouseEnter={e => {

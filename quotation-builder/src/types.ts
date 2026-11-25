@@ -17,6 +17,29 @@ export type QuotationMeta = {
   currency: string;
 };
 
+/**
+ * Seller / issuing company shown in the quotation header & footer.
+ * Every field is optional-by-emptiness: an empty string means
+ * "use the default from config/company" (see lib/resolve-company.ts).
+ */
+export type CompanyDetails = {
+  name: string;
+  tagline: string;
+  /** One address line per row (newline separated) */
+  address: string;
+  email: string;
+  phone: string;
+  website: string;
+  /** Legal name shown in the contact bar */
+  legalName: string;
+  /** Import Export Code */
+  iec: string;
+  /** GST number */
+  gst: string;
+  /** Uploaded logo as a data URL. Empty = default logo */
+  logoDataUrl: string;
+};
+
 export type ClientDetails = {
   companyName: string;
   contactPerson: string;
@@ -43,6 +66,8 @@ export type QuotationTerms = {
 
 export type QuotationData = {
   meta: QuotationMeta;
+  /** Optional so existing initial/saved data keeps working */
+  company?: CompanyDetails;
   client: ClientDetails;
   items: LineItem[];
   charges: QuotationCharges;

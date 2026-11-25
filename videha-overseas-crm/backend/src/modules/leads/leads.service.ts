@@ -16,7 +16,7 @@ import {
 } from "../../models/CallLog";
 import { AppError } from "../../utils/AppError";
 import { assertObjectId, optionalObjectId } from "../../utils/objectId";
-import { nextLeadCode, nextCompanyCode, nextCustomerCode } from "../../utils/codes";
+import { nextLeadCode, nextRfqId, nextCompanyCode, nextCustomerCode } from "../../utils/codes";
 import { normalizePhone } from "../../services/customerResolution.service";
 import {
   serializeLead,
@@ -40,7 +40,13 @@ import {
   isConvertibleLeadStatus,
   isLostLeadStatus,
   isConvertedLeadStatus,
+  normalizePipelineStatus,
 } from "../../constants/leadPipeline";
+import {
+  determineLeadAssignment,
+  getOrCreateAssignmentConfig,
+  updateAssignmentConfig as updateAssignmentConfigService,
+} from "../../services/assignment.service";
 import { exportFilename } from "../../utils/csv";
 import { streamCsvExport } from "../../utils/csvExport";
 import { LEAD_EXPORT_COLUMNS } from "../../constants/exportColumns";
@@ -97,11 +103,11 @@ function suggestedStatusAfterCall(
   if (isClosedLeadStatus(currentStatus)) return null;
   if (pickedUp) {
     if (interestLevel === "hot") return "Qualified";
-    if (currentStatus === "New") return "Contacted";
+    if (currentStatus === "New Lead") return "Verification";
     return null;
   }
-  if (["New", "Contacted", "Qualified", "Interested", "Follow-up"].includes(currentStatus)) {
-    return "Contacted";
+  if (currentStatus === "New Lead") {
+    return "Verification";
   }
   return null;
 }
@@ -131,27 +137,42 @@ async function addActivity(
 }
 
 function normalizeLeadInput(body: Record<string, unknown>) {
-  const source = (body.source ?? body.leadSource ?? "Direct Inquiry") as string;
-  const status = (body.status ?? body.leadStatus ?? "New") as string;
+  const source = (body.source ?? body.leadSource ?? "Website RFQ") as string;
+  const rawStatus = (body.status ?? body.leadStatus ?? "New Lead") as string;
+  const status = normalizePipelineStatus(rawStatus);
   const assignedToId = optionalObjectId(
     (body.assignedToId ?? body.assignedMemberId ?? null) as string | null,
   );
   const departmentId = optionalObjectId((body.departmentId ?? null) as string | null);
 
-  if (status && !LEAD_STATUSES.includes(status as LeadStatus)) {
-    throw new AppError(`Invalid lead status: ${status}`, 400);
+  let sampleRequired: boolean | string | undefined = undefined;
+  if (body.sampleRequired !== undefined && body.sampleRequired !== null) {
+    if (typeof body.sampleRequired === "boolean") {
+      sampleRequired = body.sampleRequired;
+    } else {
+      sampleRequired = String(body.sampleRequired).trim();
+    }
   }
 
   return {
+    rfqId: body.rfqId ? String(body.rfqId).trim() : undefined,
     name: body.name as string | undefined,
     company: body.company as string | undefined,
-    phoneNumber: body.phoneNumber as string | undefined,
+    phoneNumber: (body.phoneNumber ?? body.phone) as string | undefined,
     whatsAppNumber: (body.whatsAppNumber as string | undefined) ?? undefined,
     email: body.email as string | undefined,
     country: body.country as string | undefined,
     source,
-    productInterest: body.productInterest as string | undefined,
-    status: status as LeadStatus,
+    product: (body.product ?? body.productInterest) as string | undefined,
+    productInterest: (body.productInterest ?? body.product) as string | undefined,
+    grade: body.grade !== undefined ? String(body.grade).trim() : undefined,
+    quantity: body.quantity !== undefined ? String(body.quantity).trim() : undefined,
+    packaging: body.packaging !== undefined ? String(body.packaging).trim() : undefined,
+    port: (body.port ?? body.destinationPort) !== undefined ? String(body.port ?? body.destinationPort).trim() : undefined,
+    incoterm: (body.incoterm ?? body.tradeIncoTerms) !== undefined ? String(body.incoterm ?? body.tradeIncoTerms).trim() : undefined,
+    sampleRequired,
+    containerType: body.containerType !== undefined ? String(body.containerType).trim() : undefined,
+    status,
     priority: (body.priority as Priority | undefined) || undefined,
     assignedToId,
     departmentId,
@@ -163,14 +184,14 @@ function normalizeLeadInput(body: Record<string, unknown>) {
       : body.nextFollowUp === null
         ? null
         : undefined,
-    notes: body.notes as string | undefined,
+    notes: (body.notes ?? body.additionalRequirement) as string | undefined,
   };
 }
 
 const POPULATE = [{ path: "assignedToId", select: "name email" }, { path: "departmentId", select: "name" }];
 
 const LEAD_LIST_SELECT =
-  "leadCode name company phoneNumber email country source productInterest status priority assignedToId nextFollowUp revision createdAt updatedAt";
+  "leadCode rfqId name company phoneNumber email country source product productInterest grade quantity packaging port incoterm sampleRequired containerType assignmentDetails status priority assignedToId nextFollowUp revision createdAt updatedAt";
 
 async function buildLeadsQuery(
   filters: {
@@ -208,9 +229,11 @@ async function buildLeadsQuery(
         { name: new RegExp(s, "i") },
         { company: new RegExp(s, "i") },
         { leadCode: new RegExp(s, "i") },
+        { rfqId: new RegExp(s, "i") },
         { phoneNumber: new RegExp(s, "i") },
         { email: new RegExp(s, "i") },
         { productInterest: new RegExp(s, "i") },
+        { product: new RegExp(s, "i") },
       ],
     });
   }
@@ -411,19 +434,56 @@ export async function createLead(body: Record<string, unknown>, actor: AuthUser)
   }
 
   const leadCode = await nextLeadCode();
+
+  let assignedToId = input.assignedToId;
+  let assignmentDetails: Record<string, unknown>;
+
+  if (assignedToId) {
+    assignmentDetails = {
+      assignedAt: new Date(),
+      assignedBy: "manual",
+      assignedRule: `Manual assignment on creation by ${actor.name}`,
+      assignedById: actor.id,
+    };
+  } else {
+    const autoResult = await determineLeadAssignment({
+      country: input.country,
+      product: input.product || input.productInterest,
+      productInterest: input.productInterest,
+    });
+    assignedToId = autoResult.assignedToId ? String(autoResult.assignedToId) : null;
+    assignmentDetails = autoResult.assignmentDetails;
+  }
+
+  const rfqId =
+    input.rfqId ||
+    (input.source === "Website RFQ" || input.source === "Product Page Direct"
+      ? await nextRfqId()
+      : undefined);
+
   const lead = await Lead.create({
     leadCode,
+    rfqId,
     name: input.name.trim(),
     company: input.company.trim(),
     phoneNumber: input.phoneNumber.trim(),
     whatsAppNumber: input.whatsAppNumber || input.phoneNumber,
     email: (input.email || "").toLowerCase(),
     country: input.country.trim(),
-    source: input.source || "Direct Inquiry",
-    productInterest: input.productInterest || "General Commodity Inquiry",
-    status: input.status || "New",
+    source: input.source || "Website RFQ",
+    product: input.product || input.productInterest || "General Commodity Inquiry",
+    productInterest: input.productInterest || input.product || "General Commodity Inquiry",
+    grade: input.grade || "",
+    quantity: input.quantity || "",
+    packaging: input.packaging || "",
+    port: input.port || "",
+    incoterm: input.incoterm || "",
+    sampleRequired: input.sampleRequired ?? false,
+    containerType: input.containerType || "20ft FCL",
+    assignmentDetails,
+    status: input.status || "New Lead",
     priority: input.priority || "Medium",
-    assignedToId: input.assignedToId,
+    assignedToId,
     departmentId: input.departmentId,
     nextFollowUp: input.nextFollowUp ?? null,
     notes: input.notes || "",
@@ -519,11 +579,31 @@ export async function updateLead(id: string, body: Record<string, unknown>, acto
   if (input.email !== undefined) setFields.email = input.email.toLowerCase();
   if (input.country !== undefined) setFields.country = input.country.trim();
   if (input.source !== undefined) setFields.source = input.source;
+  if (input.product !== undefined) setFields.product = input.product;
   if (input.productInterest !== undefined) setFields.productInterest = input.productInterest;
+  if (input.grade !== undefined) setFields.grade = input.grade;
+  if (input.quantity !== undefined) setFields.quantity = input.quantity;
+  if (input.packaging !== undefined) setFields.packaging = input.packaging;
+  if (input.port !== undefined) setFields.port = input.port;
+  if (input.incoterm !== undefined) setFields.incoterm = input.incoterm;
+  if (input.sampleRequired !== undefined) setFields.sampleRequired = input.sampleRequired;
+  if (input.containerType !== undefined) setFields.containerType = input.containerType;
   if (input.status !== undefined) setFields.status = input.status;
   if (input.priority !== undefined) setFields.priority = input.priority;
   if (body.assignedToId !== undefined || body.assignedMemberId !== undefined) {
     setFields.assignedToId = input.assignedToId;
+    const newAssigneeStr = input.assignedToId ? String(input.assignedToId) : null;
+    if (newAssigneeStr !== prevAssignee) {
+      setFields.assignmentDetails = {
+        assignedAt: existing.assignmentDetails?.assignedAt || new Date(),
+        assignedBy: "manual",
+        assignedRule: `Manual assignment by ${actor.name}`,
+        assignedById: actor.id,
+        reassignedAt: new Date(),
+        reassignedById: actor.id,
+        previousAssigneeId: existing.assignedToId || null,
+      };
+    }
   }
   if (body.departmentId !== undefined) {
     setFields.departmentId = input.departmentId;
@@ -537,13 +617,6 @@ export async function updateLead(id: string, body: Record<string, unknown>, acto
 
   const nextStatus = input.status ?? existing.status;
   if (input.status !== undefined && input.status !== existing.status) {
-    if (input.status === "Converted" && !isConvertedLeadStatus(existing.status)) {
-      throw new AppError(
-        "Use Convert to Customer to mark a lead as Converted.",
-        400,
-        "CONVERTED_REQUIRES_CONVERT",
-      );
-    }
     if (
       isClosedLeadStatus(existing.status) &&
       !isClosedLeadStatus(input.status) &&
@@ -557,18 +630,8 @@ export async function updateLead(id: string, body: Record<string, unknown>, acto
     }
   }
 
-  if (body.lostReason !== undefined || input.status !== undefined) {
-    const lostReason =
-      body.lostReason !== undefined ? String(body.lostReason || "").trim() : existing.lostReason;
-    if (nextStatus === "Lost" && !lostReason) {
-      throw new AppError("Lost reason is required when marking a lead as Lost.", 400, "LOST_REASON_REQUIRED");
-    }
-    if (body.lostReason !== undefined || nextStatus === "Lost") {
-      setFields.lostReason = lostReason;
-    }
-    if (input.status !== undefined && !isLostLeadStatus(nextStatus)) {
-      setFields.lostReason = "";
-    }
+  if (body.lostReason !== undefined) {
+    setFields.lostReason = String(body.lostReason || "").trim();
   }
 
   if (Object.keys(setFields).length === 0) {
@@ -585,10 +648,10 @@ export async function updateLead(id: string, body: Record<string, unknown>, acto
     if (updated.status !== prevStatus) {
       await addActivity(
         id,
-        updated.status === "Lost" ? "lost" : "status_change",
-        updated.status === "Lost" ? "Lead Marked Lost" : "Status Changed",
-        updated.status === "Lost"
-          ? `Lead marked as Lost${updated.lostReason ? `: ${updated.lostReason}` : ""}.`
+        updated.status === "Closed" ? "lost" : "status_change",
+        updated.status === "Closed" ? "Lead Closed" : "Status Changed",
+        updated.status === "Closed"
+          ? `Lead marked as Closed${updated.lostReason ? `: ${updated.lostReason}` : ""}.`
           : `Status changed from ${prevStatus} to ${updated.status}.`,
         actor,
         session,
@@ -1041,4 +1104,28 @@ export async function deleteLead(id: string, actor: AuthUser) {
     entityId: id,
     details: `Archived lead ${lead.leadCode} (${lead.company}).`,
   });
+}
+
+export async function getAssignmentConfig() {
+  const config = await getOrCreateAssignmentConfig();
+  return config.populate([
+    { path: "roundRobinUserIds", select: "name email roleName" },
+    { path: "countryRules.userId", select: "name email roleName" },
+    { path: "productRules.userId", select: "name email roleName" },
+    { path: "fallbackUserId", select: "name email roleName" },
+  ]);
+}
+
+export async function updateAssignmentConfig(updates: Record<string, unknown>, actor: AuthUser) {
+  const config = await updateAssignmentConfigService(updates);
+  await writeAudit({
+    userId: actor.id,
+    userName: actor.name,
+    userRole: actor.roleName,
+    action: "Assignment Config Updated",
+    entity: "AssignmentConfig",
+    entityId: String(config._id),
+    details: `Updated automatic assignment config (mode: ${config.defaultMode}).`,
+  });
+  return config;
 }

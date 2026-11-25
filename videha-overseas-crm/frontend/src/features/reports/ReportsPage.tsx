@@ -272,7 +272,10 @@ export const ReportsPage: React.FC = () => {
       [fromDate || 'all time', toDate || 'all time', memberLabel, departmentLabel],
       [],
       ['Metric', 'Value'],
-      ['Lead conversion rate', advanced.leads?.conversionRate ?? ''],
+      ['Lead conversion rate', advanced.kpis?.conversionRate ?? advanced.leads?.conversionRate ?? ''],
+      ['Avg quotation turnaround time', advanced.kpis?.avgQuotationTurnaround ?? ''],
+      ['Open lead aging', advanced.kpis?.openLeadAging ?? ''],
+      ['Follow-up SLA adherence', advanced.kpis?.followUpSlaAdherence ?? ''],
       ['Leads won', advanced.leads?.won ?? ''],
       ['Leads lost', advanced.leads?.lost ?? ''],
       ['Follow-up completion rate', advanced.followUps?.completionRate ?? ''],
@@ -286,9 +289,17 @@ export const ReportsPage: React.FC = () => {
       ['Stage', 'Count'],
       ...Object.entries(advanced.pipeline?.openByStage || {}).map(([stage, count]) => [stage, count as number]),
       [],
-      ['Member performance'],
-      ['Member', 'Leads', 'Win rate'],
-      ...(advanced.team?.byMember || []).map((m: any) => [m.memberName, m.leads, m.winRate])
+      ['Employee KPI & performance'],
+      ['Member', 'Leads', 'Won', 'Rep conversion rate', 'Avg quote turnaround', 'Open lead aging', 'Follow-up SLA adherence'],
+      ...(advanced.team?.byMember || []).map((m: any) => [
+        m.memberName,
+        m.leads,
+        m.won ?? '',
+        m.conversionRate || m.winRate || '0%',
+        m.quotationTurnaround || '—',
+        m.leadAging || '—',
+        m.slaAdherence || '—'
+      ])
     ];
     downloadCsv(`performance-report-${fromDate || 'all'}-to-${toDate || 'all'}.csv`, rows);
   };
@@ -430,20 +441,66 @@ export const ReportsPage: React.FC = () => {
           <div className="h-24 animate-pulse rounded-lg" style={{ backgroundColor: PAPER }} />
         ) : (
           <>
-            {/* Rate ledger */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              {[
-                { label: 'Lead conversion', value: advanced.leads?.conversionRate, sub: `${advanced.leads?.won} won / ${advanced.leads?.lost} lost`, color: MARINE },
-                { label: 'Follow-up completion', value: advanced.followUps?.completionRate, sub: `${advanced.followUps?.overdue} overdue`, color: BRASS },
-                { label: 'Quotation accept rate', value: advanced.quotations?.acceptRate, sub: `${advanced.quotations?.accepted} accepted`, color: VOYAGE },
-                { label: 'Order fulfillment', value: advanced.orders?.fulfillmentRate, sub: `${advanced.orders?.delivered} delivered`, color: MARINE }
-              ].map(stat => (
-                <div key={stat.label} className="p-3.5 rounded-md border" style={{ borderColor: LINE }}>
-                  <p className="text-xs" style={{ color: INK_FAINT }}>{stat.label}</p>
-                  <p className="text-xl font-semibold mt-1" style={{ color: stat.color }}>{stat.value}</p>
-                  <p className="text-xs mt-0.5" style={{ color: INK_SOFT }}>{stat.sub}</p>
-                </div>
-              ))}
+            {/* Core KPI metrics (Step 6) */}
+            <div>
+              <h5 className="text-xs font-semibold uppercase tracking-wider mb-2.5" style={{ color: INK_SOFT }}>
+                Key Performance Indicators (KPIs)
+              </h5>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                {[
+                  {
+                    label: 'Rep conversion rate',
+                    value: advanced.kpis?.conversionRate ?? advanced.leads?.conversionRate ?? '0%',
+                    sub: `${advanced.leads?.won ?? 0} won / ${advanced.leads?.lost ?? 0} lost`,
+                    color: MARINE
+                  },
+                  {
+                    label: 'Avg quotation turnaround',
+                    value: advanced.kpis?.avgQuotationTurnaround ?? '—',
+                    sub: `${advanced.quotations?.accepted ?? 0} quotes accepted`,
+                    color: VOYAGE
+                  },
+                  {
+                    label: 'Open lead aging',
+                    value: advanced.kpis?.openLeadAging ?? '—',
+                    sub: `${advanced.pipeline?.totalOpen ?? 0} active inquiries`,
+                    color: BRASS
+                  },
+                  {
+                    label: 'Follow-up SLA adherence',
+                    value: advanced.kpis?.followUpSlaAdherence ?? '—',
+                    sub: `${advanced.followUps?.completed ?? 0} completed follow-ups`,
+                    color: MARINE
+                  }
+                ].map(stat => (
+                  <div key={stat.label} className="p-3.5 rounded-md border bg-white" style={{ borderColor: LINE }}>
+                    <p className="text-xs" style={{ color: INK_FAINT }}>{stat.label}</p>
+                    <p className="text-xl font-semibold mt-1" style={{ color: stat.color }}>{stat.value}</p>
+                    <p className="text-xs mt-0.5" style={{ color: INK_SOFT }}>{stat.sub}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Operational rate ledger */}
+            <div className="pt-2">
+              <h5 className="text-xs font-semibold uppercase tracking-wider mb-2.5" style={{ color: INK_SOFT }}>
+                Pipeline & Fulfillment Rates
+              </h5>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                {[
+                  { label: 'Lead conversion', value: advanced.leads?.conversionRate, sub: `${advanced.leads?.won} won / ${advanced.leads?.lost} lost`, color: MARINE },
+                  { label: 'Follow-up completion', value: advanced.followUps?.completionRate, sub: `${advanced.followUps?.overdue} overdue`, color: BRASS },
+                  { label: 'Quotation accept rate', value: advanced.quotations?.acceptRate, sub: `${advanced.quotations?.accepted} accepted`, color: VOYAGE },
+                  { label: 'Order fulfillment', value: advanced.orders?.fulfillmentRate, sub: `${advanced.orders?.delivered} delivered`, color: MARINE }
+                ].map(stat => (
+                  <div key={stat.label} className="p-3.5 rounded-md border" style={{ borderColor: LINE }}>
+                    <p className="text-xs" style={{ color: INK_FAINT }}>{stat.label}</p>
+                    <p className="text-xl font-semibold mt-1" style={{ color: stat.color }}>{stat.value}</p>
+                    <p className="text-xs mt-0.5" style={{ color: INK_SOFT }}>{stat.sub}</p>
+                  </div>
+                ))}
+              </div>
             </div>
 
             {/* Pipeline by stage */}
@@ -459,17 +516,48 @@ export const ReportsPage: React.FC = () => {
               </div>
             )}
 
-            {/* Member performance */}
+            {/* Employee-wise KPI & Performance Table */}
             {advanced?.team?.byMember?.length > 0 && (
-              <div className="pt-2">
-                <h5 className="text-sm font-semibold mb-4" style={{ color: INK }}>Member performance</h5>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
-                  {advanced.team.byMember.slice(0, 8).map((member: any) => (
-                    <div key={member.memberId || member.memberName} className="p-3 rounded-md border" style={{ borderColor: LINE }}>
-                      <div className="text-sm font-semibold" style={{ color: INK }}>{member.memberName}</div>
-                      <div className="mt-1 text-xs" style={{ color: INK_SOFT }}>{member.leads} leads · {member.winRate} win rate</div>
-                    </div>
-                  ))}
+              <div className="pt-3 border-t" style={{ borderColor: LINE }}>
+                <h5 className="text-sm font-semibold mb-1" style={{ color: INK }}>Employee KPI & Performance Report</h5>
+                <p className="text-xs mb-3.5" style={{ color: INK_SOFT }}>
+                  Employee-wise breakdown of conversion rate, quotation turnaround speed, open lead aging, and follow-up SLA adherence.
+                </p>
+                <div className="overflow-x-auto border rounded-md" style={{ borderColor: LINE }}>
+                  <table className="w-full text-xs">
+                    <thead style={{ backgroundColor: '#F8F6F0', color: INK }}>
+                      <tr className="border-b text-left" style={{ borderColor: LINE }}>
+                        <th className="py-2.5 px-3.5 font-semibold">Representative</th>
+                        <th className="py-2.5 px-3.5 text-center font-semibold">Leads</th>
+                        <th className="py-2.5 px-3.5 text-center font-semibold">Won</th>
+                        <th className="py-2.5 px-3.5 text-center font-semibold">Conversion Rate</th>
+                        <th className="py-2.5 px-3.5 text-center font-semibold">Quote Turnaround</th>
+                        <th className="py-2.5 px-3.5 text-center font-semibold">Lead Aging</th>
+                        <th className="py-2.5 px-3.5 text-center font-semibold">Follow-up SLA</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y" style={{ borderColor: LINE }}>
+                      {advanced.team.byMember.map((m: any) => (
+                        <tr key={m.memberId || m.memberName} className="hover:bg-[#FDFCF9] transition-colors">
+                          <td className="py-2.5 px-3.5 font-medium" style={{ color: INK }}>{m.memberName}</td>
+                          <td className="py-2.5 px-3.5 text-center" style={{ color: INK_SOFT }}>{m.leads}</td>
+                          <td className="py-2.5 px-3.5 text-center font-medium" style={{ color: MARINE }}>{m.won}</td>
+                          <td className="py-2.5 px-3.5 text-center font-semibold" style={{ color: MARINE }}>
+                            {m.conversionRate || m.winRate || '0%'}
+                          </td>
+                          <td className="py-2.5 px-3.5 text-center font-mono" style={{ color: INK_SOFT }}>
+                            {m.quotationTurnaround || '—'}
+                          </td>
+                          <td className="py-2.5 px-3.5 text-center font-mono" style={{ color: INK_SOFT }}>
+                            {m.leadAging || '—'}
+                          </td>
+                          <td className="py-2.5 px-3.5 text-center font-semibold" style={{ color: m.slaAdherence && m.slaAdherence !== '—' && parseFloat(m.slaAdherence) >= 80 ? MARINE : BRASS }}>
+                            {m.slaAdherence || '—'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             )}

@@ -6,7 +6,7 @@ export interface CreateNotificationInput {
   userId: string;
   title: string;
   message: string;
-  type: "task_assigned" | "lead_assigned" | "task_due" | "task_overdue" | "order_status" | "system";
+  type: "task_assigned" | "lead_assigned" | "task_due" | "task_overdue" | "order_status" | "followup_due" | "followup_overdue" | "system";
   linkUrl?: string;
 }
 

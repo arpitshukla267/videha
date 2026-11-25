@@ -20,6 +20,9 @@ export function resolveVisibilityScope(
     case "OPERATIONS":
       return "team";
     case "SALES_MEMBER":
+    case "SALES":
+    case "SALES_CRM":
+    case "SALES_MARKETING_CMS":
     default:
       return "own";
   }

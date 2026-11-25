@@ -24,6 +24,11 @@ export const directory = asyncHandler(async (_req: Request, res: Response) => {
   res.json({ success: true, data });
 });
 
+export const getOne = asyncHandler(async (req: Request, res: Response) => {
+  const data = await service.getUser(req.params.id);
+  res.json({ success: true, data });
+});
+
 export const create = asyncHandler(async (req: Request, res: Response) => {
   const data = await service.createUser(req.body, req.user!);
   res.status(201).json({ success: true, data });

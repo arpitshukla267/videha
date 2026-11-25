@@ -29,6 +29,7 @@ const CrmApp: React.FC = () => {
   const [publicOrderCode, setPublicOrderCode] = useState('');
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [focusEntityId, setFocusEntityId] = useState<string | null>(null);
+  const [initialLeadMemberFilter, setInitialLeadMemberFilter] = useState<string | null>(null);
   const [quotationBuilderPayload, setQuotationBuilderPayload] = useState<BuilderQuotationData | null>(
     null
   );
@@ -73,8 +74,11 @@ const CrmApp: React.FC = () => {
     if (next) setCurrentTab(next.tab);
   }, [user, isLoading, permissions, currentTab, hasPermission]);
 
-  const handleNavigate = (tab: NavigationTab, entityId?: string) => {
+  const handleNavigate = (tab: NavigationTab, entityId?: string, extra?: { filter?: string }) => {
     setFocusEntityId(entityId || null);
+    if (extra?.filter) {
+      setInitialLeadMemberFilter(extra.filter);
+    }
     setCurrentTab(tab);
   };
 
@@ -143,7 +147,12 @@ const CrmApp: React.FC = () => {
           );
         }
         return (
-          <LeadsPage focusLeadId={focusEntityId} onFocusConsumed={clearFocusEntity} />
+          <LeadsPage
+            focusLeadId={focusEntityId}
+            onFocusConsumed={clearFocusEntity}
+            initialMemberFilter={initialLeadMemberFilter}
+            onFilterConsumed={() => setInitialLeadMemberFilter(null)}
+          />
         );
       case 'customers':
         if (!hasPermission('customers.view') && !hasPermission('leads.view')) {

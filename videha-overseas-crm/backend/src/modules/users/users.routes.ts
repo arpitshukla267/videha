@@ -18,6 +18,7 @@ usersRoutes.get(
   ctrl.directory,
 );
 usersRoutes.get("/", requirePermission("users.view"), ctrl.list);
+usersRoutes.get("/:id", requirePermission("users.view"), ctrl.getOne);
 usersRoutes.post("/", requirePermission("users.create"), ctrl.create);
 usersRoutes.put("/:id", requirePermission("users.edit"), ctrl.update);
 usersRoutes.patch("/:id/status", requirePermission("users.delete"), ctrl.patchStatus);

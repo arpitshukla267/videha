@@ -8,6 +8,7 @@ import { serializeFollowUp } from "../../utils/serializers";
 import { parsePagination, paginatedResponse } from "../../utils/pagination";
 import { applyOptimisticUpdate, parseClientRequestId, parseRevision } from "../../utils/concurrency";
 import { writeAudit } from "../../services/audit.service";
+import { sendFollowUpReminderIfDueToday, isDueToday } from "../../services/emailReminder.service";
 import type { AuthUser } from "../../middleware/auth";
 import { buildAssigneeVisibilityFilter } from "../../utils/visibility";
 import { exportFilename } from "../../utils/csv";
@@ -350,6 +351,13 @@ export async function createFollowUp(body: Record<string, unknown>, actor: AuthU
   });
 
   await doc.populate(POPULATE);
+
+  if (doc.status === "Pending" && isDueToday(doc.dueAt)) {
+    sendFollowUpReminderIfDueToday(doc).catch((err) => {
+      console.error("[CRM] Failed to send follow-up reminder email on update:", err);
+    });
+  }
+
   return serializeFollowUp(doc.toObject() as unknown as Record<string, unknown>);
 }
 
@@ -406,6 +414,13 @@ export async function updateFollowUp(id: string, body: Record<string, unknown>, 
   });
 
   await doc.populate(POPULATE);
+
+  if (doc.status === "Pending" && isDueToday(doc.dueAt)) {
+    sendFollowUpReminderIfDueToday(doc).catch((err) => {
+      console.error("[CRM] Failed to send follow-up reminder email on update:", err);
+    });
+  }
+
   return serializeFollowUp(doc.toObject() as unknown as Record<string, unknown>);
 }
 

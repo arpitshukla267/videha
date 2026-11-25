@@ -15,6 +15,11 @@ import {
   MapPin,
   LayoutGrid,
   List,
+  Kanban,
+  Sliders,
+  UserCheck,
+  ChevronRight,
+  ChevronLeft,
   PhoneCall,
   PhoneOff,
   PhoneMissed
@@ -50,9 +55,12 @@ import { ListStatePanel, ownScopeEmptyCopy } from '../../components/ui/ListState
 import { LIST_PAGE_SIZE } from '../../lib/pagination';
 
 const LEAD_SOURCES = [
-  { value: 'Website', label: 'Website Form' },
-  { value: 'Trade Fair', label: 'Trade Fair / Gulfood' },
+  { value: 'Website RFQ', label: 'Website RFQ' },
+  { value: 'Product Page Direct', label: 'Product Page Direct' },
+  { value: 'WhatsApp', label: 'WhatsApp' },
   { value: 'Referral', label: 'Buyer Referral' },
+  { value: 'Country', label: 'Country Lead' },
+  { value: 'Trade Fair', label: 'Trade Fair / Gulfood' },
   { value: 'LinkedIn', label: 'LinkedIn B2B' },
   { value: 'Direct Inquiry', label: 'Trade Inquiry' },
   { value: 'Cold Outreach', label: 'Cold Outreach' }
@@ -135,6 +143,61 @@ const emptyCallForm = (): CallLogForm => ({
   followUpRequired: false
 });
 
+function buildWhatsAppExportLink(
+  lead: {
+    name?: string;
+    phoneNumber?: string;
+    whatsAppNumber?: string;
+    product?: string;
+    productInterest?: string;
+    quantity?: string;
+    grade?: string;
+    company?: string;
+  },
+  senderName?: string
+): string | null {
+  const raw = lead.whatsAppNumber || lead.phoneNumber || '';
+  const clean = raw.replace(/[^0-9]/g, '');
+  if (!clean) return null;
+  const leadName = lead.name?.trim() || 'Valued Buyer';
+  const product = lead.product || lead.productInterest || 'agro commodities';
+  const rep = senderName?.trim() || 'Videha Overseas Export Team';
+  const qty = lead.quantity ? ` for ${lead.quantity}` : '';
+  const grade = lead.grade ? ` (${lead.grade})` : '';
+
+  const message = `Hello ${leadName},\n\nThank you for reaching out to Videha Overseas regarding ${product}.\n\nThis is ${rep} from Videha Overseas. I would be glad to share our export product catalog, FOB/CIF pricing, and shipment schedules${qty}${grade}.\n\nPlease let us know your required delivery schedule and destination port.\n\nBest regards,\n${rep}\nVideha Overseas | Global Agro Exports`;
+
+  return `https://wa.me/${clean}?text=${encodeURIComponent(message)}`;
+}
+
+export const PIPELINE_STAGES: LeadStatus[] = [
+  'New Lead',
+  'Verification',
+  'Qualified',
+  'Quotation Sent',
+  'Follow-up',
+  'Sample',
+  'Negotiation',
+  'Confirmed Order',
+  'Payment',
+  'Shipment',
+  'Closed'
+];
+
+const CONTAINER_TYPES = [
+  { value: '20ft FCL', label: '20ft FCL' },
+  { value: '40ft FCL', label: '40ft FCL' },
+  { value: 'LCL', label: 'LCL' }
+];
+
+const INCOTERM_OPTIONS = [
+  { value: 'CIF', label: 'CIF' },
+  { value: 'FOB', label: 'FOB' },
+  { value: 'CFR', label: 'CFR' },
+  { value: 'EXW', label: 'EXW' },
+  { value: 'DDP', label: 'DDP' }
+];
+
 type LeadDraft = {
   leadStatus: LeadStatus;
   priority: Priority;
@@ -147,7 +210,15 @@ type LeadDraft = {
   whatsAppNumber: string;
   email: string;
   country: string;
+  product: string;
   productInterest: string;
+  grade: string;
+  quantity: string;
+  packaging: string;
+  port: string;
+  incoterm: string;
+  sampleRequired: boolean | string;
+  containerType: string;
   leadSource: string;
   notes: string;
   departmentId: string;
@@ -160,9 +231,17 @@ const emptyLeadForm = {
   whatsAppNumber: '',
   email: '',
   country: 'United Arab Emirates',
-  productInterest: '',
-  leadSource: 'Website' as const,
-  leadStatus: 'New' as LeadStatus,
+  product: 'Makhana / Foxnut',
+  productInterest: 'Makhana / Foxnut',
+  grade: '5 Suta Plus / Handpicked',
+  quantity: '10 MT',
+  packaging: 'Custom Cartons',
+  port: '',
+  incoterm: 'CIF',
+  sampleRequired: false,
+  containerType: '20ft FCL',
+  leadSource: 'Website RFQ' as const,
+  leadStatus: 'New Lead' as LeadStatus,
   priority: 'Medium' as Priority,
   assignedMemberId: '',
   departmentId: '',
@@ -175,7 +254,7 @@ function leadToDraft(lead: Lead): LeadDraft {
     ? String(lead.nextFollowUp).slice(0, 10)
     : '';
   return {
-    leadStatus: lead.leadStatus,
+    leadStatus: lead.leadStatus || 'New Lead',
     priority: lead.priority,
     assignedMemberId: lead.assignedMemberId || '',
     nextFollowUp: followUp,
@@ -186,8 +265,16 @@ function leadToDraft(lead: Lead): LeadDraft {
     whatsAppNumber: lead.whatsAppNumber || '',
     email: lead.email || '',
     country: lead.country || '',
-    productInterest: lead.productInterest || '',
-    leadSource: lead.leadSource || '',
+    product: lead.product || lead.productInterest || '',
+    productInterest: lead.productInterest || lead.product || '',
+    grade: lead.grade || '',
+    quantity: lead.quantity || '',
+    packaging: lead.packaging || '',
+    port: lead.port || lead.destinationPort || '',
+    incoterm: lead.incoterm || lead.tradeIncoTerms || '',
+    sampleRequired: lead.sampleRequired ?? false,
+    containerType: lead.containerType || '20ft FCL',
+    leadSource: lead.leadSource || 'Website RFQ',
     notes: lead.notes || '',
     departmentId: lead.departmentId || ''
   };
@@ -196,9 +283,16 @@ function leadToDraft(lead: Lead): LeadDraft {
 type LeadsPageProps = {
   focusLeadId?: string | null;
   onFocusConsumed?: () => void;
+  initialMemberFilter?: string | null;
+  onFilterConsumed?: () => void;
 };
 
-export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsumed }) => {
+export const LeadsPage: React.FC<LeadsPageProps> = ({
+  focusLeadId,
+  onFocusConsumed,
+  initialMemberFilter,
+  onFilterConsumed,
+}) => {
   const { user, hasPermission } = useAuth();
 
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -209,21 +303,38 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
   const [totalPages, setTotalPages] = useState(1);
   const [limit] = useState(LIST_PAGE_SIZE);
 
-  // View Mode: Cards (default) or Table
-  const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
+  // View Mode: Cards, Table, or Pipeline (Kanban)
+  const [viewMode, setViewMode] = useState<'cards' | 'table' | 'pipeline'>('cards');
 
   // Filters
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [countryFilter, setCountryFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
-  const [memberFilter, setMemberFilter] = useState('all');
+  const [memberFilter, setMemberFilter] = useState(initialMemberFilter || 'all');
+
+  useEffect(() => {
+    if (initialMemberFilter) {
+      setMemberFilter(initialMemberFilter);
+      if (onFilterConsumed) {
+        onFilterConsumed();
+      }
+    }
+  }, [initialMemberFilter, onFilterConsumed]);
 
   // Team Members & Departments
   const [teamMembers, setTeamMembers] = useState<CrmUser[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [pipelineMeta, setPipelineMeta] = useState<LeadPipelineMeta | null>(null);
   const [isConverting, setIsConverting] = useState(false);
+
+  // Assignment Rules Modal State
+  const [isAssignmentModalOpen, setIsAssignmentModalOpen] = useState(false);
+  const [assignmentConfig, setAssignmentConfig] = useState<any>(null);
+  const [isLoadingAssignment, setIsLoadingAssignment] = useState(false);
+  const [isSavingAssignment, setIsSavingAssignment] = useState(false);
+  const [newCountryRule, setNewCountryRule] = useState({ country: '', userId: '' });
+  const [newProductRule, setNewProductRule] = useState({ product: '', userId: '' });
 
   // Export Modal State
   const [isExportOpen, setIsExportOpen] = useState(false);
@@ -259,12 +370,11 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
   const [quickCallLead, setQuickCallLead] = useState<Lead | null>(null);
 
   const countryOptions = CRM_COUNTRIES.map(c => ({ value: c, label: c }));
-  const manualStatuses = (pipelineMeta?.allStatuses || [
-    'New',
-    'Contacted',
-    'Qualified',
-    'Lost'
-  ]).filter(s => s !== 'Converted');
+  const manualStatuses = (
+    pipelineMeta?.pipelineStatuses && pipelineMeta.pipelineStatuses.length > 0
+      ? pipelineMeta.pipelineStatuses
+      : PIPELINE_STAGES
+  );
   const statusOptions = manualStatuses.map(s => ({ value: s, label: s }));
   const memberOptions = teamMembers.map(m => ({
     value: m.id,
@@ -281,8 +391,7 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
   ];
   const statusFilterOptions = [
     { value: 'all', label: 'All Statuses' },
-    ...statusOptions,
-    { value: 'Converted', label: 'Converted' }
+    ...statusOptions
   ];
   const priorityFilterOptions = [
     { value: 'all', label: 'All Priorities' },
@@ -418,6 +527,74 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
     setDetailDirty(true);
   };
 
+  const handleQuickStatusChange = async (lead: Lead, nextStatus: LeadStatus) => {
+    try {
+      await api.leads.updateLead(lead.id, {
+        leadStatus: nextStatus,
+        revision: lead.revision
+      });
+      setLeads(prev =>
+        prev.map(l =>
+          l.id === lead.id
+            ? { ...l, leadStatus: nextStatus, status: nextStatus, revision: (l.revision ?? 0) + 1 }
+            : l
+        )
+      );
+      if (selectedLeadId === lead.id) {
+        handleOpenDetail(lead.id);
+      }
+      refreshNotifications();
+    } catch (err: any) {
+      alert(err.message || 'Failed to update lead status');
+      fetchLeads(currentPage);
+    }
+  };
+
+  const handleOpenAssignmentConfig = async () => {
+    setIsAssignmentModalOpen(true);
+    setIsLoadingAssignment(true);
+    try {
+      const res = await api.leads.getAssignmentConfig();
+      if (res.success) {
+        setAssignmentConfig(res.data);
+      }
+    } catch (err: any) {
+      alert(err.message || 'Failed to load assignment config');
+    } finally {
+      setIsLoadingAssignment(false);
+    }
+  };
+
+  const handleSaveAssignmentConfig = async () => {
+    if (!assignmentConfig) return;
+    setIsSavingAssignment(true);
+    try {
+      const res = await api.leads.updateAssignmentConfig({
+        enabled: assignmentConfig.enabled,
+        defaultMode: assignmentConfig.defaultMode,
+        roundRobinUserIds: (assignmentConfig.roundRobinUserIds || []).map((u: any) => u?.id || u?._id || u),
+        countryRules: (assignmentConfig.countryRules || []).map((r: any) => ({
+          country: r.country,
+          userId: r.userId?.id || r.userId?._id || r.userId
+        })),
+        productRules: (assignmentConfig.productRules || []).map((r: any) => ({
+          product: r.product,
+          userId: r.userId?.id || r.userId?._id || r.userId
+        })),
+        fallbackUserId: assignmentConfig.fallbackUserId?.id || assignmentConfig.fallbackUserId?._id || assignmentConfig.fallbackUserId || null
+      });
+      if (res.success) {
+        setAssignmentConfig(res.data);
+        alert('Assignment configuration successfully saved.');
+        setIsAssignmentModalOpen(false);
+      }
+    } catch (err: any) {
+      alert(err.message || 'Failed to save assignment configuration');
+    } finally {
+      setIsSavingAssignment(false);
+    }
+  };
+
   const handleSaveDetail = async () => {
     if (!leadDetail || !leadDraft || !detailDirty) return;
     setIsSavingDetail(true);
@@ -429,10 +606,18 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
         whatsAppNumber: leadDraft.whatsAppNumber,
         email: leadDraft.email,
         country: leadDraft.country,
+        product: leadDraft.product,
         productInterest: leadDraft.productInterest,
+        grade: leadDraft.grade,
+        quantity: leadDraft.quantity,
+        packaging: leadDraft.packaging,
+        port: leadDraft.port,
+        incoterm: leadDraft.incoterm,
+        sampleRequired: leadDraft.sampleRequired,
+        containerType: leadDraft.containerType,
         leadSource: leadDraft.leadSource,
         leadStatus: leadDraft.leadStatus,
-        lostReason: leadDraft.leadStatus === 'Lost' ? leadDraft.lostReason : '',
+        lostReason: leadDraft.leadStatus === 'Closed' ? leadDraft.lostReason : '',
         priority: leadDraft.priority,
         assignedMemberId: leadDraft.assignedMemberId || null,
         departmentId: leadDraft.departmentId || null,
@@ -493,7 +678,15 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
         whatsAppNumber: newLeadForm.whatsAppNumber,
         email: newLeadForm.email,
         country: newLeadForm.country,
+        product: newLeadForm.product,
         productInterest: newLeadForm.productInterest,
+        grade: newLeadForm.grade,
+        quantity: newLeadForm.quantity,
+        packaging: newLeadForm.packaging,
+        port: newLeadForm.port,
+        incoterm: newLeadForm.incoterm,
+        sampleRequired: newLeadForm.sampleRequired,
+        containerType: newLeadForm.containerType,
         leadSource: newLeadForm.leadSource,
         leadStatus: newLeadForm.leadStatus,
         priority: newLeadForm.priority,
@@ -705,7 +898,31 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
               <List className="w-3.5 h-3.5" />
               <span className="hidden md:inline">Table</span>
             </button>
+            <button
+              onClick={() => setViewMode('pipeline')}
+              className={`px-2.5 py-1.5 rounded-md text-xs font-medium flex items-center gap-1.5 transition-colors ${
+                viewMode === 'pipeline'
+                  ? 'bg-white text-teal-700 shadow-sm'
+                  : 'text-stone-600 hover:text-stone-800'
+              }`}
+              title="Pipeline / Kanban View (11 Stages)"
+            >
+              <Kanban className="w-3.5 h-3.5" />
+              <span className="hidden md:inline">Pipeline</span>
+            </button>
           </div>
+
+          {/* Auto-Assignment Rules Button */}
+          {hasPermission('leads.assign') && (
+            <button
+              onClick={handleOpenAssignmentConfig}
+              className="inline-flex items-center gap-1.5 px-3 py-2 bg-white text-stone-700 hover:bg-stone-50 border border-stone-200 rounded-lg text-xs font-medium transition-colors"
+              title="Configure Automatic Lead Assignment (Round Robin / Country / Product)"
+            >
+              <UserCheck className="w-3.5 h-3.5 text-teal-600" />
+              <span className="hidden sm:inline">Assignment Rules</span>
+            </button>
+          )}
 
           {/* Import Leads Button */}
           {hasPermission('leads.create') && (
@@ -796,8 +1013,118 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
         </div>
       </div>
 
-      {/* Main Content: Card View (Default) or Table View */}
-      {viewMode === 'cards' ? (
+      {/* Main Content: Pipeline (Kanban), Cards, or Table View */}
+      {viewMode === 'pipeline' ? (
+        <div className="overflow-x-auto pb-4">
+          <div className="flex gap-3.5 min-w-[2600px] items-start">
+            {PIPELINE_STAGES.map((stage, stageIdx) => {
+              const stageLeads = leads.filter(l => (l.leadStatus || 'New Lead') === stage);
+              return (
+                <div
+                  key={stage}
+                  className="flex-1 min-w-[225px] max-w-[250px] bg-stone-50 border border-stone-200/80 rounded-xl p-3 flex flex-col max-h-[780px]"
+                >
+                  {/* Column Header */}
+                  <div className="flex items-center justify-between pb-2 mb-2.5 border-b border-stone-200">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className="w-2 h-2 rounded-full bg-teal-600 shrink-0" />
+                      <h4 className="text-xs font-semibold text-stone-800 truncate" title={stage}>
+                        {stage}
+                      </h4>
+                    </div>
+                    <span className="text-[11px] font-mono font-medium px-1.5 py-0.5 bg-white border border-stone-200 rounded text-stone-600">
+                      {stageLeads.length}
+                    </span>
+                  </div>
+
+                  {/* Leads in Column */}
+                  <div className="flex-1 overflow-y-auto space-y-2.5 pr-1">
+                    {stageLeads.length === 0 ? (
+                      <div className="py-8 text-center text-xs text-stone-400 border border-dashed border-stone-200 rounded-lg">
+                        Empty stage
+                      </div>
+                    ) : (
+                      stageLeads.map(lead => {
+                        const assigned = teamMembers.find(m => m.id === lead.assignedMemberId);
+                        const assignedName = assigned ? assigned.name : lead.assignedMemberName || 'Unassigned';
+
+                        return (
+                          <div
+                            key={lead.id}
+                            onClick={() => handleOpenDetail(lead.id)}
+                            className="bg-white border border-stone-200 hover:border-teal-400 rounded-lg p-3 shadow-xs hover:shadow-md transition-all cursor-pointer group"
+                          >
+                            <div className="flex items-center justify-between gap-1 pb-1.5 border-b border-stone-100">
+                              <span className="font-mono text-[10px] font-medium text-stone-600 bg-stone-100 px-1.5 py-0.5 rounded">
+                                {lead.leadCode}
+                              </span>
+                              {lead.rfqId && (
+                                <span className="font-mono text-[10px] font-semibold text-teal-700 bg-teal-50 border border-teal-200 px-1.5 py-0.5 rounded">
+                                  {lead.rfqId}
+                                </span>
+                              )}
+                              <PriorityBadge priority={lead.priority} />
+                            </div>
+
+                            <div className="mt-2">
+                              <h5 className="text-xs font-semibold text-stone-900 group-hover:text-teal-700 line-clamp-1">
+                                {lead.company}
+                              </h5>
+                              <p className="text-[11px] text-stone-500 truncate mt-0.5">
+                                {lead.name} · {lead.country}
+                              </p>
+                            </div>
+
+                            <div className="mt-2 bg-stone-50 border border-stone-100 rounded p-1.5 text-[11px] text-stone-700">
+                              <p className="truncate font-medium" title={lead.product || lead.productInterest}>
+                                {lead.product || lead.productInterest || 'Foxnut / Makhana'}
+                              </p>
+                              <div className="flex items-center justify-between text-[10px] text-stone-500 mt-1">
+                                <span>{lead.containerType || '20ft FCL'}</span>
+                                {lead.destinationPort && <span>Port: {lead.destinationPort}</span>}
+                              </div>
+                            </div>
+
+                            <div className="mt-2 pt-2 border-t border-stone-100 flex items-center justify-between text-[10px]">
+                              <span className="text-stone-500 truncate max-w-[100px]" title={assignedName}>
+                                👤 {assignedName}
+                              </span>
+
+                              {/* Stage Transition Controls */}
+                              <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                                {stageIdx > 0 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleQuickStatusChange(lead, PIPELINE_STAGES[stageIdx - 1])}
+                                    className="p-1 hover:bg-stone-100 text-stone-500 hover:text-stone-800 rounded transition-colors"
+                                    title={`Move back to ${PIPELINE_STAGES[stageIdx - 1]}`}
+                                  >
+                                    <ChevronLeft className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                                {stageIdx < PIPELINE_STAGES.length - 1 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleQuickStatusChange(lead, PIPELINE_STAGES[stageIdx + 1])}
+                                    className="p-1 hover:bg-teal-50 text-teal-600 hover:text-teal-800 rounded transition-colors"
+                                    title={`Advance to ${PIPELINE_STAGES[stageIdx + 1]}`}
+                                  >
+                                    <ChevronRight className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : viewMode === 'cards' ? (
         <div>
           <ListStatePanel
             isLoading={isLoading}
@@ -908,13 +1235,13 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
                               <Phone className="w-3.5 h-3.5" />
                             </button>
                           )}
-                          {whatsappClean && (
+                          {buildWhatsAppExportLink(lead, user?.name) && (
                             <a
-                              href={`https://wa.me/${whatsappClean}?text=Hello%20${encodeURIComponent(lead.name)},%20greetings%20from%20Videha%20Overseas.`}
+                              href={buildWhatsAppExportLink(lead, user?.name)!}
                               target="_blank"
                               rel="noreferrer"
                               className="p-1.5 rounded-md text-emerald-600 hover:bg-emerald-50 transition-colors"
-                              title="Chat on WhatsApp"
+                              title="Chat on WhatsApp (Export Template)"
                             >
                               <MessageSquare className="w-3.5 h-3.5" />
                             </a>
@@ -1079,6 +1406,17 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
                         onClick={e => e.stopPropagation()}
                       >
                         <div className="flex items-center justify-end gap-1.5">
+                          {buildWhatsAppExportLink(lead, user?.name) && (
+                            <a
+                              href={buildWhatsAppExportLink(lead, user?.name)!}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="p-1 rounded bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 transition-colors"
+                              title="Chat on WhatsApp (Export Template)"
+                            >
+                              <MessageSquare className="w-3.5 h-3.5" />
+                            </a>
+                          )}
                           <button
                             onClick={() => handleOpenDetail(lead.id)}
                             className="px-2 py-1 rounded bg-teal-50 text-teal-700 hover:bg-teal-100 border border-teal-200 text-xs font-medium"
@@ -1379,6 +1717,87 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
             </div>
           </section>
 
+          {/* RFQ & Trade Parameters */}
+          <section className="space-y-3">
+            <h4 className="text-sm font-semibold text-stone-800 pb-2 border-b border-stone-100">
+              RFQ &amp; Trade Parameters
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Container Type</label>
+                <SearchableSelect
+                  options={CONTAINER_TYPES}
+                  value={newLeadForm.containerType}
+                  onChange={v => setNewLeadForm({ ...newLeadForm, containerType: v })}
+                  placeholder="Select container…"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Grade / Specification</label>
+                <input
+                  type="text"
+                  value={newLeadForm.grade}
+                  onChange={e => setNewLeadForm({ ...newLeadForm, grade: e.target.value })}
+                  placeholder="e.g. 5 Suta Plus / 6 Suta"
+                  className="w-full px-3 py-2.5 border border-stone-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-600/30 focus:border-teal-600 text-stone-800"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Required Quantity</label>
+                <input
+                  type="text"
+                  value={newLeadForm.quantity}
+                  onChange={e => setNewLeadForm({ ...newLeadForm, quantity: e.target.value })}
+                  placeholder="e.g. 10 MT"
+                  className="w-full px-3 py-2.5 border border-stone-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-600/30 focus:border-teal-600 text-stone-800"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Packaging</label>
+                <input
+                  type="text"
+                  value={newLeadForm.packaging}
+                  onChange={e => setNewLeadForm({ ...newLeadForm, packaging: e.target.value })}
+                  placeholder="e.g. 10kg cartons"
+                  className="w-full px-3 py-2.5 border border-stone-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-600/30 focus:border-teal-600 text-stone-800"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Destination Port</label>
+                <input
+                  type="text"
+                  value={newLeadForm.port}
+                  onChange={e => setNewLeadForm({ ...newLeadForm, port: e.target.value })}
+                  placeholder="e.g. Jebel Ali, Dubai"
+                  className="w-full px-3 py-2.5 border border-stone-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-600/30 focus:border-teal-600 text-stone-800"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Incoterm</label>
+                <SearchableSelect
+                  options={INCOTERM_OPTIONS}
+                  value={newLeadForm.incoterm}
+                  onChange={v => setNewLeadForm({ ...newLeadForm, incoterm: v })}
+                  placeholder="Select incoterm…"
+                />
+              </div>
+            </div>
+            <div className="flex items-center gap-2 pt-1">
+              <input
+                type="checkbox"
+                id="create-sample-required"
+                checked={Boolean(newLeadForm.sampleRequired)}
+                onChange={e => setNewLeadForm({ ...newLeadForm, sampleRequired: e.target.checked })}
+                className="w-4 h-4 rounded text-teal-600 focus:ring-teal-500 border-stone-300"
+              />
+              <label htmlFor="create-sample-required" className="text-sm font-medium text-stone-700 cursor-pointer">
+                Sample required by buyer before order confirmation
+              </label>
+            </div>
+          </section>
+
           {/* Assignment */}
           <section className="space-y-3">
             <h4 className="text-sm font-semibold text-stone-800 pb-2 border-b border-stone-100">
@@ -1452,6 +1871,38 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
           <div className="py-12 text-center text-stone-400">Loading lead details...</div>
         ) : (
           <div className="space-y-6" style={{ fontFamily: "'Poppins', sans-serif" }}>
+            {/* Top RFQ and Assignment Meta */}
+            <div className="flex flex-wrap items-center gap-2 pb-3 border-b border-stone-100">
+              {leadDetail.lead.rfqId && (
+                <span className="px-2.5 py-1 bg-teal-100 text-teal-800 rounded font-mono font-bold text-xs">
+                  RFQ ID: {leadDetail.lead.rfqId}
+                </span>
+              )}
+              {leadDetail.lead.assignmentDetails && (
+                <span className="px-2.5 py-1 bg-stone-100 text-stone-700 rounded text-xs">
+                  Assigned By: <strong className="capitalize">{leadDetail.lead.assignmentDetails.assignedBy || 'Manual'}</strong>
+                  {leadDetail.lead.assignmentDetails.assignedRule ? ` (${leadDetail.lead.assignmentDetails.assignedRule})` : ''}
+                </span>
+              )}
+              {leadDetail.lead.source && (
+                <span className="px-2.5 py-1 bg-blue-50 text-blue-700 rounded text-xs">
+                  Source: <strong>{leadDetail.lead.source}</strong>
+                </span>
+              )}
+              {buildWhatsAppExportLink(leadDraft, user?.name) && (
+                <a
+                  href={buildWhatsAppExportLink(leadDraft, user?.name)!}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="sm:ml-auto inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-medium transition-colors shadow-2xs"
+                  title="Open WhatsApp chat with predefined export message template"
+                >
+                  <MessageSquare className="w-3.5 h-3.5" />
+                  <span>Chat on WhatsApp</span>
+                </a>
+              )}
+            </div>
+
             {/* Editable 2-column form */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
@@ -1491,7 +1942,21 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-stone-700 mb-1">WhatsApp</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-sm font-medium text-stone-700">WhatsApp</label>
+                  {buildWhatsAppExportLink(leadDraft, user?.name) && (
+                    <a
+                      href={buildWhatsAppExportLink(leadDraft, user?.name)!}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 hover:text-emerald-700"
+                      title="Open WhatsApp chat with export template"
+                    >
+                      <MessageSquare className="w-3 h-3" />
+                      <span>Chat</span>
+                    </a>
+                  )}
+                </div>
                 <input
                   type="text"
                   value={leadDraft.whatsAppNumber}
@@ -1528,13 +1993,83 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-stone-700 mb-1">Status</label>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Pipeline Stage *</label>
                 <SearchableSelect
                   options={statusOptions}
                   value={leadDraft.leadStatus}
                   onChange={v => updateDraft('leadStatus', v as LeadStatus)}
-                  placeholder="Select status…"
+                  placeholder="Select stage…"
                 />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Container Type</label>
+                <SearchableSelect
+                  options={CONTAINER_TYPES}
+                  value={leadDraft.containerType}
+                  onChange={v => updateDraft('containerType', v)}
+                  placeholder="Container type…"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Grade / Spec</label>
+                <input
+                  type="text"
+                  value={leadDraft.grade}
+                  onChange={e => updateDraft('grade', e.target.value)}
+                  placeholder="e.g. 5 Suta Plus"
+                  className="w-full px-3 py-2.5 border border-stone-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-600/30 focus:border-teal-600 text-stone-800"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Required Quantity</label>
+                <input
+                  type="text"
+                  value={leadDraft.quantity}
+                  onChange={e => updateDraft('quantity', e.target.value)}
+                  placeholder="e.g. 10 MT"
+                  className="w-full px-3 py-2.5 border border-stone-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-600/30 focus:border-teal-600 text-stone-800"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Packaging</label>
+                <input
+                  type="text"
+                  value={leadDraft.packaging}
+                  onChange={e => updateDraft('packaging', e.target.value)}
+                  placeholder="e.g. 10kg cartons"
+                  className="w-full px-3 py-2.5 border border-stone-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-600/30 focus:border-teal-600 text-stone-800"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Destination Port</label>
+                <input
+                  type="text"
+                  value={leadDraft.port}
+                  onChange={e => updateDraft('port', e.target.value)}
+                  placeholder="e.g. Jebel Ali"
+                  className="w-full px-3 py-2.5 border border-stone-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-600/30 focus:border-teal-600 text-stone-800"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Incoterm</label>
+                <SearchableSelect
+                  options={INCOTERM_OPTIONS}
+                  value={leadDraft.incoterm}
+                  onChange={v => updateDraft('incoterm', v)}
+                  placeholder="Select incoterm…"
+                />
+              </div>
+              <div className="sm:col-span-2 flex items-center gap-2 py-1">
+                <input
+                  type="checkbox"
+                  id="detail-sample-required"
+                  checked={Boolean(leadDraft.sampleRequired)}
+                  onChange={e => updateDraft('sampleRequired', e.target.checked)}
+                  className="w-4 h-4 rounded text-teal-600 focus:ring-teal-500 border-stone-300"
+                />
+                <label htmlFor="detail-sample-required" className="text-sm font-medium text-stone-700 cursor-pointer">
+                  Sample required by buyer before order confirmation
+                </label>
               </div>
               {leadDraft.leadStatus === 'Lost' && (
                 <div className="sm:col-span-2">
@@ -2042,6 +2577,261 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ focusLeadId, onFocusConsum
               </button>
             </div>
           </form>
+        )}
+      </Modal>
+
+      {/* AUTOMATIC ASSIGNMENT CONFIGURATION MODAL */}
+      <Modal
+        isOpen={isAssignmentModalOpen}
+        onClose={() => setIsAssignmentModalOpen(false)}
+        title="Automatic Lead Assignment Settings"
+        subtitle="Configure Round Robin, Country, and Product-based assignment rules"
+        maxWidth="2xl"
+      >
+        {isLoadingAssignment || !assignmentConfig ? (
+          <div className="py-10 text-center text-stone-400">Loading assignment configuration...</div>
+        ) : (
+          <div className="space-y-6 text-xs text-stone-700" style={{ fontFamily: "'Poppins', sans-serif" }}>
+            {/* Enable switch & default mode */}
+            <div className="bg-stone-50 p-4 rounded-xl border border-stone-200 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="font-semibold text-stone-900 text-sm">Automatic Assignment Engine</h4>
+                  <p className="text-stone-500 text-xs">Automatically assign incoming RFQs and leads</p>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={assignmentConfig.enabled}
+                  onChange={e => setAssignmentConfig({ ...assignmentConfig, enabled: e.target.checked })}
+                  className="w-5 h-5 rounded text-teal-600 focus:ring-teal-500 border-stone-300"
+                />
+              </div>
+
+              <div className="pt-2 border-t border-stone-200">
+                <label className="block text-xs font-medium text-stone-700 mb-1">Assignment Mode</label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {[
+                    { value: 'rules', label: 'Hybrid Rules', desc: 'Country → Product → Round Robin' },
+                    { value: 'round_robin', label: 'Round Robin', desc: 'Even distribution' },
+                    { value: 'country', label: 'Country Based', desc: 'Match country' },
+                    { value: 'product', label: 'Product Based', desc: 'Match product' }
+                  ].map(m => (
+                    <button
+                      key={m.value}
+                      type="button"
+                      onClick={() => setAssignmentConfig({ ...assignmentConfig, defaultMode: m.value })}
+                      className={`p-2.5 rounded-lg border text-left transition-colors ${
+                        assignmentConfig.defaultMode === m.value
+                          ? 'border-teal-600 bg-teal-50 text-teal-900 font-semibold'
+                          : 'border-stone-200 bg-white hover:border-stone-300 text-stone-700'
+                      }`}
+                    >
+                      <div className="font-medium text-xs">{m.label}</div>
+                      <div className="text-[10px] text-stone-500 mt-0.5">{m.desc}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Country Rules */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <h4 className="font-semibold text-stone-800 text-sm">1. Country Assignment Rules</h4>
+                <span className="text-stone-500 text-xs">{(assignmentConfig.countryRules || []).length} active rule(s)</span>
+              </div>
+              <div className="space-y-2">
+                {(assignmentConfig.countryRules || []).map((rule: any, idx: number) => {
+                  const assignedUser = teamMembers.find(m => m.id === (rule.userId?.id || rule.userId?._id || rule.userId));
+                  return (
+                    <div key={idx} className="flex items-center justify-between p-2.5 bg-white border border-stone-200 rounded-lg">
+                      <div>
+                        <span className="font-medium text-stone-800">{rule.country}</span>
+                        <span className="text-stone-400 mx-2">→</span>
+                        <span className="text-teal-700 font-medium">{assignedUser ? assignedUser.name : 'Unknown User'}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updated = [...(assignmentConfig.countryRules || [])];
+                          updated.splice(idx, 1);
+                          setAssignmentConfig({ ...assignmentConfig, countryRules: updated });
+                        }}
+                        className="text-stone-400 hover:text-rose-600 p-1"
+                        title="Remove rule"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  );
+                })}
+
+                {/* Add country rule */}
+                <div className="flex gap-2 pt-1">
+                  <input
+                    type="text"
+                    value={newCountryRule.country}
+                    onChange={e => setNewCountryRule({ ...newCountryRule, country: e.target.value })}
+                    placeholder="Country (e.g. United States)"
+                    className="flex-1 px-3 py-1.5 border border-stone-200 rounded-lg text-xs"
+                  />
+                  <select
+                    value={newCountryRule.userId}
+                    onChange={e => setNewCountryRule({ ...newCountryRule, userId: e.target.value })}
+                    className="flex-1 px-3 py-1.5 border border-stone-200 rounded-lg text-xs bg-white"
+                  >
+                    <option value="">Select Assignee…</option>
+                    {teamMembers.map(m => (
+                      <option key={m.id} value={m.id}>{m.name}</option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!newCountryRule.country.trim() || !newCountryRule.userId) return;
+                      setAssignmentConfig({
+                        ...assignmentConfig,
+                        countryRules: [
+                          ...(assignmentConfig.countryRules || []),
+                          { country: newCountryRule.country.trim(), userId: newCountryRule.userId }
+                        ]
+                      });
+                      setNewCountryRule({ country: '', userId: '' });
+                    }}
+                    disabled={!newCountryRule.country.trim() || !newCountryRule.userId}
+                    className="px-3 py-1.5 bg-teal-700 hover:bg-teal-800 text-white rounded-lg font-medium disabled:opacity-40"
+                  >
+                    Add Rule
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Product Rules */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <h4 className="font-semibold text-stone-800 text-sm">2. Product Assignment Rules</h4>
+                <span className="text-stone-500 text-xs">{(assignmentConfig.productRules || []).length} active rule(s)</span>
+              </div>
+              <div className="space-y-2">
+                {(assignmentConfig.productRules || []).map((rule: any, idx: number) => {
+                  const assignedUser = teamMembers.find(m => m.id === (rule.userId?.id || rule.userId?._id || rule.userId));
+                  return (
+                    <div key={idx} className="flex items-center justify-between p-2.5 bg-white border border-stone-200 rounded-lg">
+                      <div>
+                        <span className="font-medium text-stone-800">{rule.product}</span>
+                        <span className="text-stone-400 mx-2">→</span>
+                        <span className="text-teal-700 font-medium">{assignedUser ? assignedUser.name : 'Unknown User'}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updated = [...(assignmentConfig.productRules || [])];
+                          updated.splice(idx, 1);
+                          setAssignmentConfig({ ...assignmentConfig, productRules: updated });
+                        }}
+                        className="text-stone-400 hover:text-rose-600 p-1"
+                        title="Remove rule"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  );
+                })}
+
+                {/* Add product rule */}
+                <div className="flex gap-2 pt-1">
+                  <input
+                    type="text"
+                    value={newProductRule.product}
+                    onChange={e => setNewProductRule({ ...newProductRule, product: e.target.value })}
+                    placeholder="Product keyword (e.g. Makhana, Foxnut)"
+                    className="flex-1 px-3 py-1.5 border border-stone-200 rounded-lg text-xs"
+                  />
+                  <select
+                    value={newProductRule.userId}
+                    onChange={e => setNewProductRule({ ...newProductRule, userId: e.target.value })}
+                    className="flex-1 px-3 py-1.5 border border-stone-200 rounded-lg text-xs bg-white"
+                  >
+                    <option value="">Select Assignee…</option>
+                    {teamMembers.map(m => (
+                      <option key={m.id} value={m.id}>{m.name}</option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!newProductRule.product.trim() || !newProductRule.userId) return;
+                      setAssignmentConfig({
+                        ...assignmentConfig,
+                        productRules: [
+                          ...(assignmentConfig.productRules || []),
+                          { product: newProductRule.product.trim(), userId: newProductRule.userId }
+                        ]
+                      });
+                      setNewProductRule({ product: '', userId: '' });
+                    }}
+                    disabled={!newProductRule.product.trim() || !newProductRule.userId}
+                    className="px-3 py-1.5 bg-teal-700 hover:bg-teal-800 text-white rounded-lg font-medium disabled:opacity-40"
+                  >
+                    Add Rule
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Round Robin Members Pool */}
+            <div className="space-y-2">
+              <h4 className="font-semibold text-stone-800 text-sm">3. Round Robin Distribution Pool</h4>
+              <p className="text-stone-500 text-xs">Members included in the round-robin rotation</p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {teamMembers.map(m => {
+                  const selectedIds = (assignmentConfig.roundRobinUserIds || []).map((u: any) => u?.id || u?._id || u);
+                  const isSelected = selectedIds.includes(m.id);
+                  return (
+                    <label
+                      key={m.id}
+                      className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-colors ${
+                        isSelected ? 'bg-teal-50 border-teal-300 text-teal-900 font-medium' : 'bg-white border-stone-200 text-stone-700'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={e => {
+                          const updated = e.target.checked
+                            ? [...selectedIds, m.id]
+                            : selectedIds.filter((id: string) => id !== m.id);
+                          setAssignmentConfig({ ...assignmentConfig, roundRobinUserIds: updated });
+                        }}
+                        className="w-4 h-4 rounded text-teal-600 focus:ring-teal-500 border-stone-300"
+                      />
+                      <span className="truncate">{m.name}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="flex justify-end gap-2 pt-3 border-t border-stone-200">
+              <button
+                type="button"
+                onClick={() => setIsAssignmentModalOpen(false)}
+                className="px-4 py-2 border border-stone-200 text-stone-700 rounded-lg hover:bg-stone-50 font-medium text-xs"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveAssignmentConfig}
+                disabled={isSavingAssignment}
+                className="px-5 py-2 bg-teal-700 hover:bg-teal-800 text-white rounded-lg font-medium text-xs disabled:opacity-40"
+              >
+                {isSavingAssignment ? 'Saving…' : 'Save Assignment Settings'}
+              </button>
+            </div>
+          </div>
         )}
       </Modal>
 

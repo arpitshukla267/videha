@@ -2,8 +2,12 @@ import { forwardRef, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { COMPANY } from "../config/company";
 import type { QuotationData, QuotationTotals } from "../types";
 import { formatDisplayDate, formatMoney } from "../lib/calculations";
-import { paginateQuotation, type QuotationMeasuredHeights } from "../lib/pagination";
+import {
+  paginateQuotation,
+  type QuotationMeasuredHeights,
+} from "../lib/pagination";
 import { measureRowMeta } from "../lib/row-segments";
+import { resolveCompany } from "../lib/resolve-company";
 import { QuotationDocument } from "./QuotationDocument";
 
 type Props = {
@@ -36,6 +40,7 @@ const PaginationProbe = forwardRef<
   { data: QuotationData; totals: QuotationTotals; logoSrc?: string }
 >(function PaginationProbe({ data, totals, logoSrc }, ref) {
   const currency = data.meta.currency || COMPANY.currency;
+  const company = resolveCompany(data);
   const linesById = new Map(totals.lines.map((l) => [l.id, l]));
 
   return (
@@ -51,14 +56,17 @@ const PaginationProbe = forwardRef<
                 alt=""
               />
               <div className="qb-doc-brand-text">
-                <strong>{COMPANY.brandName}</strong>
-                <em>{COMPANY.tagline}</em>
+                <strong>{company.name}</strong>
+                <em>{company.tagline}</em>
                 <div className="qb-doc-company-meta">
-                  {COMPANY.addressLines.map((line) => (
-                    <div key={line}>{line}</div>
+                  {company.addressLines.map((line, i) => (
+                    <div key={`${i}-${line}`}>{line}</div>
                   ))}
                   <div>
-                    {COMPANY.email} · {COMPANY.phone}
+                    {company.email} · {company.phone}
+                  </div>
+                  <div>
+                    IEC {company.iec} · GST {company.gst}
                   </div>
                 </div>
               </div>
@@ -68,11 +76,15 @@ const PaginationProbe = forwardRef<
               <div className="qb-doc-meta-rows">
                 <div className="qb-doc-meta-row">
                   <span className="qb-doc-meta-label">Quotation No.</span>
-                  <span className="qb-doc-meta-value">{data.meta.quotationNumber || "—"}</span>
+                  <span className="qb-doc-meta-value">
+                    {data.meta.quotationNumber || "—"}
+                  </span>
                 </div>
                 <div className="qb-doc-meta-row">
                   <span className="qb-doc-meta-label">Date</span>
-                  <span className="qb-doc-meta-value">{formatDisplayDate(data.meta.date)}</span>
+                  <span className="qb-doc-meta-value">
+                    {formatDisplayDate(data.meta.date)}
+                  </span>
                 </div>
               </div>
             </div>
@@ -116,12 +128,18 @@ const PaginationProbe = forwardRef<
                     <td className="desc">{item.description || "—"}</td>
                     <td className="num">{item.quantity || 0}</td>
                     <td className="center">{item.unit || "—"}</td>
-                    <td className="num">{formatMoney(item.rate || 0, currency)}</td>
+                    <td className="num">
+                      {formatMoney(item.rate || 0, currency)}
+                    </td>
                     <td className="num">
                       {item.discountPercent ? `${item.discountPercent}%` : "—"}
                     </td>
-                    <td className="num">{item.taxPercent ? `${item.taxPercent}%` : "—"}</td>
-                    <td className="num">{formatMoney(lt?.amount ?? 0, currency)}</td>
+                    <td className="num">
+                      {item.taxPercent ? `${item.taxPercent}%` : "—"}
+                    </td>
+                    <td className="num">
+                      {formatMoney(lt?.amount ?? 0, currency)}
+                    </td>
                   </tr>
                 );
               })}
@@ -164,7 +182,8 @@ const PaginationProbe = forwardRef<
             {COMPANY.thankYou}
           </p>
           <div className="qb-doc-contact-bar" data-qb-block="contact">
-            {COMPANY.legalName} · {COMPANY.email} · {COMPANY.phone} · {COMPANY.website}
+            {company.legalName} · {company.email} · {company.phone} ·{" "}
+            {company.website}
           </div>
 
           <footer className="qb-doc-page-footer" data-qb-block="page-footer">
@@ -173,7 +192,11 @@ const PaginationProbe = forwardRef<
               <div className="qb-doc-page-footer-left">
                 <span>Page 1 of 1</span>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img className="qb-doc-footer-logo" src={logoSrc || "/logo.png"} alt="" />
+                <img
+                  className="qb-doc-footer-logo"
+                  src={logoSrc || "/logo.png"}
+                  alt=""
+                />
               </div>
               <div className="qb-doc-page-footer-right">
                 <span>Quotation No: {data.meta.quotationNumber || "—"}</span>
@@ -187,9 +210,15 @@ const PaginationProbe = forwardRef<
 });
 
 export const PaginatedQuotationView = forwardRef<HTMLDivElement, Props>(
-  function PaginatedQuotationView({ data, totals, logoSrc, exportMode }, ref) {
+  function PaginatedQuotationView(
+    { data, totals, logoSrc: defaultLogoSrc, exportMode },
+    ref,
+  ) {
     const probeRef = useRef<HTMLDivElement>(null);
-    const [heights, setHeights] = useState<QuotationMeasuredHeights>(defaultHeights);
+    // Uploaded logo (from the edit panel) wins; otherwise keep the default logo.
+    const logoSrc = data.company?.logoDataUrl || defaultLogoSrc;
+    const [heights, setHeights] =
+      useState<QuotationMeasuredHeights>(defaultHeights);
 
     useLayoutEffect(() => {
       const root = probeRef.current;
@@ -198,12 +227,14 @@ export const PaginatedQuotationView = forwardRef<HTMLDivElement, Props>(
       const measure = () => {
         const rows: Record<string, number> = {};
         const rowMeta: QuotationMeasuredHeights["rowMeta"] = {};
-        root.querySelectorAll<HTMLTableRowElement>("tr[data-qb-row-id]").forEach((row) => {
-          const id = row.dataset.qbRowId;
-          if (!id) return;
-          rows[id] = measureBlock(row);
-          rowMeta[id] = measureRowMeta(row);
-        });
+        root
+          .querySelectorAll<HTMLTableRowElement>("tr[data-qb-row-id]")
+          .forEach((row) => {
+            const id = row.dataset.qbRowId;
+            if (!id) return;
+            rows[id] = measureBlock(row);
+            rowMeta[id] = measureRowMeta(row);
+          });
 
         setHeights({
           header: measureBlock(root.querySelector("[data-qb-block='header']")),
@@ -214,8 +245,12 @@ export const PaginatedQuotationView = forwardRef<HTMLDivElement, Props>(
           totals: measureBlock(root.querySelector("[data-qb-block='totals']")),
           terms: measureBlock(root.querySelector("[data-qb-block='terms']")),
           thanks: measureBlock(root.querySelector("[data-qb-block='thanks']")),
-          contact: measureBlock(root.querySelector("[data-qb-block='contact']")),
-          pageFooter: measureBlock(root.querySelector("[data-qb-block='page-footer']")),
+          contact: measureBlock(
+            root.querySelector("[data-qb-block='contact']"),
+          ),
+          pageFooter: measureBlock(
+            root.querySelector("[data-qb-block='page-footer']"),
+          ),
         });
       };
 
@@ -232,7 +267,9 @@ export const PaginatedQuotationView = forwardRef<HTMLDivElement, Props>(
           heights,
           {
             hasTerms: Boolean(
-              data.terms.paymentTerms || data.terms.deliveryTerms || data.terms.notes,
+              data.terms.paymentTerms ||
+              data.terms.deliveryTerms ||
+              data.terms.notes,
             ),
             hasThanks: Boolean(COMPANY.thankYou),
             hasContact: true,
@@ -245,7 +282,12 @@ export const PaginatedQuotationView = forwardRef<HTMLDivElement, Props>(
 
     return (
       <>
-        <PaginationProbe ref={probeRef} data={data} totals={totals} logoSrc={logoSrc} />
+        <PaginationProbe
+          ref={probeRef}
+          data={data}
+          totals={totals}
+          logoSrc={logoSrc}
+        />
         <div ref={ref} className="qb-paginated-root">
           {pages.map((pagePlan, index) => (
             <QuotationDocument

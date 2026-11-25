@@ -34,7 +34,7 @@ import { PriorityBadge } from '../../components/ui/PriorityBadge';
 import { NavigationTab } from '../../components/layout/Sidebar';
 
 interface DashboardProps {
-  onNavigate: (tab: NavigationTab, entityId?: string) => void;
+  onNavigate: (tab: NavigationTab, entityId?: string, extra?: { filter?: string }) => void;
 }
 
 // Ordered pipeline stages read left-to-right as a lead matures. Colors move
@@ -137,7 +137,16 @@ export const DashboardPage: React.FC<DashboardProps> = ({ onNavigate }) => {
   const { kpi, attention, leadDistribution, pipelineDistribution, memberPerformance, recentActivities } = data;
 
   const kpiItems = [
+    // Row 1 (6 columns)
     { label: 'Total leads', value: kpi.totalLeads, icon: Users, tab: 'leads' as NavigationTab },
+    {
+      label: 'Unassigned Queries',
+      value: kpi.unassignedLeadsCount ?? (attention.unassignedLeads?.length || 0),
+      icon: ShieldAlert,
+      tab: 'leads' as NavigationTab,
+      filter: 'unassigned',
+      danger: (kpi.unassignedLeadsCount ?? (attention.unassignedLeads?.length || 0)) > 0
+    },
     { label: 'New inquiries', value: kpi.newLeads, icon: UserPlus, tab: 'leads' as NavigationTab },
     { label: 'Interested', value: kpi.interestedLeads, icon: HeartHandshake, tab: 'leads' as NavigationTab },
     { label: 'Follow-ups due', value: kpi.followUpsDueCount, icon: Calendar, tab: 'followups' as NavigationTab },
@@ -148,6 +157,7 @@ export const DashboardPage: React.FC<DashboardProps> = ({ onNavigate }) => {
       tab: 'followups' as NavigationTab,
       danger: (kpi.followUpsOverdue ?? 0) > 0
     },
+    // Row 2 (6 columns)
     { label: 'Converted', value: kpi.wonLeads ?? 0, icon: CheckCircle2, tab: 'leads' as NavigationTab },
     {
       label: 'Open quotations',
@@ -207,7 +217,13 @@ export const DashboardPage: React.FC<DashboardProps> = ({ onNavigate }) => {
               <button
                 key={idx}
                 type="button"
-                onClick={() => onNavigate(item.tab)}
+                onClick={() =>
+                  onNavigate(
+                    item.tab,
+                    undefined,
+                    (item as any).filter ? { filter: (item as any).filter } : undefined
+                  )
+                }
                 className="text-left p-3.5 hover:bg-stone-50 transition-colors group"
               >
                 <div className="flex items-center gap-1.5 text-stone-400 group-hover:text-stone-600">
@@ -478,13 +494,13 @@ export const DashboardPage: React.FC<DashboardProps> = ({ onNavigate }) => {
           <div className="p-4">
             <div className="flex items-center justify-between mb-2.5">
               <span className="text-sm font-medium text-stone-700 flex items-center gap-1.5">
-                Unassigned inquiries - {attention.unassignedLeads?.length || 0}
+                Unassigned Queries - {attention.unassignedLeads?.length || 0}
               </span>
               <button
-                onClick={() => onNavigate('leads')}
+                onClick={() => onNavigate('leads', undefined, { filter: 'unassigned' })}
                 className="text-[11px] font-medium text-stone-500 hover:text-stone-900 flex items-center gap-0.5"
               >
-                Assign now <ArrowRight className="w-3 h-3" />
+                Route / Assign now <ArrowRight className="w-3 h-3" />
               </button>
             </div>
             {attention.unassignedLeads?.length === 0 ? (
@@ -494,7 +510,7 @@ export const DashboardPage: React.FC<DashboardProps> = ({ onNavigate }) => {
                 {attention.unassignedLeads.map((l: any) => (
                   <div
                     key={l.id}
-                    onClick={() => onNavigate('leads')}
+                    onClick={() => onNavigate('leads', l.id, { filter: 'unassigned' })}
                     className="p-2.5 rounded-md border border-stone-100 hover:border-teal-200 hover:bg-teal-50/40 transition-colors cursor-pointer flex items-center justify-between"
                   >
                     <div className="min-w-0">

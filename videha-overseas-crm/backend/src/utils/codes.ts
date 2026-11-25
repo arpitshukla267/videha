@@ -28,10 +28,33 @@ export async function nextLeadCode(): Promise<string> {
   return `${prefix}${max + 1}`;
 }
 
+export async function nextRfqId(): Promise<string> {
+  const year = new Date().getFullYear();
+  const prefix = `RFQ-${year}-`;
+  const leads = await Lead.find({ rfqId: new RegExp(`^${prefix}`) })
+    .select("rfqId")
+    .lean();
+  let max = 0;
+  for (const row of leads) {
+    if (row.rfqId) {
+      const n = extractTrailingNumber(row.rfqId, prefix);
+      if (n > max) max = n;
+    }
+  }
+  return `${prefix}${String(max + 1).padStart(4, "0")}`;
+}
+
 export async function nextTaskCode(): Promise<string> {
-  const last = await Task.findOne().sort({ createdAt: -1 }).select("taskCode").lean();
-  const current = last?.taskCode ? extractTrailingNumber(last.taskCode, "VO-TSK-") : 200;
-  return `VO-TSK-${Math.max(200, current) + 1}`;
+  const prefix = "VO-TSK-";
+  const tasks = await Task.find({ taskCode: new RegExp(`^${prefix}`) })
+    .select("taskCode")
+    .lean();
+  let max = 200;
+  for (const row of tasks) {
+    const n = extractTrailingNumber(row.taskCode, prefix);
+    if (n > max) max = n;
+  }
+  return `${prefix}${max + 1}`;
 }
 
 export async function nextOrderCode(): Promise<string> {

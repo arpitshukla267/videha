@@ -160,3 +160,13 @@ export const remove = asyncHandler(async (req: Request, res: Response) => {
   await service.deleteLead(req.params.id, req.user!);
   res.json({ success: true, message: "Lead deleted successfully." });
 });
+
+export const getAssignmentConfig = asyncHandler(async (_req: Request, res: Response) => {
+  const data = await service.getAssignmentConfig();
+  res.json({ success: true, data });
+});
+
+export const updateAssignmentConfig = asyncHandler(async (req: Request, res: Response) => {
+  const data = await service.updateAssignmentConfig(req.body, req.user!);
+  res.json({ success: true, message: "Assignment configuration updated.", data });
+});

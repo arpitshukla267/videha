@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Plus,
   Phone,
@@ -59,6 +59,21 @@ const FormSection: React.FC<{
   </div>
 );
 
+// Dashed separator between active and inactive members.
+// Dash length = 8px, step = 16px, so the gap between dashes = 16 - 8 = 8px.
+// To widen the gap, increase 16px (e.g. 20px). To lengthen the dash, increase both 8px values.
+const DashedLine: React.FC<{ className?: string }> = ({ className = "" }) => (
+  <div
+    role="separator"
+    aria-label="Inactive members"
+    className={`h-[1px] w-full ${className}`}
+    style={{
+      backgroundImage:
+        "repeating-linear-gradient(to right, #94a3b8 0 4px, transparent 4px 8px)",
+    }}
+  />
+);
+
 export const TeamPage: React.FC = () => {
   const { hasPermission } = useAuth();
 
@@ -87,6 +102,18 @@ export const TeamPage: React.FC = () => {
     designation: "",
   });
   const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
+
+  // Active members first, inactive members after (separated by a dotted line in the UI).
+  // Relative order inside each group is preserved from the API response.
+  const activeMembers = useMemo(
+    () => members.filter((m) => m.status === "active"),
+    [members],
+  );
+  const inactiveMembers = useMemo(
+    () => members.filter((m) => m.status !== "active"),
+    [members],
+  );
+  const showDivider = activeMembers.length > 0 && inactiveMembers.length > 0;
 
   const fetchDepartments = async () => {
     try {
@@ -277,6 +304,286 @@ export const TeamPage: React.FC = () => {
     description: d.defaultRoleName ? undefined : "No default role assigned",
   }));
 
+  const renderMemberCard = (member: User) => (
+    <div
+      key={member.id}
+      className="bg-white border border-slate-200 hover:border-emerald-300 rounded-2xl p-4 shadow-sm hover:shadow-md transition-all flex flex-col justify-between group"
+    >
+      <div>
+        {/* Top Bar: Avatar, Name, Role, Status */}
+        <div className="flex items-start justify-between gap-3 pb-3 border-b border-slate-100">
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-sm shadow-sm shrink-0">
+              {initials(member.name)}
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <h4 className="text-sm font-semibold text-slate-800 leading-tight">
+                  {member.name}
+                </h4>
+                {member.employeeId && (
+                  <span className="text-[11px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded font-medium">
+                    {member.employeeId}
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-500 truncate max-w-[160px]">
+                {member.email}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-col items-end gap-1 shrink-0">
+            <span
+              className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium border ${
+                member.status === "active"
+                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                  : "bg-slate-100 text-slate-500 border-slate-200"
+              }`}
+            >
+              <span className="w-1.5 h-1.5 rounded-full mr-1 bg-current" />
+              {member.status === "active" ? "Active" : "Inactive"}
+            </span>
+            <span className="inline-flex items-center gap-1 font-medium text-slate-700 bg-slate-100 px-2 py-0.5 rounded text-[11px]">
+              <Shield className="w-2.5 h-2.5 text-slate-500" />
+              {member.roleDisplayName || member.roleName}
+            </span>
+          </div>
+        </div>
+
+        {/* Department & Designation */}
+        <div className="mt-3 space-y-1.5">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-slate-500 font-medium">Designation:</span>
+            <span className="font-semibold text-slate-800">
+              {member.designation || "—"}
+            </span>
+          </div>
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-slate-500 font-medium">Department:</span>
+            <span className="text-slate-700">{departmentName(member)}</span>
+          </div>
+          {member.assignedTerritory && (
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-slate-500 font-medium">Territory:</span>
+              <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-800 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded">
+                <MapPin className="w-2.5 h-2.5 text-emerald-600" />
+                {member.assignedTerritory}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Phone */}
+        <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs text-slate-600">
+          {member.phone ? (
+            <a
+              href={`tel:${member.phone}`}
+              className="hover:text-emerald-700 flex items-center gap-1 font-medium transition-colors"
+            >
+              <Phone className="w-3 h-3 text-slate-400" />
+              {member.phone}
+            </a>
+          ) : (
+            <span className="text-slate-400">No phone listed</span>
+          )}
+
+          <span className="text-[11px] text-slate-400">
+            Joined{" "}
+            {new Date(member.createdAt).toLocaleDateString([], {
+              month: "short",
+              year: "numeric",
+            })}
+          </span>
+        </div>
+
+        {/* Workload Stats Row */}
+        <div className="grid grid-cols-3 gap-2 mt-3 text-center text-sm">
+          <div className="bg-slate-50 p-2 rounded-lg border border-slate-100">
+            <span className="text-[11px] text-slate-400 block font-medium">
+              Active Tasks
+            </span>
+            <span className="font-bold text-slate-800">
+              {member.activeTasks || 0}
+            </span>
+          </div>
+          <div className="bg-slate-50 p-2 rounded-lg border border-slate-100">
+            <span className="text-[11px] text-slate-400 block font-medium">
+              Overdue
+            </span>
+            {(member.overdueTasks || 0) > 0 ? (
+              <span className="font-bold text-rose-700 flex items-center justify-center gap-1">
+                <AlertTriangle className="w-2.5 h-2.5" />
+                {member.overdueTasks}
+              </span>
+            ) : (
+              <span className="font-semibold text-emerald-700">0</span>
+            )}
+          </div>
+          <div className="bg-slate-50 p-2 rounded-lg border border-slate-100">
+            <span className="text-[11px] text-slate-400 block font-medium">
+              Leads
+            </span>
+            <span className="font-bold text-slate-800">
+              {member.leadsAssigned || 0}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Card Footer Actions */}
+      <div className="mt-4 pt-2.5 border-t border-slate-100 flex items-center justify-end gap-1.5">
+        {hasPermission("users.edit") && (
+          <button
+            onClick={() => handleOpenEdit(member)}
+            className="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200/80 rounded-lg text-xs font-medium transition-colors flex items-center gap-1"
+          >
+            <Edit2 className="w-3 h-3" />
+            <span>Edit</span>
+          </button>
+        )}
+        {hasPermission("users.edit") && member.roleName !== "SUPER_ADMIN" && (
+          <button
+            onClick={() => handleToggleStatus(member)}
+            className={`p-1.5 rounded-lg border text-sm transition-colors ${
+              member.status === "active"
+                ? "text-slate-500 hover:text-rose-600 hover:bg-rose-50 border-slate-200"
+                : "text-teal-700 hover:bg-teal-50 border-teal-200"
+            }`}
+            title={
+              member.status === "active"
+                ? "Deactivate Member"
+                : "Activate Member"
+            }
+          >
+            <Power className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+
+  const renderMemberRow = (member: User) => (
+    <tr key={member.id} className="hover:bg-slate-50/70 transition-colors">
+      <td className="py-3 px-4 whitespace-nowrap">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-xs shrink-0">
+            {initials(member.name)}
+          </div>
+          <div>
+            <p className="font-semibold text-slate-800">{member.name}</p>
+            <p className="text-xs text-slate-500">{member.email}</p>
+          </div>
+        </div>
+      </td>
+
+      <td className="py-3 px-4 whitespace-nowrap">
+        <span className="inline-flex items-center gap-1 font-medium text-slate-800 bg-slate-100 px-2 py-0.5 rounded text-xs">
+          <Shield className="w-3 h-3 text-slate-500" />
+          {member.roleDisplayName || member.roleName}
+        </span>
+        <p className="text-[11px] text-slate-400 mt-0.5">
+          {departmentName(member)}
+        </p>
+      </td>
+
+      <td className="py-3 px-4 whitespace-nowrap">
+        <p className="font-medium text-slate-800">
+          {member.designation || "—"}
+        </p>
+      </td>
+
+      <td className="py-3 px-4 whitespace-nowrap text-slate-600">
+        {member.phone ? (
+          <a
+            href={`tel:${member.phone}`}
+            className="hover:text-emerald-700 flex items-center gap-1 text-xs transition-colors"
+          >
+            <Phone className="w-3 h-3 text-slate-400" />
+            {member.phone}
+          </a>
+        ) : (
+          <span className="text-slate-400">—</span>
+        )}
+      </td>
+
+      <td className="py-3 px-4 whitespace-nowrap">
+        <span
+          className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${
+            member.status === "active"
+              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+              : "bg-slate-100 text-slate-500 border-slate-200"
+          }`}
+        >
+          <span className="w-1.5 h-1.5 rounded-full mr-1 bg-current" />
+          {member.status === "active" ? "Active" : "Inactive"}
+        </span>
+      </td>
+
+      <td className="py-3 px-4 text-center whitespace-nowrap">
+        <span className="inline-flex items-center justify-center font-medium text-slate-800 bg-slate-50 border border-slate-200 px-2.5 py-0.5 rounded">
+          {member.activeTasks || 0}
+        </span>
+      </td>
+
+      <td className="py-3 px-4 text-center whitespace-nowrap">
+        {(member.overdueTasks || 0) > 0 ? (
+          <span className="inline-flex items-center gap-1 font-bold text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded text-xs">
+            <AlertTriangle className="w-3 h-3" />
+            {member.overdueTasks} overdue
+          </span>
+        ) : (
+          <span className="text-slate-400 font-medium">0</span>
+        )}
+      </td>
+
+      <td className="py-3 px-4 text-center whitespace-nowrap">
+        <span className="inline-flex items-center justify-center font-medium text-slate-800 bg-slate-50 border border-slate-200 px-2.5 py-0.5 rounded">
+          {member.leadsAssigned || 0}
+        </span>
+      </td>
+
+      <td className="py-3 px-4 whitespace-nowrap text-slate-500 text-xs">
+        {new Date(member.createdAt).toLocaleDateString([], {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        })}
+      </td>
+
+      <td className="py-3 px-4 text-right whitespace-nowrap">
+        <div className="flex items-center justify-end gap-1">
+          {hasPermission("users.edit") && (
+            <button
+              onClick={() => handleOpenEdit(member)}
+              className="p-1.5 rounded-lg text-slate-500 hover:text-emerald-700 hover:bg-emerald-50 transition-colors"
+              title="Edit Role & Details"
+            >
+              <Edit2 className="w-3.5 h-3.5" />
+            </button>
+          )}
+          {hasPermission("users.edit") && member.roleName !== "SUPER_ADMIN" && (
+            <button
+              onClick={() => handleToggleStatus(member)}
+              className={`p-1.5 rounded-lg transition-colors ${
+                member.status === "active"
+                  ? "text-slate-400 hover:text-rose-600 hover:bg-rose-50"
+                  : "text-slate-400 hover:text-teal-700 hover:bg-teal-50"
+              }`}
+              title={
+                member.status === "active"
+                  ? "Deactivate Member"
+                  : "Activate Member"
+              }
+            >
+              <Power className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+      </td>
+    </tr>
+  );
+
   return (
     <div className="p-6 space-y-5">
       {/* Header */}
@@ -348,175 +655,16 @@ export const TeamPage: React.FC = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-              {members.map((member) => (
-                <div
-                  key={member.id}
-                  className="bg-white border border-slate-200 hover:border-emerald-300 rounded-2xl p-4 shadow-sm hover:shadow-md transition-all flex flex-col justify-between group"
-                >
-                  <div>
-                    {/* Top Bar: Avatar, Name, Role, Status */}
-                    <div className="flex items-start justify-between gap-3 pb-3 border-b border-slate-100">
-                      <div className="flex items-center gap-3">
-                        <div className="w-11 h-11 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-sm shadow-sm shrink-0">
-                          {initials(member.name)}
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-1.5">
-                            <h4 className="text-sm font-semibold text-slate-800 leading-tight">
-                              {member.name}
-                            </h4>
-                            {member.employeeId && (
-                              <span className="text-[11px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded font-medium">
-                                {member.employeeId}
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-xs text-slate-500 truncate max-w-[160px]">
-                            {member.email}
-                          </p>
-                        </div>
-                      </div>
+              {activeMembers.map(renderMemberCard)}
 
-                      <div className="flex flex-col items-end gap-1 shrink-0">
-                        <span
-                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium border ${
-                            member.status === "active"
-                              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                              : "bg-slate-100 text-slate-500 border-slate-200"
-                          }`}
-                        >
-                          <span className="w-1.5 h-1.5 rounded-full mr-1 bg-current" />
-                          {member.status === "active" ? "Active" : "Inactive"}
-                        </span>
-                        <span className="inline-flex items-center gap-1 font-medium text-slate-700 bg-slate-100 px-2 py-0.5 rounded text-[11px]">
-                          <Shield className="w-2.5 h-2.5 text-slate-500" />
-                          {member.roleDisplayName || member.roleName}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Department & Designation */}
-                    <div className="mt-3 space-y-1.5">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-slate-500 font-medium">
-                          Designation:
-                        </span>
-                        <span className="font-semibold text-slate-800">
-                          {member.designation || "—"}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-slate-500 font-medium">
-                          Department:
-                        </span>
-                        <span className="text-slate-700">
-                          {departmentName(member)}
-                        </span>
-                      </div>
-                      {member.assignedTerritory && (
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-slate-500 font-medium">
-                            Territory:
-                          </span>
-                          <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-800 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded">
-                            <MapPin className="w-2.5 h-2.5 text-emerald-600" />
-                            {member.assignedTerritory}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Phone */}
-                    <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs text-slate-600">
-                      {member.phone ? (
-                        <a
-                          href={`tel:${member.phone}`}
-                          className="hover:text-emerald-700 flex items-center gap-1 font-medium transition-colors"
-                        >
-                          <Phone className="w-3 h-3 text-slate-400" />
-                          {member.phone}
-                        </a>
-                      ) : (
-                        <span className="text-slate-400">No phone listed</span>
-                      )}
-
-                      <span className="text-[11px] text-slate-400">
-                        Joined{" "}
-                        {new Date(member.createdAt).toLocaleDateString([], {
-                          month: "short",
-                          year: "numeric",
-                        })}
-                      </span>
-                    </div>
-
-                    {/* Workload Stats Row */}
-                    <div className="grid grid-cols-3 gap-2 mt-3 text-center text-sm">
-                      <div className="bg-slate-50 p-2 rounded-lg border border-slate-100">
-                        <span className="text-[11px] text-slate-400 block font-medium">
-                          Active Tasks
-                        </span>
-                        <span className="font-bold text-slate-800">
-                          {member.activeTasks || 0}
-                        </span>
-                      </div>
-                      <div className="bg-slate-50 p-2 rounded-lg border border-slate-100">
-                        <span className="text-[11px] text-slate-400 block font-medium">
-                          Overdue
-                        </span>
-                        {(member.overdueTasks || 0) > 0 ? (
-                          <span className="font-bold text-rose-700 flex items-center justify-center gap-1">
-                            <AlertTriangle className="w-2.5 h-2.5" />
-                            {member.overdueTasks}
-                          </span>
-                        ) : (
-                          <span className="font-semibold text-emerald-700">
-                            0
-                          </span>
-                        )}
-                      </div>
-                      <div className="bg-slate-50 p-2 rounded-lg border border-slate-100">
-                        <span className="text-[11px] text-slate-400 block font-medium">
-                          Leads
-                        </span>
-                        <span className="font-bold text-slate-800">
-                          {member.leadsAssigned || 0}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Card Footer Actions */}
-                  <div className="mt-4 pt-2.5 border-t border-slate-100 flex items-center justify-end gap-1.5">
-                    {hasPermission("users.edit") && (
-                      <button
-                        onClick={() => handleOpenEdit(member)}
-                        className="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200/80 rounded-lg text-xs font-medium transition-colors flex items-center gap-1"
-                      >
-                        <Edit2 className="w-3 h-3" />
-                        <span>Edit</span>
-                      </button>
-                    )}
-                    {hasPermission("users.edit") &&
-                      member.roleName !== "SUPER_ADMIN" && (
-                        <button
-                          onClick={() => handleToggleStatus(member)}
-                          className={`p-1.5 rounded-lg border text-sm transition-colors ${
-                            member.status === "active"
-                              ? "text-slate-500 hover:text-rose-600 hover:bg-rose-50 border-slate-200"
-                              : "text-teal-700 hover:bg-teal-50 border-teal-200"
-                          }`}
-                          title={
-                            member.status === "active"
-                              ? "Deactivate Member"
-                              : "Activate Member"
-                          }
-                        >
-                          <Power className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                  </div>
+              {/* my-6 controls the space above/below the line in Cards view */}
+              {showDivider && (
+                <div className="col-span-full my-12">
+                  <DashedLine />
                 </div>
-              ))}
+              )}
+
+              {inactiveMembers.map(renderMemberCard)}
             </div>
           )}
         </div>
@@ -559,134 +707,22 @@ export const TeamPage: React.FC = () => {
                     </td>
                   </tr>
                 ) : (
-                  members.map((member) => (
-                    <tr
-                      key={member.id}
-                      className="hover:bg-slate-50/70 transition-colors"
-                    >
-                      <td className="py-3 px-4 whitespace-nowrap">
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-xs shrink-0">
-                            {initials(member.name)}
+                  <>
+                    {activeMembers.map(renderMemberRow)}
+
+                    {showDivider && (
+                      <tr aria-hidden="true">
+                        <td colSpan={10} className="p-0 bg-white">
+                          {/* py-5 controls the space above/below the line in Table view */}
+                          <div className="py-5">
+                            <DashedLine />
                           </div>
-                          <div>
-                            <p className="font-semibold text-slate-800">
-                              {member.name}
-                            </p>
-                            <p className="text-xs text-slate-500">
-                              {member.email}
-                            </p>
-                          </div>
-                        </div>
-                      </td>
+                        </td>
+                      </tr>
+                    )}
 
-                      <td className="py-3 px-4 whitespace-nowrap">
-                        <span className="inline-flex items-center gap-1 font-medium text-slate-800 bg-slate-100 px-2 py-0.5 rounded text-xs">
-                          <Shield className="w-3 h-3 text-slate-500" />
-                          {member.roleDisplayName || member.roleName}
-                        </span>
-                        <p className="text-[11px] text-slate-400 mt-0.5">
-                          {departmentName(member)}
-                        </p>
-                      </td>
-
-                      <td className="py-3 px-4 whitespace-nowrap">
-                        <p className="font-medium text-slate-800">
-                          {member.designation || "—"}
-                        </p>
-                      </td>
-
-                      <td className="py-3 px-4 whitespace-nowrap text-slate-600">
-                        {member.phone ? (
-                          <a
-                            href={`tel:${member.phone}`}
-                            className="hover:text-emerald-700 flex items-center gap-1 text-xs transition-colors"
-                          >
-                            <Phone className="w-3 h-3 text-slate-400" />
-                            {member.phone}
-                          </a>
-                        ) : (
-                          <span className="text-slate-400">—</span>
-                        )}
-                      </td>
-
-                      <td className="py-3 px-4 whitespace-nowrap">
-                        <span
-                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${
-                            member.status === "active"
-                              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                              : "bg-slate-100 text-slate-500 border-slate-200"
-                          }`}
-                        >
-                          <span className="w-1.5 h-1.5 rounded-full mr-1 bg-current" />
-                          {member.status === "active" ? "Active" : "Inactive"}
-                        </span>
-                      </td>
-
-                      <td className="py-3 px-4 text-center whitespace-nowrap">
-                        <span className="inline-flex items-center justify-center font-medium text-slate-800 bg-slate-50 border border-slate-200 px-2.5 py-0.5 rounded">
-                          {member.activeTasks || 0}
-                        </span>
-                      </td>
-
-                      <td className="py-3 px-4 text-center whitespace-nowrap">
-                        {(member.overdueTasks || 0) > 0 ? (
-                          <span className="inline-flex items-center gap-1 font-bold text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded text-xs">
-                            <AlertTriangle className="w-3 h-3" />
-                            {member.overdueTasks} overdue
-                          </span>
-                        ) : (
-                          <span className="text-slate-400 font-medium">0</span>
-                        )}
-                      </td>
-
-                      <td className="py-3 px-4 text-center whitespace-nowrap">
-                        <span className="inline-flex items-center justify-center font-medium text-slate-800 bg-slate-50 border border-slate-200 px-2.5 py-0.5 rounded">
-                          {member.leadsAssigned || 0}
-                        </span>
-                      </td>
-
-                      <td className="py-3 px-4 whitespace-nowrap text-slate-500 text-xs">
-                        {new Date(member.createdAt).toLocaleDateString([], {
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric",
-                        })}
-                      </td>
-
-                      <td className="py-3 px-4 text-right whitespace-nowrap">
-                        <div className="flex items-center justify-end gap-1">
-                          {hasPermission("users.edit") && (
-                            <button
-                              onClick={() => handleOpenEdit(member)}
-                              className="p-1.5 rounded-lg text-slate-500 hover:text-emerald-700 hover:bg-emerald-50 transition-colors"
-                              title="Edit Role & Details"
-                            >
-                              <Edit2 className="w-3.5 h-3.5" />
-                            </button>
-                          )}
-                          {hasPermission("users.edit") &&
-                            member.roleName !== "SUPER_ADMIN" && (
-                              <button
-                                onClick={() => handleToggleStatus(member)}
-                                className={`p-1.5 rounded-lg transition-colors ${
-                                  member.status === "active"
-                                    ? "text-slate-400 hover:text-rose-600 hover:bg-rose-50"
-                                    : "text-slate-400 hover:text-teal-700 hover:bg-teal-50"
-                                }`}
-                                title={
-                                  member.status === "active"
-                                    ? "Deactivate Member"
-                                    : "Activate Member"
-                                }
-                              >
-                                <Power className="w-3.5 h-3.5" />
-                              </button>
-                            )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))
+                    {inactiveMembers.map(renderMemberRow)}
+                  </>
                 )}
               </tbody>
             </table>

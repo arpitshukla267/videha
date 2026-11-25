@@ -5,7 +5,9 @@ export type SystemRoleName =
   | "SUPER_ADMIN"
   | "ADMIN"
   | "MANAGER"
+  | "SALES"
   | "SALES_MEMBER"
+  | "SALES_MARKETING_CMS"
   | "OPERATIONS";
 
 export type RoleName = SystemRoleName | (string & {});
@@ -16,7 +18,9 @@ export const SYSTEM_ROLE_NAMES: SystemRoleName[] = [
   "SUPER_ADMIN",
   "ADMIN",
   "MANAGER",
+  "SALES",
   "SALES_MEMBER",
+  "SALES_MARKETING_CMS",
   "OPERATIONS",
 ];
 

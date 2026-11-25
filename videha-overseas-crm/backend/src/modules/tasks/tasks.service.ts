@@ -11,6 +11,7 @@ import { parsePagination, paginatedResponse } from "../../utils/pagination";
 import { applyOptimisticUpdate, parseClientRequestId, parseRevision } from "../../utils/concurrency";
 import { writeAudit } from "../../services/audit.service";
 import { createNotification } from "../../services/notification.service";
+import { sendTaskReminderIfDueToday, isDueToday } from "../../services/emailReminder.service";
 import { buildAssigneeVisibilityFilter, isAdminRole } from "../../utils/visibility";
 import type { AuthUser } from "../../middleware/auth";
 
@@ -197,7 +198,7 @@ export async function createTask(body: Record<string, unknown>, actor: AuthUser)
     dueDate: input.dueDate,
     createdById: actor.id,
     completedAt: status === "Completed" ? new Date() : null,
-    clientRequestId: clientRequestId ?? null,
+    ...(clientRequestId ? { clientRequestId } : {}),
   });
 
   if (String(assignee._id) !== actor.id) {
@@ -207,6 +208,12 @@ export async function createTask(body: Record<string, unknown>, actor: AuthUser)
       message: `Task "${task.title}" assigned to you by ${actor.name}.`,
       type: "task_assigned",
       linkUrl: `/tasks/${task._id}`,
+    });
+  }
+
+  if (isDueToday(task.dueDate)) {
+    sendTaskReminderIfDueToday(task, assignee).catch((err) => {
+      console.error("[CRM] Failed to send task reminder email on create:", err);
     });
   }
 
@@ -296,6 +303,14 @@ export async function updateTask(id: string, body: Record<string, unknown>, acto
       type: "task_assigned",
       linkUrl: `/tasks/${task._id}`,
     });
+  }
+
+  if (task.status !== "Completed" && task.status !== "Cancelled" && isDueToday(task.dueDate)) {
+    if (newAssignee !== prevAssignee || setFields.dueDate !== undefined) {
+      sendTaskReminderIfDueToday(task).catch((err) => {
+        console.error("[CRM] Failed to send task reminder email on update:", err);
+      });
+    }
   }
 
   const becameCompleted = prevStatus !== "Completed" && task.status === "Completed";

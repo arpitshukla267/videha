@@ -3,8 +3,16 @@ import { AppError } from "../../utils/AppError";
 import { assertObjectId } from "../../utils/objectId";
 import { serializeNotification } from "../../utils/serializers";
 import { parsePagination, paginatedResponse } from "../../utils/pagination";
+import { checkFollowUpReminders } from "../../services/followupReminder.service";
 
 export async function listMine(userId: string, query: { page?: unknown; limit?: unknown }) {
+  // Check and generate any due or overdue follow-up reminders
+  try {
+    await checkFollowUpReminders();
+  } catch (err) {
+    console.error("Failed to check follow-up reminders:", err);
+  }
+
   const { page, limit, skip } = parsePagination(query);
   const filter = { userId };
 
