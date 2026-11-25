@@ -15,6 +15,7 @@ const NAV = [
   { label: "Services", href: "/services" },
   { label: "Why Videha", href: "/why-videha" },
   { label: "Contact", href: "/contact" },
+  { label: "Privacy Policy", href: "/privacy-policy" },
 ];
 
 type SiteFooterProps = {

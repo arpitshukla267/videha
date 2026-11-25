@@ -1,0 +1,37 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+
+export const metadata: Metadata = {
+  title: "Privacy Policy — Videha Overseas",
+  description: "How Videha Overseas Private Limited uses website and Meta lead-form enquiries, business contact details and sourcing requirements.",
+  alternates: { canonical: "https://www.videhaoverseas.com/privacy-policy" },
+};
+
+const sections = [
+  { title: "Who we are", text: "Videha Overseas Private Limited is an agricultural and food products exporter based in Pune, Maharashtra, India. We are responsible for the personal information that we receive for our business enquiries. For privacy questions or requests, email info@videhaoverseas.com." },
+  { title: "Information we collect", text: "When you contact us through this website, Facebook or Instagram lead forms, email, telephone or WhatsApp, we receive the details you provide. These may include your name, business email, telephone number, company name and website, business type, country, delivery postcode or destination, product grade, quantity, packaging, purchase timing and correspondence. Our website and infrastructure providers may also process technical information such as IP address, device/browser information, pages viewed and security logs. Please do not include passwords, payment-card details, identity documents or sensitive personal information in an enquiry." },
+  { title: "How and why we use information", text: "We use enquiry details to assess sourcing requirements, reply to questions, prepare specifications and quotations, discuss samples, coordinate requested orders and maintain business correspondence. We also use information to operate and protect our website, prevent misuse and meet applicable record-keeping obligations. Providing the requested business information helps us respond accurately; without it we may be unable to provide a relevant quotation. Submitting an enquiry does not subscribe you to an unrelated marketing newsletter." },
+  { title: "Our basis for processing", text: "Where UK data protection law applies, we rely on our legitimate interests in responding to business enquiries, maintaining relevant business relationships and securing our services, taking account of your rights. Where you are personally a party to a proposed contract, processing necessary to take steps you request before that contract may apply. We rely on legal obligations for required records, and on consent where required for optional marketing or non-essential cookies. You can withdraw consent without affecting earlier lawful processing and can object to processing based on legitimate interests." },
+  { title: "Who receives information", text: "Information is accessible to authorised company staff and service providers supporting hosting, enquiry email delivery, business email, record management and communications. The website enquiry email integration uses Resend when configured. The website includes Google Analytics and Vercel Analytics integrations. If you use a Facebook or Instagram form, Meta also processes information under its own privacy policy; WhatsApp and email services similarly process communications under their own terms. Relevant details may be provided to supply, inspection or logistics partners when needed to fulfil your requested enquiry or order. We do not sell your personal information. Disclosure may also be required by law or to protect legal rights." },
+  { title: "International processing", text: "We operate in India, so information submitted by a UK buyer is received and reviewed in India. Our technology and communications providers may process information in other countries. Where applicable law requires safeguards for restricted international transfers, the relevant transfer arrangements must apply. Contact info@videhaoverseas.com for information about the arrangements relevant to your enquiry." },
+  { title: "Retention and security", text: "We keep information for as long as needed for the enquiry, associated business relationship, follow-up and applicable accounting, legal or dispute requirements. Retention depends on whether an enquiry leads to an order, the last relevant contact and any required record-keeping period. You may ask us to delete information no longer needed. We use access restrictions and appropriate organisational and technical measures to protect information, but no internet transmission or storage system is completely secure." },
+  { title: "Cookies and analytics", text: "Website integrations may use cookies or similar technologies to understand visits and website performance. Your browser settings can restrict or delete cookies; blocking them may affect some features. Where consent is required for non-essential technologies, those technologies should operate only after that consent. Third-party sites and platforms linked from our website have their own privacy and cookie practices." },
+  { title: "Your choices and rights", text: "Depending on applicable law, you may request access, correction, deletion, restriction or a portable copy of your information; object to certain processing; and withdraw consent where consent is used. You may object to direct marketing at any time. Email info@videhaoverseas.com with your request and enough information to identify the relevant enquiry. We may need to verify your identity proportionately and will respond within the applicable legal time limit. Some rights have exceptions, including required transaction records. We do not use these enquiry forms to make solely automated decisions with legal or similarly significant effects." },
+  { title: "Children and updates", text: "Our enquiry services are intended for business users, not children. Please contact us if a child has provided personal information. We may update this notice when our services or practices change; the updated notice and its date will be published on this page." },
+];
+
+export default function PrivacyPolicyPage() {
+  return (
+    <main className="mx-auto max-w-4xl px-5 py-16 text-videha-navy sm:px-8 md:py-24">
+      <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Videha Overseas Private Limited</p>
+      <h1 className="mt-4 text-4xl font-medium tracking-tight md:text-5xl">Privacy Policy</h1>
+      <p className="mt-4 text-sm text-muted-foreground">Last updated: 17 November 2026</p>
+      <p className="mt-6 leading-8">This notice covers our website and business sourcing enquiries, including enquiries submitted through our Facebook and Instagram advertisements.</p>
+      <div className="mt-10 space-y-9">
+        {sections.map((section) => <section key={section.title}><h2 className="text-xl font-medium">{section.title}</h2><p className="mt-3 text-sm leading-7 text-muted-foreground">{section.text}</p></section>)}
+        <section><h2 className="text-xl font-medium">Questions or complaints</h2><p className="mt-3 text-sm leading-7 text-muted-foreground">Contact <a className="underline" href="mailto:info@videhaoverseas.com">info@videhaoverseas.com</a> first so we can address your concern. UK individuals can also complain to the <a className="underline" href="https://ico.org.uk/make-a-complaint/">Information Commissioner’s Office (ICO)</a> or their relevant data protection authority.</p></section>
+      </div>
+      <Link className="mt-10 inline-block underline" href="/contact">Contact our export team</Link>
+    </main>
+  );
+}
